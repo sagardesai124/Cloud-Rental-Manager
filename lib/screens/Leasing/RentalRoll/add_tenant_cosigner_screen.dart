@@ -291,7 +291,12 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
   // ------------------------------------------------------------------ save
 
   void _saveTenant() {
-    if (!(_tenantFormKey.currentState?.validate() ?? false)) return;
+    // Same gap as Add Tenant: the override-fee message is listener-driven,
+    // so Form.validate() never sees it. Re-run it here (covers a field that
+    // was never typed in) and let it block the save.
+    if (_enableOverrideFee) _validateOverride();
+    final formOk = _tenantFormKey.currentState?.validate() ?? false;
+    if (!formOk || (_enableOverrideFee && _overrideFeeError.isNotEmpty)) return;
     final ecItems = _emergencyContacts
         .where((c) =>
             c.name.text.trim().isNotEmpty ||

@@ -111,6 +111,7 @@ class AdminBalanceRepository {
     int limit = 10,
     String? sortKey,
     String? sortOrder,
+    String? search,
   }) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -143,7 +144,13 @@ class AdminBalanceRepository {
     if (sortOrder != null && sortOrder.isNotEmpty) {
       queryParams['sortOrder'] = sortOrder;
     }
-    
+    // The route already reads and applies `search` (Payment.js filterItems),
+    // it was simply never sent. Filtering on the client could only ever see
+    // the current page, so matches on other pages were invisible.
+    if (search != null && search.trim().isNotEmpty) {
+      queryParams['search'] = search.trim();
+    }
+
     // Build URL with query parameters
     Uri uri = Uri.parse('$baseUrl/$adminId').replace(queryParameters: queryParams);
     String url = uri.toString();

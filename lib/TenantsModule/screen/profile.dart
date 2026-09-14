@@ -69,8 +69,7 @@ class _Profile_screenState extends State<Profile_screen>
   // has no destination. profiledata values can be null OR an empty string.
   String get _phone2FA =>
       (profiledata['tenant_phoneNumber'] ?? '').toString().trim();
-  String get _email2FA =>
-      (profiledata['tenant_email'] ?? '').toString().trim();
+  String get _email2FA => (profiledata['tenant_email'] ?? '').toString().trim();
   bool get _canUseSms2FA => _phone2FA.isNotEmpty;
   bool get _canUseEmail2FA => _email2FA.isNotEmpty;
   bool get _can2FAEnable =>
@@ -86,6 +85,7 @@ class _Profile_screenState extends State<Profile_screen>
   TextEditingController regenerateVerificationController =
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   /// Required by [NetworkRetryState]: re-issue this screen's own load.
   /// These are the data calls `initState` makes; nothing that sets up
   /// controllers, filters or defaults is repeated, so a reload cannot
@@ -94,14 +94,17 @@ class _Profile_screenState extends State<Profile_screen>
   Future<void> reloadData() async {
     if (!mounted) return;
     setState(() {
-      _fetchProfile();;
+      _fetchProfile();
+      ;
     });
   }
 
   @override
   void initState() {
     super.initState();
-    _connectivitySub = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+    _connectivitySub = Connectivity()
+        .onConnectivityChanged
+        .listen((ConnectivityResult result) {
       if (!mounted) return;
       // The event is only a trigger: checkInternet() verifies
       // against the network before deciding, so a stale `none`
@@ -203,7 +206,7 @@ class _Profile_screenState extends State<Profile_screen>
                         TextSpan(
                           text: getTimerString(),
                           style: const TextStyle(
-                            color: Color(0xFFE2574C),
+                            color: Color(0xFFDC3545),
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -217,7 +220,7 @@ class _Profile_screenState extends State<Profile_screen>
               const Text(
                 "Code expired",
                 style: TextStyle(
-                  color: Color(0xFFE2574C),
+                  color: Color(0xFFDC3545),
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                 ),
@@ -230,7 +233,7 @@ class _Profile_screenState extends State<Profile_screen>
                 children: [
                   Icon(Icons.refresh,
                       color: canResend
-                          ? const Color(0xFF2F6FE4)
+                          ? const Color(0xFF2C72E0)
                           : Colors.grey.shade500,
                       size: 16),
                   const SizedBox(width: 4),
@@ -239,7 +242,7 @@ class _Profile_screenState extends State<Profile_screen>
                     style: TextStyle(
                       fontSize: 13.5,
                       color: canResend
-                          ? const Color(0xFF2F6FE4)
+                          ? const Color(0xFF2C72E0)
                           : Colors.grey.shade500,
                       fontWeight: FontWeight.w700,
                     ),
@@ -259,8 +262,7 @@ class _Profile_screenState extends State<Profile_screen>
     // can stay `none` after the connection is back (reliably so on the
     // iOS simulator), which made this screen declare itself offline
     // while requests actually succeed. Confirm before believing it.
-    if (connectiondata == ConnectivityResult.none &&
-        await hasNetworkNow()) {
+    if (connectiondata == ConnectivityResult.none && await hasNetworkNow()) {
       connectiondata = ConnectivityResult.wifi;
     }
     if (!mounted) return;
@@ -348,7 +350,6 @@ class _Profile_screenState extends State<Profile_screen>
       _isLoading = false;
     });
 
-
     if (response.statusCode == 200) {
       final jsonData = json.decode(response.body);
 
@@ -371,7 +372,6 @@ class _Profile_screenState extends State<Profile_screen>
             sms2FA = false;
           }
         });
-
       } else {
         setState(() {
           enble2FA = false;
@@ -409,7 +409,6 @@ class _Profile_screenState extends State<Profile_screen>
         backupCode = true;
         codes = jsonData["data"]["codes"];
       });
-
     } else {
       setState(() {
         backupCode = false;
@@ -445,7 +444,6 @@ class _Profile_screenState extends State<Profile_screen>
           "user_type": "tenant"
         }),
       );
-
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -504,7 +502,6 @@ class _Profile_screenState extends State<Profile_screen>
           "user_type": "tenant"
         }),
       );
-
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -579,7 +576,6 @@ class _Profile_screenState extends State<Profile_screen>
         }),
       );
 
-
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData["statusCode"] == 200) {
@@ -642,7 +638,6 @@ class _Profile_screenState extends State<Profile_screen>
           "user_type": "tenant"
         }),
       );
-
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -709,7 +704,6 @@ class _Profile_screenState extends State<Profile_screen>
             jsonEncode({"tenant_id": id, "method": email2FA ? "email" : "sms"}),
       );
 
-
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData["statusCode"] == 200) {
@@ -763,7 +757,6 @@ class _Profile_screenState extends State<Profile_screen>
         },
         body: jsonEncode({"user_id": id, "user_type": "tenant"}),
       );
-
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -1097,8 +1090,7 @@ class _Profile_screenState extends State<Profile_screen>
                   ? isNetworkError(_errorMessage)
                       ? NoInternetView(onRetry: retryNow)
                       : Center(
-                          child:
-                              Text(friendlyErrorMessage(_errorMessage)),
+                          child: Text(friendlyErrorMessage(_errorMessage)),
                         )
                   : SingleChildScrollView(
                       child: LayoutBuilder(
@@ -1698,7 +1690,14 @@ class _Profile_screenState extends State<Profile_screen>
                                                               const SizedBox(
                                                                   height: 4),
                                                               Text(
-                                                                leaseData[0]['amount'] != null ? formatMoney(leaseData[0]['amount']) : 'N/A',
+                                                                leaseData[0][
+                                                                            'amount'] !=
+                                                                        null
+                                                                    ? formatMoney(
+                                                                        leaseData[0]
+                                                                            [
+                                                                            'amount'])
+                                                                    : 'N/A',
                                                                 style:
                                                                     const TextStyle(
                                                                   fontWeight:
@@ -1835,7 +1834,8 @@ class _Profile_screenState extends State<Profile_screen>
                                       ),
                                       child: Container(
                                         decoration: BoxDecoration(
-                                          border: Border.all(color: const Color(0xFFE5E9F0)),
+                                          border: Border.all(
+                                              color: const Color(0xFFE5E9F0)),
                                           borderRadius:
                                               BorderRadius.circular(6),
                                         ),
@@ -1856,27 +1856,12 @@ class _Profile_screenState extends State<Profile_screen>
                                                             .start,
                                                     children: [
                                                       Text(
-                                                        "Two-Factor Authentication",
+                                                        "Two-Factor Authentication (2FA)",
                                                         style: TextStyle(
                                                           fontSize: 16,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           color: blueColor,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        showDisableVerification
-                                                            ? "Verification required to disable"
-                                                            : enble2FA
-                                                                ? "Protecting your account"
-                                                                : "Adds a second step at sign-in",
-                                                        style: const TextStyle(
-                                                          color: Color(
-                                                              0xFF8A93A3),
-                                                          fontSize: 12.5,
-                                                          fontWeight:
-                                                              FontWeight.w500,
                                                         ),
                                                       ),
                                                     ],
@@ -1887,8 +1872,8 @@ class _Profile_screenState extends State<Profile_screen>
                                                   // twoFactorToggle: on when
                                                   // 2FA is enabled OR while
                                                   // setting it up.
-                                                  initialValue: enble2FA ||
-                                                      show2FASetup,
+                                                  initialValue:
+                                                      enble2FA || show2FASetup,
                                                   onChanged: (value) {
                                                     if (isVerifyingCode) return;
                                                     if (value) {
@@ -1976,14 +1961,16 @@ class _Profile_screenState extends State<Profile_screen>
                                                           value: 'sms',
                                                           groupValue:
                                                               selected2FAMethod,
-                                                          onChanged: _canUseSms2FA
-                                                              ? (value) {
-                                                                  setState(() {
-                                                                    selected2FAMethod =
-                                                                        value!;
-                                                                  });
-                                                                }
-                                                              : null,
+                                                          onChanged:
+                                                              _canUseSms2FA
+                                                                  ? (value) {
+                                                                      setState(
+                                                                          () {
+                                                                        selected2FAMethod =
+                                                                            value!;
+                                                                      });
+                                                                    }
+                                                                  : null,
                                                           activeColor:
                                                               blueColor,
                                                         ),
@@ -2030,14 +2017,16 @@ class _Profile_screenState extends State<Profile_screen>
                                                           value: 'email',
                                                           groupValue:
                                                               selected2FAMethod,
-                                                          onChanged: _canUseEmail2FA
-                                                              ? (value) {
-                                                                  setState(() {
-                                                                    selected2FAMethod =
-                                                                        value!;
-                                                                  });
-                                                                }
-                                                              : null,
+                                                          onChanged:
+                                                              _canUseEmail2FA
+                                                                  ? (value) {
+                                                                      setState(
+                                                                          () {
+                                                                        selected2FAMethod =
+                                                                            value!;
+                                                                      });
+                                                                    }
+                                                                  : null,
                                                           activeColor:
                                                               blueColor,
                                                         ),
@@ -2102,11 +2091,16 @@ class _Profile_screenState extends State<Profile_screen>
                                                             : null,
                                                         style: ElevatedButton
                                                             .styleFrom(
-                                                          backgroundColor: blueColor,
-                          // Web design: disabled = light grey pill.
-                          disabledBackgroundColor: const Color(0xFFE5E8ED),
-                          disabledForegroundColor: const Color(0xFF9AA3B0),
-                          elevation: 0,
+                                                          backgroundColor:
+                                                              blueColor,
+                                                          // Web design: disabled = light grey pill.
+                                                          disabledBackgroundColor:
+                                                              const Color(
+                                                                  0xFFE5E8ED),
+                                                          disabledForegroundColor:
+                                                              const Color(
+                                                                  0xFF9AA3B0),
+                                                          elevation: 0,
                                                           foregroundColor:
                                                               Colors.white,
                                                           shape:
@@ -2154,6 +2148,11 @@ class _Profile_screenState extends State<Profile_screen>
                                                     Form(
                                                       key: _formKey,
                                                       child: TextFormField(
+                                                        style: const TextStyle(
+                                                            fontSize: 15,
+                                                            letterSpacing: 1.5,
+                                                            color: Color(
+                                                                0xFF152B51)),
                                                         autovalidateMode:
                                                             AutovalidateMode
                                                                 .onUserInteraction,
@@ -2181,25 +2180,38 @@ class _Profile_screenState extends State<Profile_screen>
                                                             !is2FACodeExpired,
                                                         decoration:
                                                             InputDecoration(
+                                                          contentPadding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal:
+                                                                      14,
+                                                                  vertical: 16),
                                                           hintText:
                                                               "Enter 6-digit code",
+                                                          hintStyle:
+                                                              const TextStyle(
+                                                                  color: Color(
+                                                                      0xFF94A1B4),
+                                                                  letterSpacing:
+                                                                      0.5),
                                                           border:
                                                               OutlineInputBorder(
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        8),
+                                                                        10),
                                                             borderSide:
                                                                 const BorderSide(
-                                                                    color: Colors
-                                                                        .grey),
+                                                                    color: Color(
+                                                                        0xFFD3DAE5),
+                                                                    width: 1.5),
                                                           ),
                                                           focusedBorder:
                                                               OutlineInputBorder(
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        8),
+                                                                        10),
                                                             borderSide:
                                                                 BorderSide(
                                                                     color:
@@ -2211,7 +2223,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        8),
+                                                                        10),
                                                             borderSide:
                                                                 const BorderSide(
                                                                     color: Colors
@@ -2223,7 +2235,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        8),
+                                                                        10),
                                                             borderSide:
                                                                 const BorderSide(
                                                                     color: Colors
@@ -2242,70 +2254,72 @@ class _Profile_screenState extends State<Profile_screen>
                                                       children: [
                                                         ValueListenableBuilder<
                                                             int>(
-                                                            valueListenable:
-                                                                seconds,
-                                                            builder: (context,
-                                                                value, child) {
-                                                              // Once the
-                                                              // countdown runs
-                                                              // out this reads
-                                                              // "Code expired"
-                                                              // instead of a
-                                                              // stuck 0m 0s.
-                                                              if (value <= 0) {
-                                                                return Text(
-                                                                  is2FACodeExpired
-                                                                      ? "Code expired"
-                                                                      : "",
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    color: Colors
-                                                                        .red,
-                                                                    fontSize:
-                                                                        14,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                  ),
-                                                                );
-                                                              }
-                                                              return RichText(
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                text: TextSpan(
-                                                                  children: [
-                                                                    TextSpan(
-                                                                      text:
-                                                                          "Code will expire in ",
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color: Colors
-                                                                            .grey[600],
-                                                                        fontSize:
-                                                                            14,
-                                                                        fontWeight:
-                                                                            FontWeight.w600,
-                                                                      ),
-                                                                    ),
-                                                                    TextSpan(
-                                                                      text:
-                                                                          "${getTimerString()}",
-                                                                      style:
-                                                                          const TextStyle(
-                                                                        color: Colors
-                                                                            .red,
-                                                                        fontSize:
-                                                                            14,
-                                                                        fontWeight:
-                                                                            FontWeight.w600,
-                                                                      ),
-                                                                    ),
-                                                                  ],
+                                                          valueListenable:
+                                                              seconds,
+                                                          builder: (context,
+                                                              value, child) {
+                                                            // Once the
+                                                            // countdown runs
+                                                            // out this reads
+                                                            // "Code expired"
+                                                            // instead of a
+                                                            // stuck 0m 0s.
+                                                            if (value <= 0) {
+                                                              return Text(
+                                                                is2FACodeExpired
+                                                                    ? "Code expired"
+                                                                    : "",
+                                                                style:
+                                                                    const TextStyle(
+                                                                  color: Colors
+                                                                      .red,
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
                                                                 ),
                                                               );
-                                                            },
-                                                          ),
+                                                            }
+                                                            return RichText(
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              text: TextSpan(
+                                                                children: [
+                                                                  TextSpan(
+                                                                    text:
+                                                                        "Code will expire in ",
+                                                                    style:
+                                                                        TextStyle(
+                                                                      color: Colors
+                                                                              .grey[
+                                                                          600],
+                                                                      fontSize:
+                                                                          14,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                    ),
+                                                                  ),
+                                                                  TextSpan(
+                                                                    text:
+                                                                        "${getTimerString()}",
+                                                                    style:
+                                                                        const TextStyle(
+                                                                      color: Colors
+                                                                          .red,
+                                                                      fontSize:
+                                                                          14,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            );
+                                                          },
+                                                        ),
                                                         GestureDetector(
                                                           onTap: () {
                                                             // Locked for the
@@ -2460,10 +2474,10 @@ class _Profile_screenState extends State<Profile_screen>
                                                         },
                                                         style: OutlinedButton
                                                             .styleFrom(
-                                                          side:
-                                                              const BorderSide(
-                                                                  color: Colors
-                                                                      .grey),
+                                                          side: const BorderSide(
+                                                              color: Color(
+                                                                  0xFFD3DAE5),
+                                                              width: 1.5),
                                                           shape:
                                                               RoundedRectangleBorder(
                                                             borderRadius:
@@ -2499,27 +2513,17 @@ class _Profile_screenState extends State<Profile_screen>
                                                         vertical: 12),
                                                 decoration: BoxDecoration(
                                                   color:
-                                                      const Color(0xFFE9F6EE),
+                                                      const Color(0xFFE7F7EE),
                                                   borderRadius:
                                                       BorderRadius.circular(10),
                                                 ),
                                                 child: Row(
                                                   children: [
-                                                    Container(
-                                                      height: 22,
-                                                      width: 22,
-                                                      decoration:
-                                                          const BoxDecoration(
+                                                    const Icon(Icons.check,
+                                                        size: 18,
                                                         color:
-                                                            Color(0xFF34A661),
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                      child: const Icon(
-                                                          Icons.check,
-                                                          size: 14,
-                                                          color: Colors.white),
-                                                    ),
-                                                    const SizedBox(width: 10),
+                                                            Color(0xFF1F9D55)),
+                                                    const SizedBox(width: 8),
                                                     Expanded(
                                                       child: Text(
                                                         email2FA
@@ -2529,7 +2533,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                                 : "2FA is enabled",
                                                         style: const TextStyle(
                                                           color:
-                                                              Color(0xFF2E8B57),
+                                                              Color(0xFF1F9D55),
                                                           fontSize: 14.5,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -2556,8 +2560,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                   padding:
                                                       const EdgeInsets.all(12),
                                                   decoration: BoxDecoration(
-                                                    color:
-                                                        const Color(0xFFF7F9FB),
+                                                    color: Colors.white,
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             12),
@@ -2567,27 +2570,14 @@ class _Profile_screenState extends State<Profile_screen>
                                                   ),
                                                   child: Row(
                                                     children: [
-                                                      Container(
-                                                        height: 40,
-                                                        width: 40,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: const Color(
-                                                              0xFFE4EDFB),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(10),
-                                                        ),
-                                                        child: Icon(
-                                                          sms2FA && !email2FA
-                                                              ? Icons
-                                                                  .sms_outlined
-                                                              : Icons
-                                                                  .mail_outline,
-                                                          size: 20,
-                                                          color: const Color(
-                                                              0xFF2F6FE4),
-                                                        ),
+                                                      Icon(
+                                                        sms2FA && !email2FA
+                                                            ? Icons.sms_outlined
+                                                            : Icons
+                                                                .mail_outline,
+                                                        size: 22,
+                                                        color: const Color(
+                                                            0xFF2C72E0),
                                                       ),
                                                       const SizedBox(width: 12),
                                                       Expanded(
@@ -2600,7 +2590,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                               "VERIFICATION METHOD",
                                                               style: TextStyle(
                                                                 color: Color(
-                                                                    0xFF8A93A3),
+                                                                    0xFF6B7A90),
                                                                 fontSize: 11,
                                                                 fontWeight:
                                                                     FontWeight
@@ -2673,25 +2663,42 @@ class _Profile_screenState extends State<Profile_screen>
                                                       // expired.
                                                       enabled:
                                                           !is2FACodeExpired,
+                                                      style: const TextStyle(
+                                                          fontSize: 15,
+                                                          letterSpacing: 1.5,
+                                                          color: Color(
+                                                              0xFF152B51)),
                                                       decoration:
                                                           InputDecoration(
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 14,
+                                                                vertical: 16),
                                                         hintText:
                                                             "Enter 6-digit code",
+                                                        hintStyle:
+                                                            const TextStyle(
+                                                                color: Color(
+                                                                    0xFF94A1B4),
+                                                                letterSpacing:
+                                                                    0.5),
                                                         border:
                                                             OutlineInputBorder(
                                                           borderRadius:
                                                               BorderRadius
-                                                                  .circular(8),
+                                                                  .circular(10),
                                                           borderSide:
                                                               const BorderSide(
-                                                                  color: Colors
-                                                                      .grey),
+                                                                  color: Color(
+                                                                      0xFFD3DAE5),
+                                                                  width: 1.5),
                                                         ),
                                                         focusedBorder:
                                                             OutlineInputBorder(
                                                           borderRadius:
                                                               BorderRadius
-                                                                  .circular(8),
+                                                                  .circular(10),
                                                           borderSide:
                                                               const BorderSide(
                                                                   color: Colors
@@ -2716,94 +2723,117 @@ class _Profile_screenState extends State<Profile_screen>
                                                     ),
 
                                                     const SizedBox(height: 20),
-                                                    SizedBox(
-                                                      width: double.infinity,
-                                                      height: 48,
-                                                      child: ElevatedButton(
-                                                        onPressed: (isVerifyingCode ||
-                                                                is2FACodeExpired)
-                                                            ? null
-                                                            : () =>
-                                                                _disable2FAWithVerification(),
-                                                        style: ElevatedButton
-                                                            .styleFrom(
-                                                          backgroundColor:
-                                                              Colors.red,
-                                                          foregroundColor:
-                                                              Colors.white,
-                                                          shape:
-                                                              RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        8),
-                                                          ),
-                                                        ),
-                                                        child: isVerifyingCode
-                                                            ? const SizedBox(
-                                                                width: 20,
-                                                                height: 20,
-                                                                child:
-                                                                    CircularProgressIndicator(
-                                                                  color: Colors
-                                                                      .white,
-                                                                  strokeWidth:
-                                                                      2,
+                                                    // Cancel and the destructive action side by side, Cancel leading —
+                                                    // same treatment as the other modules.
+                                                    Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: SizedBox(
+                                                            width:
+                                                                double.infinity,
+                                                            height: 44,
+                                                            child:
+                                                                OutlinedButton(
+                                                              onPressed: () {
+                                                                // Leaving the flow
+                                                                // must not leave a
+                                                                // countdown ticking.
+                                                                stopTimer();
+                                                                setState(() {
+                                                                  showDisableVerification =
+                                                                      false;
+                                                                  disableVerificationController
+                                                                      .clear();
+                                                                });
+                                                              },
+                                                              style:
+                                                                  OutlinedButton
+                                                                      .styleFrom(
+                                                                side: const BorderSide(
+                                                                    color: Color(
+                                                                        0xFFD3DAE5),
+                                                                    width: 1.5),
+                                                                shape:
+                                                                    RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8),
                                                                 ),
-                                                              )
-                                                            : const Text(
-                                                                "Disable 2FA",
+                                                              ),
+                                                              child: const Text(
+                                                                "Cancel",
                                                                 style:
                                                                     TextStyle(
                                                                   fontSize: 16,
                                                                   fontWeight:
                                                                       FontWeight
                                                                           .w600,
+                                                                  color: Colors
+                                                                      .grey,
                                                                 ),
                                                               ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 12),
-                                                    SizedBox(
-                                                      width: double.infinity,
-                                                      height: 48,
-                                                      child: OutlinedButton(
-                                                        onPressed: () {
-                                                          // Leaving the flow
-                                                          // must not leave a
-                                                          // countdown ticking.
-                                                          stopTimer();
-                                                          setState(() {
-                                                            showDisableVerification =
-                                                                false;
-                                                            disableVerificationController
-                                                                .clear();
-                                                          });
-                                                        },
-                                                        style: OutlinedButton
-                                                            .styleFrom(
-                                                          side:
-                                                              const BorderSide(
-                                                                  color: Colors
-                                                                      .grey),
-                                                          shape:
-                                                              RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        8),
+                                                            ),
                                                           ),
                                                         ),
-                                                        child: const Text(
-                                                          "Cancel",
-                                                          style: TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: Colors.grey,
+                                                        const SizedBox(
+                                                            width: 12),
+                                                        Expanded(
+                                                          child: SizedBox(
+                                                            width:
+                                                                double.infinity,
+                                                            height: 44,
+                                                            child:
+                                                                ElevatedButton(
+                                                              onPressed: (isVerifyingCode ||
+                                                                      is2FACodeExpired)
+                                                                  ? null
+                                                                  : () =>
+                                                                      _disable2FAWithVerification(),
+                                                              style:
+                                                                  ElevatedButton
+                                                                      .styleFrom(
+                                                                backgroundColor:
+                                                                    const Color(
+                                                                        0xFFDC3545),
+                                                                foregroundColor:
+                                                                    Colors
+                                                                        .white,
+                                                                shape:
+                                                                    RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8),
+                                                                ),
+                                                              ),
+                                                              child: isVerifyingCode
+                                                                  ? const SizedBox(
+                                                                      width: 20,
+                                                                      height:
+                                                                          20,
+                                                                      child:
+                                                                          CircularProgressIndicator(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        strokeWidth:
+                                                                            2,
+                                                                      ),
+                                                                    )
+                                                                  : const Text(
+                                                                      "Disable 2FA",
+                                                                      style:
+                                                                          TextStyle(
+                                                                        fontSize:
+                                                                            16,
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
+                                                                      ),
+                                                                    ),
+                                                            ),
                                                           ),
                                                         ),
-                                                      ),
+                                                      ],
                                                     ),
                                                   ],
                                                 ),
@@ -2962,30 +2992,35 @@ class _Profile_screenState extends State<Profile_screen>
                                                               const SizedBox(
                                                                   width: 8),
                                                               Flexible(
-                                                                child: codes.isEmpty
+                                                                child: codes
+                                                                        .isEmpty
                                                                     ? const Text(
                                                                         "Backup Codes",
                                                                         style:
                                                                             TextStyle(
                                                                           fontSize:
-                                                                              12,
+                                                                              14,
                                                                           fontWeight:
                                                                               FontWeight.w600,
                                                                         ),
                                                                         textAlign:
                                                                             TextAlign.center,
+                                                                        maxLines:
+                                                                            2,
                                                                       )
                                                                     : const Text(
                                                                         "Regenerate Backup Codes",
                                                                         style:
                                                                             TextStyle(
                                                                           fontSize:
-                                                                              12,
+                                                                              14,
                                                                           fontWeight:
                                                                               FontWeight.w600,
                                                                         ),
                                                                         textAlign:
                                                                             TextAlign.center,
+                                                                        maxLines:
+                                                                            2,
                                                                       ),
                                                               ),
                                                             ],
@@ -3092,27 +3127,12 @@ class _Profile_screenState extends State<Profile_screen>
                                                             .start,
                                                     children: [
                                                       Text(
-                                                        "Two-Factor Authentication",
+                                                        "Two-Factor Authentication (2FA)",
                                                         style: TextStyle(
                                                           fontSize: 16,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           color: blueColor,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        showDisableVerification
-                                                            ? "Verification required to disable"
-                                                            : enble2FA
-                                                                ? "Protecting your account"
-                                                                : "Adds a second step at sign-in",
-                                                        style: const TextStyle(
-                                                          color: Color(
-                                                              0xFF8A93A3),
-                                                          fontSize: 12.5,
-                                                          fontWeight:
-                                                              FontWeight.w500,
                                                         ),
                                                       ),
                                                     ],
@@ -3123,8 +3143,8 @@ class _Profile_screenState extends State<Profile_screen>
                                                   // twoFactorToggle: on when
                                                   // 2FA is enabled OR while
                                                   // setting it up.
-                                                  initialValue: enble2FA ||
-                                                      show2FASetup,
+                                                  initialValue:
+                                                      enble2FA || show2FASetup,
                                                   onChanged: (value) {
                                                     if (isVerifyingCode) return;
                                                     if (value) {
@@ -3214,7 +3234,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                     enabled: _canUseEmail2FA,
                                                     value: 'email',
                                                   ),
-                                                                                                  const SizedBox(height: 12),
+                                                  const SizedBox(height: 12),
 
                                                   // Enable 2FA Button
                                                   SizedBox(
@@ -3299,6 +3319,11 @@ class _Profile_screenState extends State<Profile_screen>
                                                     Form(
                                                       key: _formKey,
                                                       child: TextFormField(
+                                                        style: const TextStyle(
+                                                            fontSize: 15,
+                                                            letterSpacing: 1.5,
+                                                            color: Color(
+                                                                0xFF152B51)),
                                                         autovalidateMode:
                                                             AutovalidateMode
                                                                 .onUserInteraction,
@@ -3326,25 +3351,38 @@ class _Profile_screenState extends State<Profile_screen>
                                                             !is2FACodeExpired,
                                                         decoration:
                                                             InputDecoration(
+                                                          contentPadding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal:
+                                                                      14,
+                                                                  vertical: 16),
                                                           hintText:
                                                               "Enter 6-digit code",
+                                                          hintStyle:
+                                                              const TextStyle(
+                                                                  color: Color(
+                                                                      0xFF94A1B4),
+                                                                  letterSpacing:
+                                                                      0.5),
                                                           border:
                                                               OutlineInputBorder(
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        8),
+                                                                        10),
                                                             borderSide:
                                                                 const BorderSide(
-                                                                    color: Colors
-                                                                        .grey),
+                                                                    color: Color(
+                                                                        0xFFD3DAE5),
+                                                                    width: 1.5),
                                                           ),
                                                           focusedBorder:
                                                               OutlineInputBorder(
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        8),
+                                                                        10),
                                                             borderSide:
                                                                 BorderSide(
                                                                     color:
@@ -3356,7 +3394,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        8),
+                                                                        10),
                                                             borderSide:
                                                                 const BorderSide(
                                                                     color: Colors
@@ -3368,7 +3406,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        8),
+                                                                        10),
                                                             borderSide:
                                                                 const BorderSide(
                                                                     color: Colors
@@ -3387,71 +3425,73 @@ class _Profile_screenState extends State<Profile_screen>
                                                       children: [
                                                         ValueListenableBuilder<
                                                             int>(
-                                                            valueListenable:
-                                                                seconds,
-                                                            builder: (context,
-                                                                value, child) {
-                                                              // Once the
-                                                              // countdown runs
-                                                              // out this reads
-                                                              // "Code expired"
-                                                              // instead of a
-                                                              // stuck 0m 0s.
-                                                              if (value <= 0) {
-                                                                return Text(
-                                                                  is2FACodeExpired
-                                                                      ? "Code expired"
-                                                                      : "",
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    color: Colors
-                                                                        .red,
-                                                                    fontSize:
-                                                                        14,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                  ),
-                                                                );
-                                                              }
-                                                              return RichText(
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                text: TextSpan(
-                                                                  children: [
-                                                                    // make text smaller
-                                                                    TextSpan(
-                                                                      text:
-                                                                          "Code will expire in ",
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color: Colors
-                                                                            .grey[600],
-                                                                        fontSize:
-                                                                            12,
-                                                                        fontWeight:
-                                                                            FontWeight.w600,
-                                                                      ),
-                                                                    ),
-                                                                    TextSpan(
-                                                                      text:
-                                                                          "${getTimerString()}",
-                                                                      style:
-                                                                          const TextStyle(
-                                                                        color: Colors
-                                                                            .red,
-                                                                        fontSize:
-                                                                            12,
-                                                                        fontWeight:
-                                                                            FontWeight.w600,
-                                                                      ),
-                                                                    ),
-                                                                  ],
+                                                          valueListenable:
+                                                              seconds,
+                                                          builder: (context,
+                                                              value, child) {
+                                                            // Once the
+                                                            // countdown runs
+                                                            // out this reads
+                                                            // "Code expired"
+                                                            // instead of a
+                                                            // stuck 0m 0s.
+                                                            if (value <= 0) {
+                                                              return Text(
+                                                                is2FACodeExpired
+                                                                    ? "Code expired"
+                                                                    : "",
+                                                                style:
+                                                                    const TextStyle(
+                                                                  color: Colors
+                                                                      .red,
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
                                                                 ),
                                                               );
-                                                            },
-                                                          ),
+                                                            }
+                                                            return RichText(
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              text: TextSpan(
+                                                                children: [
+                                                                  // make text smaller
+                                                                  TextSpan(
+                                                                    text:
+                                                                        "Code will expire in ",
+                                                                    style:
+                                                                        TextStyle(
+                                                                      color: Colors
+                                                                              .grey[
+                                                                          600],
+                                                                      fontSize:
+                                                                          12,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                    ),
+                                                                  ),
+                                                                  TextSpan(
+                                                                    text:
+                                                                        "${getTimerString()}",
+                                                                    style:
+                                                                        const TextStyle(
+                                                                      color: Colors
+                                                                          .red,
+                                                                      fontSize:
+                                                                          12,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            );
+                                                          },
+                                                        ),
                                                         GestureDetector(
                                                           onTap: () {
                                                             // Locked for the
@@ -3606,10 +3646,10 @@ class _Profile_screenState extends State<Profile_screen>
                                                         },
                                                         style: OutlinedButton
                                                             .styleFrom(
-                                                          side:
-                                                              const BorderSide(
-                                                                  color: Colors
-                                                                      .grey),
+                                                          side: const BorderSide(
+                                                              color: Color(
+                                                                  0xFFD3DAE5),
+                                                              width: 1.5),
                                                           shape:
                                                               RoundedRectangleBorder(
                                                             borderRadius:
@@ -3646,27 +3686,17 @@ class _Profile_screenState extends State<Profile_screen>
                                                         vertical: 12),
                                                 decoration: BoxDecoration(
                                                   color:
-                                                      const Color(0xFFE9F6EE),
+                                                      const Color(0xFFE7F7EE),
                                                   borderRadius:
                                                       BorderRadius.circular(10),
                                                 ),
                                                 child: Row(
                                                   children: [
-                                                    Container(
-                                                      height: 22,
-                                                      width: 22,
-                                                      decoration:
-                                                          const BoxDecoration(
+                                                    const Icon(Icons.check,
+                                                        size: 18,
                                                         color:
-                                                            Color(0xFF34A661),
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                      child: const Icon(
-                                                          Icons.check,
-                                                          size: 14,
-                                                          color: Colors.white),
-                                                    ),
-                                                    const SizedBox(width: 10),
+                                                            Color(0xFF1F9D55)),
+                                                    const SizedBox(width: 8),
                                                     Expanded(
                                                       child: Text(
                                                         email2FA
@@ -3676,7 +3706,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                                 : "2FA is enabled",
                                                         style: const TextStyle(
                                                           color:
-                                                              Color(0xFF2E8B57),
+                                                              Color(0xFF1F9D55),
                                                           fontSize: 14.5,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -3703,8 +3733,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                   padding:
                                                       const EdgeInsets.all(12),
                                                   decoration: BoxDecoration(
-                                                    color:
-                                                        const Color(0xFFF7F9FB),
+                                                    color: Colors.white,
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             12),
@@ -3714,27 +3743,14 @@ class _Profile_screenState extends State<Profile_screen>
                                                   ),
                                                   child: Row(
                                                     children: [
-                                                      Container(
-                                                        height: 40,
-                                                        width: 40,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: const Color(
-                                                              0xFFE4EDFB),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(10),
-                                                        ),
-                                                        child: Icon(
-                                                          sms2FA && !email2FA
-                                                              ? Icons
-                                                                  .sms_outlined
-                                                              : Icons
-                                                                  .mail_outline,
-                                                          size: 20,
-                                                          color: const Color(
-                                                              0xFF2F6FE4),
-                                                        ),
+                                                      Icon(
+                                                        sms2FA && !email2FA
+                                                            ? Icons.sms_outlined
+                                                            : Icons
+                                                                .mail_outline,
+                                                        size: 22,
+                                                        color: const Color(
+                                                            0xFF2C72E0),
                                                       ),
                                                       const SizedBox(width: 12),
                                                       Expanded(
@@ -3747,7 +3763,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                               "VERIFICATION METHOD",
                                                               style: TextStyle(
                                                                 color: Color(
-                                                                    0xFF8A93A3),
+                                                                    0xFF6B7A90),
                                                                 fontSize: 11,
                                                                 fontWeight:
                                                                     FontWeight
@@ -3811,13 +3827,13 @@ class _Profile_screenState extends State<Profile_screen>
                                                               14),
                                                       decoration: BoxDecoration(
                                                         color: const Color(
-                                                            0xFFF8FAFC),
+                                                            0xFFFFFFFF),
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(12),
                                                         border: Border.all(
                                                             color: const Color(
-                                                                0xFFE9EDF2)),
+                                                                0xFFE4E8EF)),
                                                       ),
                                                       child: Column(
                                                         crossAxisAlignment:
@@ -3841,7 +3857,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                             style:
                                                                 const TextStyle(
                                                               color: Color(
-                                                                  0xFF8A93A3),
+                                                                  0xFF6B7A90),
                                                               fontSize: 12.5,
                                                               fontWeight:
                                                                   FontWeight
@@ -3852,6 +3868,12 @@ class _Profile_screenState extends State<Profile_screen>
                                                               height: 12),
                                                           // Verification Code Input Field
                                                           TextField(
+                                                            style: const TextStyle(
+                                                                fontSize: 15,
+                                                                letterSpacing:
+                                                                    1.5,
+                                                                color: Color(
+                                                                    0xFF152B51)),
                                                             controller:
                                                                 disableVerificationController,
                                                             keyboardType:
@@ -3866,8 +3888,20 @@ class _Profile_screenState extends State<Profile_screen>
                                                                 !is2FACodeExpired,
                                                             decoration:
                                                                 InputDecoration(
+                                                              contentPadding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                      horizontal:
+                                                                          14,
+                                                                      vertical:
+                                                                          16),
                                                               hintText:
                                                                   "Enter 6-digit code",
+                                                              hintStyle: const TextStyle(
+                                                                  color: Color(
+                                                                      0xFF94A1B4),
+                                                                  letterSpacing:
+                                                                      0.5),
                                                               filled: true,
                                                               fillColor:
                                                                   Colors.white,
@@ -3879,7 +3913,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                                             10),
                                                                 borderSide: const BorderSide(
                                                                     color: Color(
-                                                                        0xFFE2E6EC)),
+                                                                        0xFFD3DAE5)),
                                                               ),
                                                               enabledBorder:
                                                                   OutlineInputBorder(
@@ -3889,7 +3923,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                                             10),
                                                                 borderSide: const BorderSide(
                                                                     color: Color(
-                                                                        0xFFE2E6EC)),
+                                                                        0xFFD3DAE5)),
                                                               ),
                                                               focusedBorder:
                                                                   OutlineInputBorder(
@@ -3897,10 +3931,12 @@ class _Profile_screenState extends State<Profile_screen>
                                                                     BorderRadius
                                                                         .circular(
                                                                             10),
-                                                                borderSide: BorderSide(
-                                                                    color:
-                                                                        blueColor,
-                                                                    width: 1.5),
+                                                                borderSide:
+                                                                    BorderSide(
+                                                                        color:
+                                                                            blueColor,
+                                                                        width:
+                                                                            1.5),
                                                               ),
                                                               counterText: "",
                                                             ),
@@ -3933,7 +3969,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                       children: [
                                                         Expanded(
                                                           child: SizedBox(
-                                                            height: 48,
+                                                            height: 44,
                                                             child:
                                                                 OutlinedButton(
                                                               onPressed: () {
@@ -3983,7 +4019,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                             width: 12),
                                                         Expanded(
                                                           child: SizedBox(
-                                                            height: 48,
+                                                            height: 44,
                                                             child:
                                                                 ElevatedButton(
                                                               onPressed: (isVerifyingCode ||
@@ -3996,7 +4032,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                                       .styleFrom(
                                                                 backgroundColor:
                                                                     const Color(
-                                                                        0xFFD96A45),
+                                                                        0xFFDC3545),
                                                                 foregroundColor:
                                                                     Colors
                                                                         .white,
@@ -4069,25 +4105,42 @@ class _Profile_screenState extends State<Profile_screen>
                                                       keyboardType:
                                                           TextInputType.number,
                                                       maxLength: 6,
+                                                      style: const TextStyle(
+                                                          fontSize: 15,
+                                                          letterSpacing: 1.5,
+                                                          color: Color(
+                                                              0xFF152B51)),
                                                       decoration:
                                                           InputDecoration(
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 14,
+                                                                vertical: 16),
                                                         hintText:
                                                             "Enter 6-digit code",
+                                                        hintStyle:
+                                                            const TextStyle(
+                                                                color: Color(
+                                                                    0xFF94A1B4),
+                                                                letterSpacing:
+                                                                    0.5),
                                                         border:
                                                             OutlineInputBorder(
                                                           borderRadius:
                                                               BorderRadius
-                                                                  .circular(8),
+                                                                  .circular(10),
                                                           borderSide:
                                                               const BorderSide(
-                                                                  color: Colors
-                                                                      .grey),
+                                                                  color: Color(
+                                                                      0xFFD3DAE5),
+                                                                  width: 1.5),
                                                         ),
                                                         focusedBorder:
                                                             OutlineInputBorder(
                                                           borderRadius:
                                                               BorderRadius
-                                                                  .circular(8),
+                                                                  .circular(10),
                                                           borderSide:
                                                               BorderSide(
                                                                   color:
@@ -4141,22 +4194,24 @@ class _Profile_screenState extends State<Profile_screen>
                                                                     style:
                                                                         TextStyle(
                                                                       fontSize:
-                                                                          16,
+                                                                          14,
                                                                       fontWeight:
                                                                           FontWeight
                                                                               .w600,
                                                                     ),
+                                                                    maxLines: 2,
                                                                   )
                                                                 : const Text(
                                                                     "Backup Codes",
                                                                     style:
                                                                         TextStyle(
                                                                       fontSize:
-                                                                          16,
+                                                                          14,
                                                                       fontWeight:
                                                                           FontWeight
                                                                               .w600,
                                                                     ),
+                                                                    maxLines: 2,
                                                                   ),
                                                       ),
                                                     ),
@@ -4178,10 +4233,10 @@ class _Profile_screenState extends State<Profile_screen>
                                                         },
                                                         style: OutlinedButton
                                                             .styleFrom(
-                                                          side:
-                                                              const BorderSide(
-                                                                  color: Colors
-                                                                      .grey),
+                                                          side: const BorderSide(
+                                                              color: Color(
+                                                                  0xFFD3DAE5),
+                                                              width: 1.5),
                                                           shape:
                                                               RoundedRectangleBorder(
                                                             borderRadius:
@@ -4360,26 +4415,31 @@ class _Profile_screenState extends State<Profile_screen>
                                                                   const SizedBox(
                                                                       width: 8),
                                                                   Flexible(
-                                                                    child: codes.isEmpty
+                                                                    child: codes
+                                                                            .isEmpty
                                                                         ? const Text(
                                                                             "Backup Codes",
                                                                             style:
                                                                                 TextStyle(
-                                                                              fontSize: 12,
+                                                                              fontSize: 14,
                                                                               fontWeight: FontWeight.w600,
                                                                             ),
                                                                             textAlign:
                                                                                 TextAlign.center,
+                                                                            maxLines:
+                                                                                2,
                                                                           )
                                                                         : const Text(
                                                                             "Regenerate Backup Codes",
                                                                             style:
                                                                                 TextStyle(
-                                                                              fontSize: 12,
+                                                                              fontSize: 14,
                                                                               fontWeight: FontWeight.w600,
                                                                             ),
                                                                             textAlign:
                                                                                 TextAlign.center,
+                                                                            maxLines:
+                                                                                2,
                                                                           ),
                                                                   ),
                                                                 ],
@@ -4539,22 +4599,25 @@ class _Profile_screenState extends State<Profile_screen>
                                                                         width:
                                                                             8),
                                                                     Flexible(
-                                                                      child: codes.isEmpty
+                                                                      child: codes
+                                                                              .isEmpty
                                                                           ? const Text(
                                                                               "Backup Codes",
                                                                               style: TextStyle(
-                                                                                fontSize: 12,
+                                                                                fontSize: 14,
                                                                                 fontWeight: FontWeight.w600,
                                                                               ),
                                                                               textAlign: TextAlign.center,
+                                                                              maxLines: 2,
                                                                             )
                                                                           : const Text(
                                                                               "Regenerate Backup Codes",
                                                                               style: TextStyle(
-                                                                                fontSize: 12,
+                                                                                fontSize: 14,
                                                                                 fontWeight: FontWeight.w600,
                                                                               ),
                                                                               textAlign: TextAlign.center,
+                                                                              maxLines: 2,
                                                                             ),
                                                                     ),
                                                                   ],
@@ -4717,9 +4780,7 @@ class _Profile_screenState extends State<Profile_screen>
         // Web design: each method is a selectable card - navy border + soft
         // blue fill when chosen, grey border otherwise.
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFE9EFFB)
-              : const Color(0xFFF7F9FB),
+          color: isSelected ? const Color(0xFFE9EFFB) : const Color(0xFFF7F9FB),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? blueColor : const Color(0xFFEDF0F4),
@@ -4754,9 +4815,8 @@ class _Profile_screenState extends State<Profile_screen>
                     detail,
                     style: TextStyle(
                       fontSize: 13,
-                      color: enabled
-                          ? Colors.grey[600]
-                          : const Color(0xFFF08A76),
+                      color:
+                          enabled ? Colors.grey[600] : const Color(0xFFF08A76),
                       fontWeight: FontWeight.w600,
                     ),
                     overflow: TextOverflow.visible,
@@ -4766,13 +4826,10 @@ class _Profile_screenState extends State<Profile_screen>
             ),
             const SizedBox(width: 8),
             Icon(
-              value == 'sms'
-                  ? Icons.smartphone_outlined
-                  : Icons.mail_outline,
+              value == 'sms' ? Icons.smartphone_outlined : Icons.mail_outline,
               size: 20,
-              color: enabled
-                  ? const Color(0xFF8A93A3)
-                  : const Color(0xFFC3C9D3),
+              color:
+                  enabled ? const Color(0xFF6B7A90) : const Color(0xFFC3C9D3),
             ),
             const SizedBox(width: 6),
           ],

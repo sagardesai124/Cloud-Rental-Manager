@@ -819,7 +819,14 @@ class _AddTenantState extends State<AddTenant> {
                 ? null
                 : () async {
                     setState(() => formValid = true);
-                    if (_formkey.currentState!.validate()) {
+                    // The override-fee message is a plain string driven by a
+                    // text listener, so Form.validate() never sees it: an
+                    // invalid or never-typed percentage showed the red text
+                    // and saved anyway. Re-run it here so a never-touched
+                    // field is checked too, and let it block the save.
+                    if (enableOverrideFee) _validateInput();
+                    final feeOk = !enableOverrideFee || overRideFeeError.isEmpty;
+                    if (_formkey.currentState!.validate() && feeOk) {
                       setState(() => formValid = false);
                       await addTenant();
                     }

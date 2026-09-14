@@ -139,11 +139,14 @@ class _DashboardState extends State<Dashboard>
       final jsonData = json.decode(response.body);
       if (jsonData["statusCode"] == 200) {
         setState(() {
-          countList[1] = jsonData['tenantCount'];
-          countList[0] = jsonData['rentalCount'];
-          countList[3] = jsonData['vendorCount'];
-          countList[2] = jsonData['applicantCount'];
-          countList[4] = jsonData['workOrderCount'];
+          // Null-safe like the Staff dashboard (:166-169). A null or double
+          // here threw inside setState, skipped `loading = false` below, and
+          // left the dashboard on the loader with no way to refresh.
+          countList[1] = (jsonData['tenantCount'] as num?)?.toInt() ?? 0;
+          countList[0] = (jsonData['rentalCount'] as num?)?.toInt() ?? 0;
+          countList[3] = (jsonData['vendorCount'] as num?)?.toInt() ?? 0;
+          countList[2] = (jsonData['applicantCount'] as num?)?.toInt() ?? 0;
+          countList[4] = (jsonData['workOrderCount'] as num?)?.toInt() ?? 0;
           loading = false;
         });
       } else {
@@ -154,6 +157,14 @@ class _DashboardState extends State<Dashboard>
       }
     } catch (e) {
       logError('Error fetching data: $e');
+      // Staff resets the flag on failure (StaffModule dashboard :200-204);
+      // Admin never did, so a failed or malformed response kept the spinner
+      // up until the app was killed.
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     } finally {}
   }
 
@@ -281,34 +292,49 @@ class _DashboardState extends State<Dashboard>
       _connectivityResult = connectiondata;
     });
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? id = prefs.getString("adminId");
-    String? token = prefs.getString('token');
-    final response = await apiGet(
-        Uri.parse('${Api_url}/api/rentals/occupied_properties/$id'),
-        headers: {
-          "authorization": "CRM $token",
-          "id": "CRM $id",
-          "Content-Type": "application/json"
-        });
-    // print('${Api_url}/api/payment/admin_balance/$id');
-    // print(response.body);
-    if (response.statusCode == 200) {
-      final jsonData = json.decode(response.body);
-      if (jsonData["statusCode"] == 200) {
-        final dataaa = jsonData["data"];
-        //   print("dataaaaa ${dataaa.length}");
-        setState(() {
-          data = [];
-          dataaa.forEach((element) {
-            data.add(Map<String, dynamic>.from(element));
+    // This method sets `loading = true` only after the connectivity checks
+    // above, so it can re-raise the flag after fetchData() has already
+    // cleared it; and it used to throw out of the method on any non-200
+    // with no reset at all. Either way the dashboard sat on the loader
+    // for good. Whatever happens below, the flag is released in `finally`.
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? id = prefs.getString("adminId");
+      String? token = prefs.getString('token');
+      final response = await apiGet(
+          Uri.parse('${Api_url}/api/rentals/occupied_properties/$id'),
+          headers: {
+            "authorization": "CRM $token",
+            "id": "CRM $id",
+            "Content-Type": "application/json"
           });
-        });
+      // print('${Api_url}/api/payment/admin_balance/$id');
+      // print(response.body);
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData["statusCode"] == 200) {
+          final dataaa = jsonData["data"];
+          //   print("dataaaaa ${dataaa.length}");
+          setState(() {
+            data = [];
+            dataaa.forEach((element) {
+              data.add(Map<String, dynamic>.from(element));
+            });
+          });
+        } else {
+          throw Exception('Failed to load dataaaaaaaa');
+        }
       } else {
-        throw Exception('Failed to load dataaaaaaaa');
+        throw Exception('Failed to load datawwwwww');
       }
-    } else {
-      throw Exception('Failed to load datawwwwww');
+    } catch (e) {
+      logError('Error fetching chart data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 

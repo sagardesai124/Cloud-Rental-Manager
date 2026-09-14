@@ -83,6 +83,8 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
   @override
   void dispose() {
     _connectivitySub?.cancel();
+    _searchDebounce?.cancel();
+    _searchController.dispose();
     fromDate.dispose();
     toDate.dispose();
     super.dispose();
@@ -201,6 +203,11 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
         month: apiMonth,
         page: currentPage,
         limit: itemsPerPage,
+        // The report is paginated server-side, so the search has to go with
+        // it. Filtering the page the server had already returned could only
+        // ever match rows the user was standing on, and left the pager and
+        // the total reading the unfiltered figures.
+        search: searchvalue,
         sortKey: sortKey,
         sortOrder: sortOrder,
       );
@@ -237,6 +244,33 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
   int? _sortColumnIndex;
   bool _sortAscending = true;
   String searchvalue = "";
+  // Without a controller the field could not be cleared in code, so resetting
+  // `searchvalue` when a filter changed left the typed word on screen while
+  // every row was showing.
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+
+  /// Search now round-trips to the server, so hold off until typing settles.
+  void _onSearchChanged(String value) {
+    setState(() {
+      searchvalue = value;
+    });
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      setState(() {
+        currentPage = 1; // a new search starts from the first page
+      });
+      refreshData();
+    });
+  }
+
+  /// Clears the box as well as the value — used when a filter dropdown changes.
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    searchvalue = "";
+  }
   String? selectedValue;
 
   int totalrecords = 0;
@@ -1289,13 +1323,21 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                         pagination: snapshot.data!.pagination)
                                   else if (chargeType == 'Charges' &&
                                       monthType == 'Current Month')
+                                    // Web parity (Report.jsx:773 reads
+                                    // tableData.total): the bucket's own total
+                                    // follows the search, whereas the
+                                    // dashboard-level currentMonthRentDue is a
+                                    // separate unfiltered metric — it kept
+                                    // showing the full amount while the table
+                                    // was filtered down or empty.
                                     chargeTable(snapshot.data!.currentDueRentCharges?.charges ?? [],
-                                        snapshot.data!.currentMonthRentDue ?? 0.0,
+                                        snapshot.data!.currentDueRentCharges?.total?.toDouble() ?? 0.0,
                                         pagination: snapshot.data!.pagination)
                                   else if (chargeType == 'Charges' &&
                                       monthType == 'Last Month')
                                     chargeTable(
-                                        snapshot.data!.lastDueRentCharges?.charges ?? [], snapshot.data!.lastMonthRentDue ?? 0.0,
+                                        snapshot.data!.lastDueRentCharges?.charges ?? [],
+                                        snapshot.data!.lastDueRentCharges?.total?.toDouble() ?? 0.0,
                                         pagination: snapshot.data!.pagination)
                                   else if (chargeType == "Payment" &&
                                       monthType == "Current Month")
@@ -1368,32 +1410,26 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
             const SizedBox(height: 5),
             _buildHeaders(),
             if (currentPageData.length == 0)
-              Padding(
-                padding: const EdgeInsets.all(15.0),
-                child: Text("No data available"),
-              ),
+              // An empty page during a search means "nothing matched", which
+              // reads differently from a report with no data at all.
+              searchvalue.trim().isNotEmpty
+                  ? kNoSearchResults(context)
+                  : const Padding(
+                      padding: EdgeInsets.all(15.0),
+                      child: Text("No data available"),
+                    ),
             if (currentPageData.length > 0)
               Container(
                 // decoration: BoxDecoration(
                 //     border:
                 //         Border.all(color: Color.fromRGBO(152, 162, 179, .5))),
                 child: Column(
-                  children: currentPageData.isEmpty
-                      ? [kNoSearchResults(context)]
-                      : currentPageData.asMap().entries.where((entry) {
-                    // Filter the data based on the search input
-                    Transaction item = entry.value;
-                    String address =
-                        item.rentalData?.address?.toLowerCase() ?? '';
-                    String tenantFirstName =
-                        item.tenantData?.tenantFirstName?.toLowerCase() ?? '';
-                    String tenantLastName =
-                        item.tenantData?.tenantLastName?.toLowerCase() ?? '';
-                    String searchLower = searchvalue.toLowerCase();
-                    return address.contains(searchLower) ||
-                        tenantFirstName.contains(searchLower) ||
-                        tenantLastName.contains(searchLower);
-                  }).map((entry) {
+                  // The server applies the search now, so the rows it returns
+                  // are already the matches. Filtering them again here is what
+                  // produced the blank body: `isEmpty` was checked before the
+                  // filter ran, so ten rows with zero matches drew nothing at
+                  // all and the "no results" message could never appear.
+                  children: currentPageData.asMap().entries.map((entry) {
                     int rowIndex = entry.key;
                     Transaction item = entry.value;
                     bool isRowExpanded = expandedRowIndex == rowIndex;
@@ -1597,7 +1633,11 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                   fetchRentPastDueData(report: true);
                             },
                     ),
-                    Text('Page ${currentPage} of $totalPages'),
+                    // A search that matches nothing returns totalPages 0 while
+                    // currentPage is still 1, which read as "Page 1 of 0".
+                    Text(totalPages < 1
+                        ? 'Page 0 of 0'
+                        : 'Page $currentPage of $totalPages'),
                     IconButton(
                       icon: FaIcon(
                         FontAwesomeIcons.circleChevronRight,
@@ -1690,7 +1730,7 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                       monthType = "Current Month";
                                     }
                                     // Reset search when filters change
-                                    searchvalue = "";
+                                    _clearSearch();
                                   });
                                   // Refresh data when charge type changes
                                   refreshData();
@@ -1766,7 +1806,7 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                     setState(() {
                                       monthType = value;
                                       // Reset search when filters change
-                                      searchvalue = "";
+                                      _clearSearch();
                                     });
                                     // Refresh data when month type changes
                                     refreshData();
@@ -1826,17 +1866,8 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                     MediaQuery.of(context).size.width < 500
                                         ? 12
                                         : 14),
-                            // onChanged: (value) {
-                            //   setState(() {
-                            //     cvverror = false;
-                            //   });
-                            // },
-                            // controller: cvv,
-                            onChanged: (value) {
-                              setState(() {
-                                searchvalue = value;
-                              });
-                            },
+                            controller: _searchController,
+                            onChanged: _onSearchChanged,
                             cursorColor: blueColor,
                             decoration: InputDecoration(
                               border: InputBorder.none,

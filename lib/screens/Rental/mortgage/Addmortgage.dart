@@ -1287,7 +1287,6 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
         // Build base mortgage data
         final mortgageData = <String, dynamic>{
           'properties': propertyIds,
-          'payment_entry_mode': 'principal_interest',
           'bank_name': _bankNameController.text.trim(),
           'bank_address': _bankAddressController.text.trim(),
           'bank_contact_no': _bankContactController.text.trim(),
@@ -1309,10 +1308,20 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
           'status':
               _statusController.text.trim().toLowerCase().replaceAll(' ', '_'),
           'remaining_balance': _remainingBalanceController.text.trim(),
-          'monthly_principal':
-              double.tryParse(_principalController.text.trim()) ?? 0,
-          'monthly_interest':
-              double.tryParse(_interestController.text.trim()) ?? 0,
+          // Only declare a principal/interest breakdown when the user has
+          // one. Sending 0/0 with payment_entry_mode set made the server
+          // recompute monthly_payment as 0 + 0 and overwrite the stored value
+          // on every Update, even with no edit (MortgageController.js:1344).
+          // With these keys absent the server keeps the mode as 'total' and
+          // persists the monthly_payment sent below unchanged.
+          if (_principalController.text.trim().isNotEmpty ||
+              _interestController.text.trim().isNotEmpty) ...{
+            'payment_entry_mode': 'principal_interest',
+            'monthly_principal':
+                double.tryParse(_principalController.text.trim()) ?? 0,
+            'monthly_interest':
+                double.tryParse(_interestController.text.trim()) ?? 0,
+          },
           'monthly_payment': double.tryParse(
                   _monthlyPaymentDisplayController.text.trim()) ??
               0,

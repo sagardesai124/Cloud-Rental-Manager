@@ -84,6 +84,7 @@ class _Profile_screenState extends State<Profile_screen>
   /// Guards the Update button while a save is in flight — the handler awaits
   /// the API now, so without it a double tap would fire two writes.
   bool _isSavingProfile = false;
+
   /// Required by [NetworkRetryState]: re-issue this screen's own load.
   /// These are the data calls `initState` makes; nothing that sets up
   /// controllers, filters or defaults is repeated, so a reload cannot
@@ -92,8 +93,10 @@ class _Profile_screenState extends State<Profile_screen>
   Future<void> reloadData() async {
     if (!mounted) return;
     setState(() {
-      _fetchProfile();;
-      _loadOldPassword();;
+      _fetchProfile();
+      ;
+      _loadOldPassword();
+      ;
     });
   }
 
@@ -230,7 +233,7 @@ class _Profile_screenState extends State<Profile_screen>
                         TextSpan(
                           text: getTimerString(),
                           style: const TextStyle(
-                            color: Color(0xFFE2574C),
+                            color: Color(0xFFDC3545),
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -244,7 +247,7 @@ class _Profile_screenState extends State<Profile_screen>
               const Text(
                 "Code expired",
                 style: TextStyle(
-                  color: Color(0xFFE2574C),
+                  color: Color(0xFFDC3545),
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                 ),
@@ -256,8 +259,9 @@ class _Profile_screenState extends State<Profile_screen>
               child: Row(
                 children: [
                   Icon(Icons.refresh,
-                      color:
-                          canResend ? const Color(0xFF2F6FE4) : Colors.grey.shade500,
+                      color: canResend
+                          ? const Color(0xFF2C72E0)
+                          : Colors.grey.shade500,
                       size: 16),
                   const SizedBox(width: 4),
                   Text(
@@ -265,7 +269,7 @@ class _Profile_screenState extends State<Profile_screen>
                     style: TextStyle(
                       fontSize: 13.5,
                       color: canResend
-                          ? const Color(0xFF2F6FE4)
+                          ? const Color(0xFF2C72E0)
                           : Colors.grey.shade500,
                       fontWeight: FontWeight.w700,
                     ),
@@ -298,8 +302,7 @@ class _Profile_screenState extends State<Profile_screen>
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color:
-              isSelected ? const Color(0xFFE9EFFB) : const Color(0xFFF7F9FB),
+          color: isSelected ? const Color(0xFFE9EFFB) : const Color(0xFFF7F9FB),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? blueColor : const Color(0xFFEDF0F4),
@@ -333,9 +336,8 @@ class _Profile_screenState extends State<Profile_screen>
                     detail,
                     style: TextStyle(
                       fontSize: 13,
-                      color: enabled
-                          ? Colors.grey[600]
-                          : const Color(0xFFF08A76),
+                      color:
+                          enabled ? Colors.grey[600] : const Color(0xFFF08A76),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -347,7 +349,7 @@ class _Profile_screenState extends State<Profile_screen>
               value == 'sms' ? Icons.smartphone_outlined : Icons.mail_outline,
               size: 20,
               color:
-                  enabled ? const Color(0xFF8A93A3) : const Color(0xFFC3C9D3),
+                  enabled ? const Color(0xFF6B7A90) : const Color(0xFFC3C9D3),
             ),
             const SizedBox(width: 6),
           ],
@@ -366,8 +368,7 @@ class _Profile_screenState extends State<Profile_screen>
   String get _avatarInitials {
     final String first = (_profile?.firstName ?? '').trim();
     final String last = (_profile?.lastName ?? '').trim();
-    final String initials =
-        '${first.isNotEmpty ? first[0].toUpperCase() : ''}'
+    final String initials = '${first.isNotEmpty ? first[0].toUpperCase() : ''}'
         '${last.isNotEmpty ? last[0].toUpperCase() : ''}';
     return initials.isNotEmpty ? initials : '-';
   }
@@ -378,8 +379,7 @@ class _Profile_screenState extends State<Profile_screen>
     // can stay `none` after the connection is back (reliably so on the
     // iOS simulator), which made this screen declare itself offline
     // while requests actually succeed. Confirm before believing it.
-    if (connectiondata == ConnectivityResult.none &&
-        await hasNetworkNow()) {
+    if (connectiondata == ConnectivityResult.none && await hasNetworkNow()) {
       connectiondata = ConnectivityResult.wifi;
     }
     if (!mounted) return;
@@ -599,7 +599,6 @@ class _Profile_screenState extends State<Profile_screen>
       loading = false; // Set loading to false after receiving response
     });
 
-
     if (response.statusCode == 200) {
       final jsonData = json.decode(response.body);
 
@@ -624,7 +623,6 @@ class _Profile_screenState extends State<Profile_screen>
             sms2FA = false;
           }
         });
-
       } else {
         // Handle case where data is null or statusCode is not 200
         setState(() {
@@ -713,8 +711,7 @@ class _Profile_screenState extends State<Profile_screen>
                   ? isNetworkError(_errorMessage)
                       ? NoInternetView(onRetry: retryNow)
                       : Center(
-                          child:
-                              Text(friendlyErrorMessage(_errorMessage)),
+                          child: Text(friendlyErrorMessage(_errorMessage)),
                         )
                   : SingleChildScrollView(
                       child: Padding(
@@ -727,7 +724,8 @@ class _Profile_screenState extends State<Profile_screen>
                               height: 220,
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFFE5E9F0)),
+                                border:
+                                    Border.all(color: const Color(0xFFE5E9F0)),
                                 // color: Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -789,11 +787,12 @@ class _Profile_screenState extends State<Profile_screen>
                                       Text(
                                         formatPhoneNumberedit(_phone2FA),
                                         style: TextStyle(
-                                          fontSize:
-                                              MediaQuery.of(context).size.width <
-                                                      500
-                                                  ? 16
-                                                  : 18,
+                                          fontSize: MediaQuery.of(context)
+                                                      .size
+                                                      .width <
+                                                  500
+                                              ? 16
+                                              : 18,
                                           fontWeight: FontWeight.w400,
                                           color: blueColor,
                                         ),
@@ -808,7 +807,8 @@ class _Profile_screenState extends State<Profile_screen>
                               //  height: 10,
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFFE5E9F0)),
+                                border:
+                                    Border.all(color: const Color(0xFFE5E9F0)),
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -859,8 +859,7 @@ class _Profile_screenState extends State<Profile_screen>
                                               mode: LaunchMode
                                                   .externalApplication, // Ensures the system browser is used
                                             );
-                                          } else {
-                                          }
+                                          } else {}
                                         },
                                         child: Row(
                                           children: [
@@ -947,25 +946,12 @@ class _Profile_screenState extends State<Profile_screen>
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                "Two-Factor Authentication",
+                                                "Two-Factor Authentication (2FA)",
                                                 style: TextStyle(
                                                     color: blueColor,
-                                                    fontSize: 16.5,
+                                                    fontSize: 16,
                                                     fontWeight:
                                                         FontWeight.bold),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                showDisableVerification
-                                                    ? "Verification required to disable"
-                                                    : enble2FA
-                                                        ? "Protecting your account"
-                                                        : "Adds a second step at sign-in",
-                                                style: const TextStyle(
-                                                    color: Color(0xFF8A93A3),
-                                                    fontSize: 13,
-                                                    fontWeight:
-                                                        FontWeight.w500),
                                               ),
                                             ],
                                           ),
@@ -1037,7 +1023,7 @@ class _Profile_screenState extends State<Profile_screen>
                                       child: Text(
                                         "Turn on the toggle above to enable Two-Factor Authentication for enhanced security.",
                                         style: TextStyle(
-                                          color: const Color(0xFF8A93A3),
+                                          color: const Color(0xFF6B7A90),
                                           fontSize: 13,
                                           height: 1.4,
                                         ),
@@ -1160,6 +1146,10 @@ class _Profile_screenState extends State<Profile_screen>
                                           Form(
                                             key: _formKey2FA,
                                             child: TextFormField(
+                                              style: const TextStyle(
+                                                  fontSize: 15,
+                                                  letterSpacing: 1.5,
+                                                  color: Color(0xFF152B51)),
                                               autovalidateMode: AutovalidateMode
                                                   .onUserInteraction,
                                               validator: (value) {
@@ -1181,35 +1171,43 @@ class _Profile_screenState extends State<Profile_screen>
                                               // the code has expired.
                                               enabled: !is2FACodeExpired,
                                               decoration: InputDecoration(
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 14,
+                                                        vertical: 16),
                                                 hintText: "Enter 6-digit code",
+                                                hintStyle: const TextStyle(
+                                                    color: Color(0xFF94A1B4),
+                                                    letterSpacing: 0.5),
                                                 border: OutlineInputBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  borderSide: BorderSide(
-                                                      color: Colors.grey),
+                                                      BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(
+                                                      color: Color(0xFFD3DAE5),
+                                                      width: 1.5),
                                                 ),
                                                 focusedBorder:
                                                     OutlineInputBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(8),
+                                                      BorderRadius.circular(10),
                                                   borderSide: BorderSide(
                                                       color: blueColor,
                                                       width: 2),
                                                 ),
                                                 errorBorder: OutlineInputBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  borderSide: BorderSide(
-                                                      color: Colors.red,
-                                                      width: 2),
+                                                      BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(
+                                                      color: Color(0xFF152B51),
+                                                      width: 1.5),
                                                 ),
                                                 focusedErrorBorder:
                                                     OutlineInputBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  borderSide: BorderSide(
-                                                      color: Colors.red,
-                                                      width: 2),
+                                                      BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(
+                                                      color: Color(0xFF152B51),
+                                                      width: 1.5),
                                                 ),
                                                 counterText: "",
                                               ),
@@ -1221,61 +1219,58 @@ class _Profile_screenState extends State<Profile_screen>
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
                                               ValueListenableBuilder<int>(
-                                                  valueListenable: seconds,
-                                                  builder:
-                                                      (context, value, child) {
-                                                    // Once the countdown runs
-                                                    // out this reads "Code
-                                                    // expired" instead of a
-                                                    // stuck "0m 0s", matching
-                                                    // the login screen.
-                                                    if (value <= 0) {
-                                                      return Text(
-                                                        is2FACodeExpired
-                                                            ? "Code expired"
-                                                            : "",
-                                                        style: const TextStyle(
-                                                          color: Colors.red,
-                                                          fontSize: 14,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                      );
-                                                    }
-                                                    return RichText(
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      text: TextSpan(
-                                                        children: [
-                                                          TextSpan(
-                                                            text:
-                                                                "Code will expire in ",
-                                                            style: TextStyle(
-                                                              color: Colors
-                                                                  .grey[600],
-                                                              fontSize: 14,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                            ),
-                                                          ),
-                                                          TextSpan(
-                                                            text:
-                                                                "${getTimerString()}",
-                                                            style:
-                                                                const TextStyle(
-                                                              color: Colors.red,
-                                                              fontSize: 14,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                            ),
-                                                          ),
-                                                        ],
+                                                valueListenable: seconds,
+                                                builder:
+                                                    (context, value, child) {
+                                                  // Once the countdown runs
+                                                  // out this reads "Code
+                                                  // expired" instead of a
+                                                  // stuck "0m 0s", matching
+                                                  // the login screen.
+                                                  if (value <= 0) {
+                                                    return Text(
+                                                      is2FACodeExpired
+                                                          ? "Code expired"
+                                                          : "",
+                                                      style: const TextStyle(
+                                                        color: Colors.red,
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
                                                     );
-                                                  },
-                                                ),
+                                                  }
+                                                  return RichText(
+                                                    textAlign: TextAlign.center,
+                                                    text: TextSpan(
+                                                      children: [
+                                                        TextSpan(
+                                                          text:
+                                                              "Code will expire in ",
+                                                          style: TextStyle(
+                                                            color: Colors
+                                                                .grey[600],
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                        TextSpan(
+                                                          text:
+                                                              "${getTimerString()}",
+                                                          style:
+                                                              const TextStyle(
+                                                            color: Colors.red,
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
                                               GestureDetector(
                                                 onTap: () {
                                                   // Resend is locked for the
@@ -1447,24 +1442,16 @@ class _Profile_screenState extends State<Profile_screen>
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 14, vertical: 12),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFE9F6EE),
+                                          color: const Color(0xFFE7F7EE),
                                           borderRadius:
                                               BorderRadius.circular(10),
                                         ),
                                         child: Row(
                                           children: [
-                                            Container(
-                                              height: 22,
-                                              width: 22,
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xFF34A661),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(Icons.check,
-                                                  size: 14,
-                                                  color: Colors.white),
-                                            ),
-                                            const SizedBox(width: 10),
+                                            const Icon(Icons.check,
+                                                size: 18,
+                                                color: Color(0xFF1F9D55)),
+                                            const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
                                                 email2FA
@@ -1473,7 +1460,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                         ? "2FA is enabled via SMS"
                                                         : "2FA is enabled",
                                                 style: const TextStyle(
-                                                  color: Color(0xFF2E8B57),
+                                                  color: Color(0xFF1F9D55),
                                                   fontSize: 14.5,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -1500,7 +1487,7 @@ class _Profile_screenState extends State<Profile_screen>
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFF7F9FB),
+                                          color: Colors.white,
                                           borderRadius:
                                               BorderRadius.circular(12),
                                           border: Border.all(
@@ -1508,21 +1495,12 @@ class _Profile_screenState extends State<Profile_screen>
                                         ),
                                         child: Row(
                                           children: [
-                                            Container(
-                                              height: 40,
-                                              width: 40,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFE4EDFB),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              child: Icon(
-                                                sms2FA && !email2FA
-                                                    ? Icons.sms_outlined
-                                                    : Icons.mail_outline,
-                                                size: 20,
-                                                color: const Color(0xFF2F6FE4),
-                                              ),
+                                            Icon(
+                                              sms2FA && !email2FA
+                                                  ? Icons.sms_outlined
+                                                  : Icons.mail_outline,
+                                              size: 22,
+                                              color: const Color(0xFF2C72E0),
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
@@ -1533,7 +1511,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                   const Text(
                                                     "VERIFICATION METHOD",
                                                     style: TextStyle(
-                                                      color: Color(0xFF8A93A3),
+                                                      color: Color(0xFF6B7A90),
                                                       fontSize: 11,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -1584,12 +1562,12 @@ class _Profile_screenState extends State<Profile_screen>
                                             width: double.infinity,
                                             padding: const EdgeInsets.all(14),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFF8FAFC),
+                                              color: const Color(0xFFFFFFFF),
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                               border: Border.all(
                                                   color:
-                                                      const Color(0xFFE9EDF2)),
+                                                      const Color(0xFFE4E8EF)),
                                             ),
                                             child: Column(
                                               crossAxisAlignment:
@@ -1600,18 +1578,16 @@ class _Profile_screenState extends State<Profile_screen>
                                                   style: TextStyle(
                                                     color: blueColor,
                                                     fontSize: 14.5,
-                                                    fontWeight:
-                                                        FontWeight.bold,
+                                                    fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
                                                   "Sent to ${email2FA ? _email2FA : (sms2FA ? _phone2FA : _email2FA)}",
                                                   style: const TextStyle(
-                                                    color: Color(0xFF8A93A3),
+                                                    color: Color(0xFF6B7A90),
                                                     fontSize: 12.5,
-                                                    fontWeight:
-                                                        FontWeight.w500,
+                                                    fontWeight: FontWeight.w500,
                                                   ),
                                                 ),
                                                 const SizedBox(height: 12),
@@ -1626,27 +1602,42 @@ class _Profile_screenState extends State<Profile_screen>
                                                   // Web greys the field out once the
                                                   // code has expired.
                                                   enabled: !is2FACodeExpired,
+                                                  style: const TextStyle(
+                                                      fontSize: 15,
+                                                      letterSpacing: 1.5,
+                                                      color: Color(0xFF152B51)),
                                                   decoration: InputDecoration(
+                                                    contentPadding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 14,
+                                                            vertical: 16),
                                                     hintText:
                                                         "Enter 6-digit code",
+                                                    hintStyle: const TextStyle(
+                                                        color:
+                                                            Color(0xFF94A1B4),
+                                                        letterSpacing: 0.5),
                                                     filled: true,
                                                     fillColor: Colors.white,
                                                     border: OutlineInputBorder(
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               10),
-                                                      borderSide: const BorderSide(
-                                                          color: Color(
-                                                              0xFFE2E6EC)),
+                                                      borderSide:
+                                                          const BorderSide(
+                                                              color: Color(
+                                                                  0xFFD3DAE5)),
                                                     ),
                                                     enabledBorder:
                                                         OutlineInputBorder(
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               10),
-                                                      borderSide: const BorderSide(
-                                                          color: Color(
-                                                              0xFFE2E6EC)),
+                                                      borderSide:
+                                                          const BorderSide(
+                                                              color: Color(
+                                                                  0xFFD3DAE5)),
                                                     ),
                                                     focusedBorder:
                                                         OutlineInputBorder(
@@ -1689,7 +1680,7 @@ class _Profile_screenState extends State<Profile_screen>
                                             children: [
                                               Expanded(
                                                 child: SizedBox(
-                                                  height: 48,
+                                                  height: 44,
                                                   child: OutlinedButton(
                                                     onPressed: () {
                                                       // Leaving the flow must not
@@ -1729,7 +1720,7 @@ class _Profile_screenState extends State<Profile_screen>
                                               const SizedBox(width: 12),
                                               Expanded(
                                                 child: SizedBox(
-                                                  height: 48,
+                                                  height: 44,
                                                   child: ElevatedButton(
                                                     // An expired code is rejected by
                                                     // the server, so block the tap
@@ -1743,7 +1734,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                         .styleFrom(
                                                       backgroundColor:
                                                           const Color(
-                                                              0xFFD96A45),
+                                                              0xFFDC3545),
                                                       foregroundColor:
                                                           Colors.white,
                                                       elevation: 0,
@@ -1808,17 +1799,29 @@ class _Profile_screenState extends State<Profile_screen>
                                                 regenerateVerificationController,
                                             keyboardType: TextInputType.number,
                                             maxLength: 6,
+                                            style: const TextStyle(
+                                                fontSize: 15,
+                                                letterSpacing: 1.5,
+                                                color: Color(0xFF152B51)),
                                             decoration: InputDecoration(
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 16),
                                               hintText: "Enter 6-digit code",
+                                              hintStyle: const TextStyle(
+                                                  color: Color(0xFF94A1B4),
+                                                  letterSpacing: 0.5),
                                               border: OutlineInputBorder(
                                                 borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: BorderSide(
-                                                    color: Colors.grey),
+                                                    BorderRadius.circular(10),
+                                                borderSide: const BorderSide(
+                                                    color: Color(0xFFD3DAE5),
+                                                    width: 1.5),
                                               ),
                                               focusedBorder: OutlineInputBorder(
                                                 borderRadius:
-                                                    BorderRadius.circular(8),
+                                                    BorderRadius.circular(10),
                                                 borderSide: BorderSide(
                                                     color: blueColor, width: 2),
                                               ),
@@ -1858,7 +1861,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                   : Text(
                                                       "Backup Codes",
                                                       style: TextStyle(
-                                                        fontSize: 16,
+                                                        fontSize: 14,
                                                         fontWeight:
                                                             FontWeight.w600,
                                                       ),
@@ -1926,7 +1929,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                   SizedBox(
                                                     width: double.infinity,
                                                     height:
-                                                        48, // Fixed height for consistency
+                                                        60, // Fits a two-line action label (e.g. Regenerate Backup Codes)
                                                     child: ElevatedButton(
                                                       onPressed: () {
                                                         // showDisableVerification
@@ -1993,7 +1996,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                   SizedBox(
                                                     width: double.infinity,
                                                     height:
-                                                        48, // Same fixed height
+                                                        60, // Fits a two-line action label (e.g. Regenerate Backup Codes)
                                                     child: ElevatedButton(
                                                       onPressed: () {
                                                         // Blocks the second of
@@ -2036,10 +2039,9 @@ class _Profile_screenState extends State<Profile_screen>
                                                           SizedBox(width: 8),
                                                           Flexible(
                                                             child: Text(
-                                                              // Web parity: the label reports whether codes already exist
-                                                              // (Profile.jsx gates on hasExistingBackupCodes = codes.length > 0),
-                                                              // so it is clear a second tap replaces the current set.
-                                                              codes.isEmpty ? "Backup Codes" : "Regenerate Backup Codes",
+                                                              codes.isEmpty
+                                                                  ? "Backup Codes"
+                                                                  : "Regenerate Backup Codes",
                                                               style: TextStyle(
                                                                 fontSize: 14,
                                                                 fontWeight:
@@ -2049,6 +2051,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                               textAlign:
                                                                   TextAlign
                                                                       .center,
+                                                              maxLines: 2,
                                                             ),
                                                           ),
                                                         ],
@@ -2069,7 +2072,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                       flex: 1,
                                                       child: SizedBox(
                                                         height:
-                                                            48, // Fixed height for consistency
+                                                            60, // Fits a two-line action label (e.g. Regenerate Backup Codes)
                                                         child: ElevatedButton(
                                                           onPressed: () {
                                                             // showDisableVerification
@@ -2092,11 +2095,10 @@ class _Profile_screenState extends State<Profile_screen>
                                                             foregroundColor:
                                                                 const Color(
                                                                     0xFFD2603C),
-                                                            side:
-                                                                const BorderSide(
-                                                                    color: Color(
-                                                                        0xFFF2C7B5),
-                                                                    width: 1.2),
+                                                            side: const BorderSide(
+                                                                color: Color(
+                                                                    0xFFF2C7B5),
+                                                                width: 1.2),
                                                             elevation: 0,
                                                             padding: EdgeInsets
                                                                 .symmetric(
@@ -2145,7 +2147,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                       flex: 1,
                                                       child: SizedBox(
                                                         height:
-                                                            48, // Same fixed height
+                                                            60, // Fits a two-line action label (e.g. Regenerate Backup Codes)
                                                         child: ElevatedButton(
                                                           onPressed: () {
                                                             // Blocks a double
@@ -2163,11 +2165,10 @@ class _Profile_screenState extends State<Profile_screen>
                                                                 Colors.white,
                                                             foregroundColor:
                                                                 blueColor,
-                                                            side:
-                                                                const BorderSide(
-                                                                    color: Color(
-                                                                        0xFFE2E6EC),
-                                                                    width: 1.2),
+                                                            side: const BorderSide(
+                                                                color: Color(
+                                                                    0xFFE2E6EC),
+                                                                width: 1.2),
                                                             elevation: 0,
                                                             padding: EdgeInsets
                                                                 .symmetric(
@@ -2193,10 +2194,9 @@ class _Profile_screenState extends State<Profile_screen>
                                                                   width: 8),
                                                               Flexible(
                                                                 child: Text(
-                                                                  // Web parity: the label reports whether codes already exist
-                                                                  // (Profile.jsx gates on hasExistingBackupCodes = codes.length > 0),
-                                                                  // so it is clear a second tap replaces the current set.
-                                                                  codes.isEmpty ? "Backup Codes" : "Regenerate Backup Codes",
+                                                                  codes.isEmpty
+                                                                      ? "Backup Codes"
+                                                                      : "Regenerate Backup Codes",
                                                                   style:
                                                                       TextStyle(
                                                                     fontSize:
@@ -2208,6 +2208,7 @@ class _Profile_screenState extends State<Profile_screen>
                                                                   textAlign:
                                                                       TextAlign
                                                                           .center,
+                                                                  maxLines: 2,
                                                                 ),
                                                               ),
                                                             ],
@@ -2227,330 +2228,332 @@ class _Profile_screenState extends State<Profile_screen>
                             // White card with a hairline border, matching the
                             // house form shell (add_tenants.dart `_sectionCard`).
                             Container(
-                                decoration: BoxDecoration(
-                                  // Same shell as the Change Password card
-                                  // below, so the two sections read as one
-                                  // consistent page.
-                                  color: Colors.grey.shade100,
-                                  border: Border.all(
-                                      color: const Color(0xFFE5E9F0)),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Form(
-                                    key: _formKey,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // "My Account" banner removed — the card
-                                        // leads with its own section heading,
-                                        // so the extra bar was a second title
-                                        // for the same block.
-                                        Text(
-                                          "User information",
-                                          style: TextStyle(
-                                              fontSize: MediaQuery.of(context)
-                                                          .size
-                                                          .width <
-                                                      500
-                                                  ? 17
-                                                  : 20,
-                                              color: blueColor,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
-                                          'First Name *',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                          'First Name',
-                                          _firstNameController,
-                                          (v) => _validateRequired(v, 'a first name'),
-                                          isRequired: true,
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
-                                          'Last Name *',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                          'Last Name',
-                                          _lastNameController,
-                                          (v) => _validateRequired(v, 'a last name'),
-                                          isRequired: true,
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
-                                          'Email *',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                          'Email Address',
-                                          _emailController,
-                                          _validateEmailAddress,
-                                          isEnabled: false,
-                                          isRequired: true,
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
-                                          'Phone Number *',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                          'Phone Number',
-                                          _phoneNumberController,
-                                          _validatePhoneNumber,
-                                          isRequired: true,
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
-                                          'Company Name *',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                          'Company Name',
-                                          _companyNameController,
-                                          (v) => _validateRequired(v, 'a company name'),
-                                          isRequired: true,
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
-                                          'Created Date *',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                          'Created Date',
-                                          _createdDate,
-                                          _validateFirstName,
-                                          isEnabled: false,
-                                          isRequired: true,
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
-                                          'Company Address',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                          'Company Address',
-                                          _companyAddressController,
-                                          (v) => _validateRequired(v, 'a company address'),
-                                          isRequired: false,
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
+                              decoration: BoxDecoration(
+                                // Same shell as the Change Password card
+                                // below, so the two sections read as one
+                                // consistent page.
+                                color: Colors.grey.shade100,
+                                border:
+                                    Border.all(color: const Color(0xFFE5E9F0)),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Form(
+                                  key: _formKey,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // "My Account" banner removed — the card
+                                      // leads with its own section heading,
+                                      // so the extra bar was a second title
+                                      // for the same block.
+                                      Text(
+                                        "User information",
+                                        style: TextStyle(
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    500
+                                                ? 17
+                                                : 20,
+                                            color: blueColor,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'First Name *',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
+                                        'First Name',
+                                        _firstNameController,
+                                        (v) => _validateRequired(
+                                            v, 'a first name'),
+                                        isRequired: true,
+                                      ),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'Last Name *',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
+                                        'Last Name',
+                                        _lastNameController,
+                                        (v) =>
+                                            _validateRequired(v, 'a last name'),
+                                        isRequired: true,
+                                      ),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'Email *',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
+                                        'Email Address',
+                                        _emailController,
+                                        _validateEmailAddress,
+                                        isEnabled: false,
+                                        isRequired: true,
+                                      ),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'Phone Number *',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
+                                        'Phone Number',
+                                        _phoneNumberController,
+                                        _validatePhoneNumber,
+                                        isRequired: true,
+                                      ),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'Company Name *',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
+                                        'Company Name',
+                                        _companyNameController,
+                                        (v) => _validateRequired(
+                                            v, 'a company name'),
+                                        isRequired: true,
+                                      ),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'Created Date *',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
+                                        'Created Date',
+                                        _createdDate,
+                                        _validateFirstName,
+                                        isEnabled: false,
+                                        isRequired: true,
+                                      ),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'Company Address',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
+                                        'Company Address',
+                                        _companyAddressController,
+                                        (v) => _validateRequired(
+                                            v, 'a company address'),
+                                        isRequired: false,
+                                      ),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'Postal Code',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
                                           'Postal Code',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                            'Postal Code',
-                                            _companyPostalCodeController,
-                                            (v) => _validateRequired(v, 'a postal code')),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
+                                          _companyPostalCodeController,
+                                          (v) => _validateRequired(
+                                              v, 'a postal code')),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'City',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
                                           'City',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                            'City',
-                                            _companyCityController,
-                                            (v) => _validateRequired(v, 'a city')),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
-                                          'State',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildStateDropdown(),
-                                        const SizedBox(height: 16.0),
-                                        const Text(
+                                          _companyCityController,
+                                          (v) =>
+                                              _validateRequired(v, 'a city')),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'State',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildStateDropdown(),
+                                      const SizedBox(height: 16.0),
+                                      const Text(
+                                        'Country',
+                                        style: TextStyle(
+                                            color: Color(0xFF8A95A8),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(
+                                        height: 5,
+                                      ),
+                                      buildTextField(
                                           'Country',
-                                          style: TextStyle(
-                                              color: Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(
-                                          height: 5,
-                                        ),
-                                        buildTextField(
-                                            'Country',
-                                            _companyCountryController,
-                                            (v) => _validateRequired(v, 'a country')),
-                                        const SizedBox(height: 16.0),
+                                          _companyCountryController,
+                                          (v) => _validateRequired(
+                                              v, 'a country')),
+                                      const SizedBox(height: 16.0),
 
-                                        // ElevatedButton(
-                                        //   onPressed: () {
-                                        //     if (_formKey.currentState!.validate()) {
-                                        //       // If the form is valid, proceed with form submission
-                                        //       _formKey.currentState!.save();
-                                        //       ProfileRepository().Edit_profile({
-                                        //         "first_name": _firstNameController.text,
-                                        //         "last_name": _lastNameController.text,
-                                        //         "email": _emailController.text,
-                                        //         "company_name": _companyNameController.text,
-                                        //         "phone_number": int.parse(_phoneNumberController.text),
-                                        //       });
-                                        //     }
-                                        //     // Implement save functionality
-                                        //   },
-                                        //   child: Text('Update'),
-                                        // ),
-                                        Row(
-                                          // Reversed so Back sits on the left
-                                          // and Update on the right, matching
-                                          // the agreed layout. The two button
-                                          // blocks are left in place rather
-                                          // than moved, so their handlers stay
-                                          // untouched.
-                                          children: <Widget>[
-                                            Expanded(
-                                                child: GestureDetector(
-                                              // onTap: () {
-                                              //   if (_formKey.currentState!
-                                              //       .validate()) {
-                                              //     // If the form is valid, proceed with form submission
-                                              //
-                                              //     _formKey.currentState!.save();
-                                              //     ProfileRepository()
-                                              //         .Edit_profile({
-                                              //       "first_name":
-                                              //           _firstNameController
-                                              //               .text,
-                                              //       "last_name":
-                                              //           _lastNameController
-                                              //               .text,
-                                              //       "email":
-                                              //           _emailController.text,
-                                              //       "company_name":
-                                              //           _companyNameController
-                                              //               .text,
-                                              //       "phone_number":
-                                              //           _phoneNumberController
-                                              //               .text,
-                                              //       "company_address":
-                                              //           _companyAddressController
-                                              //               .text,
-                                              //       "postal_code":
-                                              //           _companyPostalCodeController
-                                              //               .text,
-                                              //       "city":
-                                              //           _companyCityController
-                                              //               .text,
-                                              //       "state":
-                                              //           _companyStateController
-                                              //               .text,
-                                              //       "country":
-                                              //           _companyCountryController
-                                              //               .text,
-                                              //     });
-                                              //   }
-                                              // },
-                                              onTap: () async {
-                                                if (_isSavingProfile) return;
-                                                if (_formKey.currentState!
-                                                    .validate()) {
-                                                  // Check if any field has changed
-                                                  if (_firstNameController
-                                                              .text !=
-                                                          originalFirstName ||
-                                                      _lastNameController
-                                                              .text !=
-                                                          originalLastName ||
-                                                      _emailController
-                                                              .text !=
-                                                          originalEmail ||
-                                                      _companyNameController
-                                                              .text !=
-                                                          originalCompanyName ||
-                                                      // Compared digits-only,
-                                                      // like web's `phoneNorm`:
-                                                      // the field displays
-                                                      // "(555) 123-4567" while
-                                                      // the API returns
-                                                      // "5551234567", so a raw
-                                                      // string compare marked
-                                                      // the phone changed on
-                                                      // every load.
-                                                      phoneDigitsOnly(
-                                                              _phoneNumberController
-                                                                  .text) !=
-                                                          phoneDigitsOnly(
-                                                              originalPhoneNumber) ||
-                                                      _companyAddressController
-                                                              .text !=
-                                                          originalCompanyAddress ||
-                                                      _companyPostalCodeController
-                                                              .text !=
-                                                          originalCompanyPostalCode ||
-                                                      _companyCityController
-                                                              .text !=
-                                                          originalCompanyCity ||
-                                                      _companyStateController
-                                                              .text !=
-                                                          originalCompanyState ||
-                                                      _companyCountryController
-                                                              .text !=
-                                                          originalCompanyCountry) {
-                                                    // If any field has changed, call the API
-                                                    _formKey.currentState!
-                                                        .save();
-                                                    setState(() =>
-                                                        _isSavingProfile =
-                                                            true);
-                                                    try {
-                                                      await ProfileRepository()
-                                                          .Edit_profile({
+                                      // ElevatedButton(
+                                      //   onPressed: () {
+                                      //     if (_formKey.currentState!.validate()) {
+                                      //       // If the form is valid, proceed with form submission
+                                      //       _formKey.currentState!.save();
+                                      //       ProfileRepository().Edit_profile({
+                                      //         "first_name": _firstNameController.text,
+                                      //         "last_name": _lastNameController.text,
+                                      //         "email": _emailController.text,
+                                      //         "company_name": _companyNameController.text,
+                                      //         "phone_number": int.parse(_phoneNumberController.text),
+                                      //       });
+                                      //     }
+                                      //     // Implement save functionality
+                                      //   },
+                                      //   child: Text('Update'),
+                                      // ),
+                                      Row(
+                                        // Reversed so Back sits on the left
+                                        // and Update on the right, matching
+                                        // the agreed layout. The two button
+                                        // blocks are left in place rather
+                                        // than moved, so their handlers stay
+                                        // untouched.
+                                        children: <Widget>[
+                                          Expanded(
+                                              child: GestureDetector(
+                                            // onTap: () {
+                                            //   if (_formKey.currentState!
+                                            //       .validate()) {
+                                            //     // If the form is valid, proceed with form submission
+                                            //
+                                            //     _formKey.currentState!.save();
+                                            //     ProfileRepository()
+                                            //         .Edit_profile({
+                                            //       "first_name":
+                                            //           _firstNameController
+                                            //               .text,
+                                            //       "last_name":
+                                            //           _lastNameController
+                                            //               .text,
+                                            //       "email":
+                                            //           _emailController.text,
+                                            //       "company_name":
+                                            //           _companyNameController
+                                            //               .text,
+                                            //       "phone_number":
+                                            //           _phoneNumberController
+                                            //               .text,
+                                            //       "company_address":
+                                            //           _companyAddressController
+                                            //               .text,
+                                            //       "postal_code":
+                                            //           _companyPostalCodeController
+                                            //               .text,
+                                            //       "city":
+                                            //           _companyCityController
+                                            //               .text,
+                                            //       "state":
+                                            //           _companyStateController
+                                            //               .text,
+                                            //       "country":
+                                            //           _companyCountryController
+                                            //               .text,
+                                            //     });
+                                            //   }
+                                            // },
+                                            onTap: () async {
+                                              if (_isSavingProfile) return;
+                                              if (_formKey.currentState!
+                                                  .validate()) {
+                                                // Check if any field has changed
+                                                if (_firstNameController.text !=
+                                                        originalFirstName ||
+                                                    _lastNameController.text !=
+                                                        originalLastName ||
+                                                    _emailController.text !=
+                                                        originalEmail ||
+                                                    _companyNameController
+                                                            .text !=
+                                                        originalCompanyName ||
+                                                    // Compared digits-only,
+                                                    // like web's `phoneNorm`:
+                                                    // the field displays
+                                                    // "(555) 123-4567" while
+                                                    // the API returns
+                                                    // "5551234567", so a raw
+                                                    // string compare marked
+                                                    // the phone changed on
+                                                    // every load.
+                                                    phoneDigitsOnly(
+                                                            _phoneNumberController
+                                                                .text) !=
+                                                        phoneDigitsOnly(
+                                                            originalPhoneNumber) ||
+                                                    _companyAddressController
+                                                            .text !=
+                                                        originalCompanyAddress ||
+                                                    _companyPostalCodeController
+                                                            .text !=
+                                                        originalCompanyPostalCode ||
+                                                    _companyCityController
+                                                            .text !=
+                                                        originalCompanyCity ||
+                                                    _companyStateController
+                                                            .text !=
+                                                        originalCompanyState ||
+                                                    _companyCountryController
+                                                            .text !=
+                                                        originalCompanyCountry) {
+                                                  // If any field has changed, call the API
+                                                  _formKey.currentState!.save();
+                                                  setState(() =>
+                                                      _isSavingProfile = true);
+                                                  try {
+                                                    await ProfileRepository()
+                                                        .Edit_profile({
                                                       "first_name":
                                                           _firstNameController
                                                               .text
@@ -2598,93 +2601,94 @@ class _Profile_screenState extends State<Profile_screen>
                                                           _companyCountryController
                                                               .text
                                                               .trim(),
-                                                      });
-                                                      if (!mounted) return;
-                                                      // Re-read the saved
-                                                      // record: the header now
-                                                      // renders the phone
-                                                      // number, and the
-                                                      // original* snapshots
-                                                      // behind the no-changes
-                                                      // guard must match what
-                                                      // was actually stored.
-                                                      await _fetchProfile();
-                                                    } catch (_) {
-                                                      // Edit_profile already
-                                                      // toasts the failure.
-                                                    } finally {
-                                                      if (mounted) {
-                                                        setState(() =>
-                                                            _isSavingProfile =
-                                                                false);
-                                                      }
+                                                    });
+                                                    if (!mounted) return;
+                                                    // Re-read the saved
+                                                    // record: the header now
+                                                    // renders the phone
+                                                    // number, and the
+                                                    // original* snapshots
+                                                    // behind the no-changes
+                                                    // guard must match what
+                                                    // was actually stored.
+                                                    await _fetchProfile();
+                                                  } catch (_) {
+                                                    // Edit_profile already
+                                                    // toasts the failure.
+                                                  } finally {
+                                                    if (mounted) {
+                                                      setState(() =>
+                                                          _isSavingProfile =
+                                                              false);
                                                     }
-                                                  } else {
-                                                    // Optionally, show a message that no changes were made
                                                   }
+                                                } else {
+                                                  // Optionally, show a message that no changes were made
                                                 }
-                                              },
-                                              child: Container(
-                                                height: 48,
-                                                decoration: BoxDecoration(
-                                                  color: navyClr,
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                child: const Center(
-                                                  child: Text(
-                                                    "Update",
-                                                    style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 16),
-                                                  ),
+                                              }
+                                            },
+                                            child: Container(
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                color: navyClr,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: const Center(
+                                                child: Text(
+                                                  "Update",
+                                                  style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16),
                                                 ),
                                               ),
-                                            )),
-                                            const SizedBox(
-                                              width: 12,
                                             ),
-                                            Expanded(
-                                                child: GestureDetector(
-                                              onTap: () {
-                                                Navigator.pop(context);
-                                              },
-                                              child: Container(
-                                                height: 48,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  border: Border.all(
-                                                      color: outlineClr),
-                                                ),
-                                                child: const Center(
-                                                  child: Text(
-                                                    "Back",
-                                                    style: TextStyle(
-                                                        color: navyClr,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 16),
-                                                  ),
+                                          )),
+                                          const SizedBox(
+                                            width: 12,
+                                          ),
+                                          Expanded(
+                                              child: GestureDetector(
+                                            onTap: () {
+                                              Navigator.pop(context);
+                                            },
+                                            child: Container(
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                border: Border.all(
+                                                    color: outlineClr),
+                                              ),
+                                              child: const Center(
+                                                child: Text(
+                                                  "Back",
+                                                  style: TextStyle(
+                                                      color: navyClr,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16),
                                                 ),
                                               ),
-                                            )),
-                                          ].reversed.toList(),
-                                        ),
-                                      ],
-                                    ),
+                                            ),
+                                          )),
+                                        ].reversed.toList(),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
+                            ),
                             const SizedBox(height: 20),
                             Container(
                               // height: 220,
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFFE5E9F0)),
+                                border:
+                                    Border.all(color: const Color(0xFFE5E9F0)),
                                 color: Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -3170,8 +3174,7 @@ class _Profile_screenState extends State<Profile_screen>
                                             changePassword(); // Call the function to change the password
                                           }
                                         },
-                                        child: 
-                                        Row(
+                                        child: Row(
                                           children: [
                                             // Full-width primary action, same
                                             // as the Staff/Tenant/Vendor
@@ -3218,7 +3221,6 @@ class _Profile_screenState extends State<Profile_screen>
                                             )),
                                           ],
                                         ),
-
                                       ),
                                       SizedBox(
                                         height:
@@ -3245,8 +3247,8 @@ class _Profile_screenState extends State<Profile_screen>
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFDECEC),
                                   borderRadius: BorderRadius.circular(12),
-                                  border:
-                                      Border.all(color: const Color(0xFFF5C2C2)),
+                                  border: Border.all(
+                                      color: const Color(0xFFF5C2C2)),
                                 ),
                                 child: const Center(
                                   child: Row(
@@ -3452,7 +3454,6 @@ class _Profile_screenState extends State<Profile_screen>
       // Close loading dialog
       Navigator.of(context).pop();
 
-
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData["success"] == true) {
@@ -3571,8 +3572,8 @@ class _Profile_screenState extends State<Profile_screen>
                 color: blueColor, size: 22),
           ),
           dropdownStyleData: DropdownStyleData(
-            maxHeight: (MediaQuery.sizeOf(context).height * 0.35)
-                .clamp(200.0, 320.0),
+            maxHeight:
+                (MediaQuery.sizeOf(context).height * 0.35).clamp(200.0, 320.0),
             elevation: 3,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -3704,7 +3705,6 @@ class _Profile_screenState extends State<Profile_screen>
         }),
       );
 
-
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData["statusCode"] == 200) {
@@ -3777,7 +3777,6 @@ class _Profile_screenState extends State<Profile_screen>
           "admin_id": id
         }),
       );
-
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -3856,7 +3855,6 @@ class _Profile_screenState extends State<Profile_screen>
             jsonEncode({"admin_id": id, "method": email2FA ? "email" : "sms"}),
       );
 
-
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData["statusCode"] == 200) {
@@ -3933,7 +3931,6 @@ class _Profile_screenState extends State<Profile_screen>
             {"code": disableVerificationController.text, "admin_id": id}),
       );
 
-
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData["statusCode"] == 200) {
@@ -4004,7 +4001,6 @@ class _Profile_screenState extends State<Profile_screen>
         body:
             jsonEncode({"admin_id": id, "method": email2FA ? "email" : "sms"}),
       );
-
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -4077,7 +4073,6 @@ class _Profile_screenState extends State<Profile_screen>
         },
         body: jsonEncode({"user_id": id, "user_type": "admin"}),
       );
-
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);

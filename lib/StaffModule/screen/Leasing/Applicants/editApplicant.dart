@@ -480,34 +480,39 @@ class _EditApplicantState extends State<EditApplicant> {
                                 setState(() {
                                   isLoading = true;
                                 });
-                                // Create the applicant data map
+                                // Create the applicant data map.
+                                // Empty fields fall back to '' like the Admin
+                                // screen. This used to write the literal
+                                // string 'N/A' into the record, which then
+                                // round-tripped into the form and every
+                                // display as if it were real data.
                                 Map<String, dynamic> applicantData = {
                                   "applicant_firstName":
                                   firstName.text.trim().isNotEmpty
                                       ? firstName.text.trim()
-                                      : 'N/A',
+                                      : '',
                                   "applicant_lastName": lastName.text.trim().isNotEmpty
                                       ? lastName.text.trim()
-                                      : 'N/A',
+                                      : '',
                                   "applicant_email": email.text.trim().isNotEmpty
                                       ? email.text.trim()
-                                      : 'N/A',
+                                      : '',
                                   "applicant_phoneNumber":
                                   mobileNumber.text.trim().isNotEmpty
                                       ? mobileNumber.text.trim()
-                                      : 'N/A',
+                                      : '',
                                   "applicant_homeNumber":
                                   homeNumber.text.trim().isNotEmpty
                                       ? homeNumber.text.trim()
-                                      : 'N/A',
+                                      : '',
                                   "applicant_telephoneNumber":
                                   telePhoneNumber.text.trim().isNotEmpty
                                       ? telePhoneNumber.text.trim()
-                                      : 'N/A',
+                                      : '',
                                   "applicant_businessNumber":
                                   bussinessNumber.text.trim().isNotEmpty
                                       ? bussinessNumber.text.trim()
-                                      : 'N/A',
+                                      : '',
                                 };
 
                                 // Make the API call using updateApplicants
