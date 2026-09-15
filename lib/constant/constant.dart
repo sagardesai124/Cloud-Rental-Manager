@@ -12,7 +12,8 @@ import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
 import 'package:zxcvbn/zxcvbn.dart';
 
-String image_url = "https://staging.cloudrentalmanager.com/api/images/get-file/";
+String image_url =
+    "https://staging.cloudrentalmanager.com/api/images/get-file/";
 //String image_url = "http://192.168.1.37:4000/api/images/get-file/";
 //String image_url = "https://saas.cloudrentalmanager.com/api/images/get-file/";
 
@@ -142,7 +143,6 @@ List<Map<String, dynamic>> asObjectList(dynamic value) {
 // }
 
 formatDate(String dateTime) {
-
   // If already in correct format, return as is
   if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateTime.trim())) {
     return dateTime;
@@ -174,7 +174,8 @@ formatDate(String dateTime) {
       parsedDate = DateFormat(format).parse(dateTime);
       break;
     } catch (e) {
-      logError("formatDate failed to parse '$dateTime' with format '$format': $e");
+      logError(
+          "formatDate failed to parse '$dateTime' with format '$format': $e");
       continue;
     }
   }
@@ -217,7 +218,6 @@ String reverseFormatDate(String formattedDate) {
   }
 
   try {
-
     // Clean the input string - remove any extra whitespace
     String cleanDate = formattedDate.trim();
 
@@ -314,7 +314,8 @@ String? validateInsuranceDateRange(DateTime? effective, DateTime? expiration) {
   if (effective == null || expiration == null) {
     return "Please select both Effective Date and Expiration Date";
   }
-  if (expiration.isBefore(effective) || expiration.isAtSameMomentAs(effective)) {
+  if (expiration.isBefore(effective) ||
+      expiration.isAtSameMomentAs(effective)) {
     return "Expiration Date must be after Effective Date";
   }
   return null;
@@ -328,26 +329,26 @@ Color greyColor = Color.fromRGBO(73, 81, 96, 1);
 Color grey = Color.fromRGBO(21, 43, 83, .5);
 
 // ===== Unified mobile palette (Work Order + shared screens) =====
-const Color navyClr      = Color(0xFF1C2D4E); // primary navy
+const Color navyClr = Color(0xFF1C2D4E); // primary navy
 const Color navyHoverClr = Color(0xFF16243F); // pressed/hover
-const Color tintBg       = Color(0xFFEEF2F8); // card header / alt row
-const Color tint2        = Color(0xFFE1E9F4); // nested sub-cards
-const Color pageBg       = Color(0xFFF4F6F9); // app background
-const Color borderClr    = Color(0xFFE4E8EF); // outer card border
-const Color innerBdClr   = Color(0xFFD8DDE6); // inner divider
-const Color outlineClr   = Color(0xFFD3DAE5); // outlined button border
-const Color checkOffClr  = Color(0xFFB6BFCD); // unchecked checkbox border
-const Color mutedClr     = Color(0xFF6B7A90); // secondary text / labels
-const Color subjectClr   = Color(0xFF5A86B8); // subject / unit accent
-const Color greenClr     = Color(0xFF1F9D55); // success / New / Completed
-const Color greenBg      = Color(0xFFDCFCE7); // green pill bgR
-const Color orangeClr    = Color(0xFFD97706); // in-progress / charge
-const Color orangeBg     = Color(0xFFFEF3C7); // orange pill bg
-const Color statusBlue   = Color(0xFF2868A0); // New status / view icon
+const Color tintBg = Color(0xFFEEF2F8); // card header / alt row
+const Color tint2 = Color(0xFFE1E9F4); // nested sub-cards
+const Color pageBg = Color(0xFFF4F6F9); // app background
+const Color borderClr = Color(0xFFE4E8EF); // outer card border
+const Color innerBdClr = Color(0xFFD8DDE6); // inner divider
+const Color outlineClr = Color(0xFFD3DAE5); // outlined button border
+const Color checkOffClr = Color(0xFFB6BFCD); // unchecked checkbox border
+const Color mutedClr = Color(0xFF6B7A90); // secondary text / labels
+const Color subjectClr = Color(0xFF5A86B8); // subject / unit accent
+const Color greenClr = Color(0xFF1F9D55); // success / New / Completed
+const Color greenBg = Color(0xFFDCFCE7); // green pill bgR
+const Color orangeClr = Color(0xFFD97706); // in-progress / charge
+const Color orangeBg = Color(0xFFFEF3C7); // orange pill bg
+const Color statusBlue = Color(0xFF2868A0); // New status / view icon
 const Color statusBlueBg = Color(0xFFE8F0FA); // view button bg
-const Color closedClr    = Color(0xFF6B7A90); // closed status
-const Color redClr       = Color(0xFFDC3545); // delete / error
-const Color redDotClr    = Color(0xFFE62E2E); // notification dot
+const Color closedClr = Color(0xFF6B7A90); // closed status
+const Color redClr = Color(0xFFDC3545); // delete / error
+const Color redDotClr = Color(0xFFE62E2E); // notification dot
 TableRow buildTableRow(
     String leftLabel, String leftValue, String rightLabel, String rightValue) {
   return TableRow(
@@ -811,10 +812,7 @@ String formatLeasePropertyLine(String? rentalAddress, String? rentalUnit) {
   final address = rentalAddress ?? "";
   if (address.isEmpty) return "";
   final unit = rentalUnit?.trim() ?? "";
-  if (unit.isEmpty ||
-      unit == "-" ||
-      unit == "null" ||
-      unit == "undefined") {
+  if (unit.isEmpty || unit == "-" || unit == "null" || unit == "undefined") {
     return address;
   }
   if (unit.contains(address)) return unit;
@@ -1161,6 +1159,24 @@ class CVVFormatter extends TextInputFormatter {
 /// or digits with a single optional decimal point whose numeric value is
 /// between 0 and 100 (inclusive). Any keystroke that would fall outside that
 /// range (or isn't numeric) is rejected, so out-of-range values can't be typed.
+/// Digits with at most one decimal point, no upper bound.
+///
+/// For money amounts (e.g. the ACH flat fee) where
+/// [PercentRangeFormatter]'s 0-100 cap does not apply. A raw
+/// `FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))` filters per
+/// character, so it lets "1..5" through and the value then fails to parse.
+class DecimalAmountFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final text = newValue.text;
+    if (text.isEmpty) return newValue;
+    if (!RegExp(r'^\d*\.?\d*$').hasMatch(text)) return oldValue;
+    if (double.tryParse(text) == null) return oldValue;
+    return newValue;
+  }
+}
+
 class PercentRangeFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -1356,8 +1372,7 @@ class CustomTableView extends StatelessWidget {
 // exception class names, OS errno values and whole JSON response bodies.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const String kGenericErrorMessage =
-    'Something went wrong. Please try again.';
+const String kGenericErrorMessage = 'Something went wrong. Please try again.';
 const String kWorkOrderNotFoundMessage =
     'This work order could not be found. It may have been deleted.';
 

@@ -1018,13 +1018,19 @@ class _FinancialTableState extends State<FinancialTable>
                                         bool isExpanded =
                                             expandedIndex == index;
                                         Data Tenant_financial = entry.value;
-                                        String accounts = "";
-                                        Tenant_financial.entry!
-                                            .forEach((entry) {
-                                          accounts += entry.account! + " , ";
-                                        });
-                                        accounts = accounts.substring(
-                                            0, accounts.length - 2);
+                                        // A ledger row can arrive with no
+                                        // `entry` array at all (the model only
+                                        // fills it when the key is present), an
+                                        // empty one, or entries with no
+                                        // account. The old code null-asserted
+                                        // both and then trimmed two characters
+                                        // off the result, so any of the three
+                                        // took the whole tab down.
+                                        final String accounts =
+                                            (Tenant_financial.entry ?? [])
+                                                .map((e) => e.account ?? '')
+                                                .where((a) => a.isNotEmpty)
+                                                .join(', ');
 
                                         //print(Tenant_financial.totalBalance);
                                         //return CustomExpansionTile(data: Propertytype, index: index);
@@ -1121,15 +1127,22 @@ class _FinancialTableState extends State<FinancialTable>
                                                         Expanded(
                                                           flex: 3,
                                                           child: Text(
-                                                            Tenant_financial
-                                                                        .entry
-                                                                        ?.first
-                                                                        .date
-                                                                        ?.isNotEmpty ==
-                                                                    true
+                                                            // `?.first` guards a
+                                                            // null list but not
+                                                            // an empty one, which
+                                                            // still threw here.
+                                                            (Tenant_financial.entry
+                                                                            ?.isNotEmpty ??
+                                                                        false) &&
+                                                                    (Tenant_financial
+                                                                            .entry!
+                                                                            .first
+                                                                            .date
+                                                                            ?.isNotEmpty ??
+                                                                        false)
                                                                 ? dateProvider
                                                                     .formatCurrentDate(
-                                                                        '${Tenant_financial.entry?.first.date}')
+                                                                        '${Tenant_financial.entry!.first.date}')
                                                                 : 'N/A',
                                                             style: TextStyle(
                                                               color: blueColor,
@@ -1872,10 +1885,20 @@ class _FinancialTableState extends State<FinancialTable>
                                                                         vertical:
                                                                             20),
                                                                 child: Text(
-                                                                  _pagedData[i]
-                                                                      .entry!
-                                                                      .first
-                                                                      .date!,
+                                                                  // `.first` on an
+                                                                  // empty entry list
+                                                                  // threw even when
+                                                                  // the list itself
+                                                                  // was present.
+                                                                  (_pagedData[i].entry ??
+                                                                              [])
+                                                                          .isEmpty
+                                                                      ? ''
+                                                                      : (_pagedData[i]
+                                                                              .entry!
+                                                                              .first
+                                                                              .date ??
+                                                                          ''),
                                                                   style:
                                                                       TextStyle(
                                                                     color:
@@ -1922,10 +1945,15 @@ class _FinancialTableState extends State<FinancialTable>
                                                                         vertical:
                                                                             20),
                                                                 child: Text(
-                                                                  _pagedData[i]
-                                                                      .entry!
-                                                                      .first
-                                                                      .account!,
+                                                                  (_pagedData[i].entry ??
+                                                                              [])
+                                                                          .isEmpty
+                                                                      ? ''
+                                                                      : (_pagedData[i]
+                                                                              .entry!
+                                                                              .first
+                                                                              .account ??
+                                                                          ''),
                                                                   style:
                                                                       TextStyle(
                                                                     color:

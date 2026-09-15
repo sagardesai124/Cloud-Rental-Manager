@@ -175,7 +175,7 @@ class _Insurance_premium_TableState extends State<Insurance_premium_Table>
       context: context,
       type: AlertType.warning,
       title: "Are you sure?",
-      desc: "Once deleted, you will not be able to recover this property!",
+      desc: "Once deleted, you will not be able to recover this insurance premium entry!",
       content: Column(
         children: <Widget>[
           const SizedBox(

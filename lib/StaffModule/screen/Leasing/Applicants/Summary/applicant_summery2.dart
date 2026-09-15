@@ -1225,50 +1225,32 @@ class _applicant_summeryState extends State<applicant_summery>
                             color: blueColor),
                       ),
                     ),
+                    // The middle column used to print a const placeholder
+                    // ("The New Rental Application Status") on every row, and
+                    // the three headings were blank. ApplicantStatus carries
+                    // only status / statusUpdatedBy / updateAt, so there was no
+                    // per-row value that column could ever have shown — the
+                    // detail column beside it already carries all three.
                     DataTable(
-                      headingRowHeight: 10,
                       columnSpacing: 20,
                       dataRowHeight:
                           80, // Adjust spacing between columns as needed
-                      columns: [
-                        const DataColumn(label: Text('')),
-                        const DataColumn(label: Text('')),
-                        const DataColumn(label: Text('')),
+                      columns: const [
+                        DataColumn(label: Text('Status')),
+                        DataColumn(label: Text('Updated')),
                       ],
                       rows: summery.applicantStatus!.map((status) {
                         final statusMessage =
                             '${status.status} by ${status.statusUpdatedBy} at ${status.updateAt}';
                         return DataRow(cells: [
-                          DataCell(Text(status.status!)),
-                          const DataCell(
-                              Text("The New Rental Application Status")),
+                          DataCell(Text(status.status ?? '')),
                           DataCell(Text(statusMessage)),
                         ]);
                       }).toList(),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          GestureDetector(
-                            onTap: () {},
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                    color:blueColor),
-                              ),
-                              child: const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Text('View More'),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // "View More" had an empty onTap and nothing further to
+                    // show — the table above already lists every status change.
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),

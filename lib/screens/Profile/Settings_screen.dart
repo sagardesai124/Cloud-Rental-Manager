@@ -88,8 +88,7 @@ class TabBarExample extends StatefulWidget {
   State<TabBarExample> createState() => _TabBarExampleState();
 }
 
-class _TabBarExampleState extends State<TabBarExample>
-    with NetworkRetryState {
+class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   int _selectedRadio = 0;
   TextEditingController credit = TextEditingController();
   TextEditingController debit = TextEditingController();
@@ -430,8 +429,7 @@ class _TabBarExampleState extends State<TabBarExample>
     // can stay `none` after the connection is back (reliably so on the
     // iOS simulator), which made this screen declare itself offline
     // while requests actually succeed. Confirm before believing it.
-    if (connectiondata == ConnectivityResult.none &&
-        await hasNetworkNow()) {
+    if (connectiondata == ConnectivityResult.none && await hasNetworkNow()) {
       connectiondata = ConnectivityResult.wifi;
     }
     if (!mounted) return;
@@ -503,9 +501,10 @@ class _TabBarExampleState extends State<TabBarExample>
     String? role = prefs.getString("role");
 
     // Use staff_id only in a staff session, otherwise admin_id
-    String? id = (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
-        ? staffId
-        : adminId;
+    String? id =
+        (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
+            ? staffId
+            : adminId;
 
     try {
       Setting1 surcharges =
@@ -665,8 +664,9 @@ class _TabBarExampleState extends State<TabBarExample>
         "surcharge_percent_ACH": percent.text.trim().isNotEmpty
             ? double.tryParse(percent.text.trim())
             : null, // Add your logic to get this value
-        "surcharge_flat_ACH":
-            flat.text.trim().isNotEmpty ? double.tryParse(flat.text.trim()) : null,
+        "surcharge_flat_ACH": flat.text.trim().isNotEmpty
+            ? double.tryParse(flat.text.trim())
+            : null,
         "surcharge_account": selectedAccount != null
             ? (accounts.any((account) => account.accountId == selectedAccount)
                 ? accounts
@@ -700,12 +700,16 @@ class _TabBarExampleState extends State<TabBarExample>
       }
     } catch (e) {
       logError('Failed to update surcharge data: $e');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: ${friendlyErrorMessage(e)}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${friendlyErrorMessage(e)}')));
     }
   }
 
   Future<void> AddSurgedata() async {
+    // double, not int: these are money fields and the UI accepts decimals.
+    // int.tryParse("2.5") returns null (it does not truncate), so a first
+    // save silently stored null for every decimal while the toast said it
+    // succeeded. updateSurcharge() already parsed these as double.
     // Settings are view-only for staff — never send a surcharge.
     if (!_canEditSettings) return;
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -716,15 +720,17 @@ class _TabBarExampleState extends State<TabBarExample>
       Map<String, dynamic> data = {
         "admin_id": id,
         "surcharge_percent": credit.text.trim().isNotEmpty
-            ? int.tryParse(credit.text.trim())
+            ? double.tryParse(credit.text.trim())
             : null,
-        "surcharge_percent_debit":
-            debit.text.trim().isNotEmpty ? int.tryParse(debit.text.trim()) : null,
+        "surcharge_percent_debit": debit.text.trim().isNotEmpty
+            ? double.tryParse(debit.text.trim())
+            : null,
         "surcharge_percent_ACH": percent.text.trim().isNotEmpty
-            ? int.tryParse(percent.text.trim())
+            ? double.tryParse(percent.text.trim())
             : null, // Add your logic to get this value
-        "surcharge_flat_ACH":
-            flat.text.trim().isNotEmpty ? int.tryParse(flat.text.trim()) : null,
+        "surcharge_flat_ACH": flat.text.trim().isNotEmpty
+            ? double.tryParse(flat.text.trim())
+            : null,
         "surcharge_account": selectedAccount
         // Add your logic to get this value
       };
@@ -741,8 +747,8 @@ class _TabBarExampleState extends State<TabBarExample>
       }
     } catch (e) {
       logError('Failed to update surcharge data: $e');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: ${friendlyErrorMessage(e)}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${friendlyErrorMessage(e)}')));
     }
   }
 
@@ -1052,8 +1058,8 @@ class _TabBarExampleState extends State<TabBarExample>
       }
     } catch (e) {
       logError('Failed to update mail data: $e');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: ${friendlyErrorMessage(e)}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${friendlyErrorMessage(e)}')));
     }
   }
 
@@ -1125,8 +1131,8 @@ class _TabBarExampleState extends State<TabBarExample>
       }
     } catch (e) {
       logError('Failed to update mail data: $e');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: ${friendlyErrorMessage(e)}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${friendlyErrorMessage(e)}')));
     }
   }
 
@@ -1637,10 +1643,13 @@ class _TabBarExampleState extends State<TabBarExample>
     final narrow = w < 700;
 
     if (_cpLoading && !_cpLoadedOnce) {
-      return  Padding(
+      return Padding(
         padding: EdgeInsets.all(24),
-        child: Center(child: 
-         SpinKitFadingCircle(color: blueColor,size: 35,),
+        child: Center(
+          child: SpinKitFadingCircle(
+            color: blueColor,
+            size: 35,
+          ),
         ),
       );
     }
@@ -2803,7 +2812,6 @@ class _TabBarExampleState extends State<TabBarExample>
         "id": "CRM $id",
       });
 
-
       if (response.statusCode == 200) {
         List jsonResponse = json.decode(response.body)['data'];
         Map<String, String> unitAddresses = {};
@@ -2865,7 +2873,9 @@ class _TabBarExampleState extends State<TabBarExample>
         _isLoadingtenant = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch tenants: ${friendlyErrorMessage(e)}')),
+        SnackBar(
+            content:
+                Text('Failed to fetch tenants: ${friendlyErrorMessage(e)}')),
       );
     }
   }
@@ -2913,7 +2923,9 @@ class _TabBarExampleState extends State<TabBarExample>
       // which says it better than a snackbar stacked on top of it.
       if (!isNetworkError(e))
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to fetch vendors: ${friendlyErrorMessage(e)}')),
+          SnackBar(
+              content:
+                  Text('Failed to fetch vendors: ${friendlyErrorMessage(e)}')),
         );
     }
   }
@@ -2964,7 +2976,9 @@ class _TabBarExampleState extends State<TabBarExample>
       // which says it better than a snackbar stacked on top of it.
       if (!isNetworkError(e))
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to fetch vendors: ${friendlyErrorMessage(e)}')),
+          SnackBar(
+              content:
+                  Text('Failed to fetch vendors: ${friendlyErrorMessage(e)}')),
         );
     }
   }
@@ -2990,7 +3004,6 @@ class _TabBarExampleState extends State<TabBarExample>
       });
       return;
     }
-
 
     final url = '${Api_url}/api/work-order/work-defaults';
     final headers = {
@@ -3101,7 +3114,6 @@ class _TabBarExampleState extends State<TabBarExample>
       'Content-Type': 'application/json; charset=UTF-8',
     };
 
-
     try {
       final response = await apiGet(Uri.parse(url), headers: headers);
 
@@ -3142,8 +3154,7 @@ class _TabBarExampleState extends State<TabBarExample>
                   true; // Mark as loaded even with defaults
             });
           }
-        } else {
-        }
+        } else {}
       } else if (response.statusCode == 404) {
         // First time - no settings exist yet, use defaults
         setState(() {
@@ -3166,7 +3177,9 @@ class _TabBarExampleState extends State<TabBarExample>
       }
     } catch (e) {
       logError('Exception loading workorder notification settings: $e');
-      Fluttertoast.showToast(msg: 'Failed to load notification settings: ${friendlyErrorMessage(e)}');
+      Fluttertoast.showToast(
+          msg:
+              'Failed to load notification settings: ${friendlyErrorMessage(e)}');
     }
   }
 
@@ -3306,6 +3319,7 @@ class _TabBarExampleState extends State<TabBarExample>
       ),
     );
   }
+
   _checkUserType() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? staffid = prefs.getString("staff_id");
@@ -3468,9 +3482,7 @@ class _TabBarExampleState extends State<TabBarExample>
         inputFormatters: [
           // Web parity: percentage surcharge is capped 0–100 at the keystroke
           // level; the flat ($) field keeps plain numeric entry.
-          showPercent
-              ? PercentRangeFormatter()
-              : FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+          showPercent ? PercentRangeFormatter() : DecimalAmountFormatter(),
         ],
         onChanged: (value) {
           setState(() {});
@@ -3626,9 +3638,8 @@ class _TabBarExampleState extends State<TabBarExample>
                   ),
                 )
               : null,
-          prefixIconConstraints: dollar
-              ? const BoxConstraints(minWidth: 30, maxWidth: 34)
-              : null,
+          prefixIconConstraints:
+              dollar ? const BoxConstraints(minWidth: 30, maxWidth: 34) : null,
           suffixText: percent ? '%' : null,
           suffixStyle: TextStyle(
             color: Colors.grey.shade500,
@@ -3761,8 +3772,8 @@ class _TabBarExampleState extends State<TabBarExample>
         // the (also-disabled-but-undimmed) fields around it — no Opacity
         // wrap, since _lateFeeField doesn't dim either.
         Theme(
-            data: Theme.of(context).copyWith(disabledColor: blueColor),
-            child: Container(
+          data: Theme.of(context).copyWith(disabledColor: blueColor),
+          child: Container(
             height: 54,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -3770,85 +3781,85 @@ class _TabBarExampleState extends State<TabBarExample>
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: DropdownButtonHideUnderline(
-            child: DropdownButton2<String>(
-              isExpanded: true,
-              alignment: AlignmentDirectional.centerStart,
-              // dropdown_button2 only adds its own extra closed-state sizing
-              // padding when width is left unset on both the button and the
-              // dropdown menu — width: double.infinity turns that off, so this
-              // padding (matching the TextField's contentPadding exactly) is
-              // the only thing governing the text's start position.
-              buttonStyleData: const ButtonStyleData(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 16),
-              ),
-              value: (selectedPropertyOwnerId.isEmpty ||
-                      propertyOwners.any(
-                          (po) => po.rentalownerId == selectedPropertyOwnerId))
-                  ? selectedPropertyOwnerId
-                  : "",
-              style: TextStyle(
-                fontSize: 15,
-                color: blueColor,
-                fontWeight: FontWeight.w600,
-              ),
-              iconStyleData: IconStyleData(
-                icon: isLoadingPropertyOwners
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(Icons.keyboard_arrow_down, color: blueColor),
-              ),
-              dropdownStyleData: DropdownStyleData(
-                maxHeight: 260,
-                offset: const Offset(0, -4),
-                elevation: 2,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+              child: DropdownButton2<String>(
+                isExpanded: true,
+                alignment: AlignmentDirectional.centerStart,
+                // dropdown_button2 only adds its own extra closed-state sizing
+                // padding when width is left unset on both the button and the
+                // dropdown menu — width: double.infinity turns that off, so this
+                // padding (matching the TextField's contentPadding exactly) is
+                // the only thing governing the text's start position.
+                buttonStyleData: const ButtonStyleData(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 16),
                 ),
-              ),
-              menuItemStyleData: const MenuItemStyleData(
-                height: 48,
-                padding: EdgeInsets.symmetric(horizontal: 16),
-              ),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: "",
-                  child: Text(
-                    "Default (All Properties)",
-                    overflow: TextOverflow.ellipsis,
+                value: (selectedPropertyOwnerId.isEmpty ||
+                        propertyOwners.any((po) =>
+                            po.rentalownerId == selectedPropertyOwnerId))
+                    ? selectedPropertyOwnerId
+                    : "",
+                style: TextStyle(
+                  fontSize: 15,
+                  color: blueColor,
+                  fontWeight: FontWeight.w600,
+                ),
+                iconStyleData: IconStyleData(
+                  icon: isLoadingPropertyOwners
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(Icons.keyboard_arrow_down, color: blueColor),
+                ),
+                dropdownStyleData: DropdownStyleData(
+                  maxHeight: 260,
+                  offset: const Offset(0, -4),
+                  elevation: 2,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
                 ),
-                ...propertyOwners
-                    .where((po) =>
-                        (po.rentalownerId ?? '').isNotEmpty &&
-                        (po.rentalOwnerName ?? '').isNotEmpty)
-                    .map((po) {
-                  return DropdownMenuItem<String>(
-                    value: po.rentalownerId,
+                menuItemStyleData: const MenuItemStyleData(
+                  height: 48,
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                ),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: "",
                     child: Text(
-                      po.rentalOwnerName ?? '',
+                      "Default (All Properties)",
                       overflow: TextOverflow.ellipsis,
                     ),
-                  );
-                }),
-              ],
-              // Settings are view-only for staff — null disables the dropdown.
-              onChanged: !_canEditSettings
-                  ? null
-                  : (String? newValue) {
-                setState(() {
-                  selectedPropertyOwnerId = newValue ?? '';
-                });
-              },
+                  ),
+                  ...propertyOwners
+                      .where((po) =>
+                          (po.rentalownerId ?? '').isNotEmpty &&
+                          (po.rentalOwnerName ?? '').isNotEmpty)
+                      .map((po) {
+                    return DropdownMenuItem<String>(
+                      value: po.rentalownerId,
+                      child: Text(
+                        po.rentalOwnerName ?? '',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }),
+                ],
+                // Settings are view-only for staff — null disables the dropdown.
+                onChanged: !_canEditSettings
+                    ? null
+                    : (String? newValue) {
+                        setState(() {
+                          selectedPropertyOwnerId = newValue ?? '';
+                        });
+                      },
+              ),
             ),
           ),
         ),
-          ),
         const SizedBox(height: 20),
         _lateFeeLabel("Number of Grace Period Days"),
         const SizedBox(height: 8),
@@ -3912,8 +3923,8 @@ class _TabBarExampleState extends State<TabBarExample>
         // the (also-disabled-but-undimmed) fields around it — no Opacity
         // wrap, since _lateFeeField doesn't dim either.
         Theme(
-            data: Theme.of(context).copyWith(disabledColor: blueColor),
-            child: Container(
+          data: Theme.of(context).copyWith(disabledColor: blueColor),
+          child: Container(
             height: 54,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -3921,79 +3932,81 @@ class _TabBarExampleState extends State<TabBarExample>
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: DropdownButtonHideUnderline(
-            child: DropdownButton2<String>(
-              isExpanded: true,
-              alignment: AlignmentDirectional.centerStart,
-              // dropdown_button2 only adds its own extra closed-state sizing
-              // padding when width is left unset on both the button and the
-              // dropdown menu — width: double.infinity turns that off, so this
-              // padding (matching the TextField's contentPadding exactly) is
-              // the only thing governing the text's start position.
-              buttonStyleData: const ButtonStyleData(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 16),
-              ),
-              value: accountOptions.contains(selectedAccountName)
-                  ? selectedAccountName
-                  : null,
-              hint: Text(
-                "Select Account",
+              child: DropdownButton2<String>(
+                isExpanded: true,
+                alignment: AlignmentDirectional.centerStart,
+                // dropdown_button2 only adds its own extra closed-state sizing
+                // padding when width is left unset on both the button and the
+                // dropdown menu — width: double.infinity turns that off, so this
+                // padding (matching the TextField's contentPadding exactly) is
+                // the only thing governing the text's start position.
+                buttonStyleData: const ButtonStyleData(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                ),
+                value: accountOptions.contains(selectedAccountName)
+                    ? selectedAccountName
+                    : null,
+                hint: Text(
+                  "Select Account",
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 style: TextStyle(
                   fontSize: 15,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w500,
+                  color: blueColor,
+                  fontWeight: FontWeight.w600,
                 ),
-              ),
-              style: TextStyle(
-                fontSize: 15,
-                color: blueColor,
-                fontWeight: FontWeight.w600,
-              ),
-              iconStyleData: IconStyleData(
-                icon: Icon(Icons.keyboard_arrow_down, color: blueColor),
-              ),
-              dropdownStyleData: DropdownStyleData(
-                maxHeight: 260,
-                offset: const Offset(0, -4),
-                elevation: 2,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+                iconStyleData: IconStyleData(
+                  icon: Icon(Icons.keyboard_arrow_down, color: blueColor),
                 ),
-              ),
-              menuItemStyleData: const MenuItemStyleData(
-                height: 48,
-                padding: EdgeInsets.symmetric(horizontal: 16),
-              ),
-              items: accountOptions.map((String accountName) {
-                return DropdownMenuItem<String>(
-                  value: accountName,
-                  child: Text(
-                    accountName,
-                    overflow: TextOverflow.ellipsis,
+                dropdownStyleData: DropdownStyleData(
+                  maxHeight: 260,
+                  offset: const Offset(0, -4),
+                  elevation: 2,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                );
-              }).toList(),
-              // Settings are view-only for staff — null disables the dropdown.
-              onChanged: !_canEditSettings ? null : (String? newValue) {
-                setState(() {
-                  selectedAccountName = newValue ?? '';
-                  if (newValue == "Late Fee Income") {
-                    selectedAccountId = "";
-                  } else {
-                    Setting4? selectedAccount = accounts.firstWhere(
-                      (account) => account.account == newValue,
-                      orElse: () => Setting4(),
-                    );
-                    selectedAccountId = selectedAccount.accountId ?? '';
-                  }
-                });
-              },
+                ),
+                menuItemStyleData: const MenuItemStyleData(
+                  height: 48,
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                ),
+                items: accountOptions.map((String accountName) {
+                  return DropdownMenuItem<String>(
+                    value: accountName,
+                    child: Text(
+                      accountName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                // Settings are view-only for staff — null disables the dropdown.
+                onChanged: !_canEditSettings
+                    ? null
+                    : (String? newValue) {
+                        setState(() {
+                          selectedAccountName = newValue ?? '';
+                          if (newValue == "Late Fee Income") {
+                            selectedAccountId = "";
+                          } else {
+                            Setting4? selectedAccount = accounts.firstWhere(
+                              (account) => account.account == newValue,
+                              orElse: () => Setting4(),
+                            );
+                            selectedAccountId = selectedAccount.accountId ?? '';
+                          }
+                        });
+                      },
+              ),
             ),
           ),
         ),
-          ),
         const SizedBox(height: 20),
         _lateFeeLabel("Description"),
         const SizedBox(height: 8),
@@ -4209,8 +4222,7 @@ class _TabBarExampleState extends State<TabBarExample>
             Expanded(
               child: GestureDetector(
                 onTap: () async {
-                  final dp =
-                      Provider.of<DateProvider>(context, listen: false);
+                  final dp = Provider.of<DateProvider>(context, listen: false);
                   await dp.loadDateFormat();
                   setState(() {
                     dateformateselect = dp.dateformateselect;
@@ -4268,9 +4280,7 @@ class _TabBarExampleState extends State<TabBarExample>
                         .updateDateFormat('yyyy-MMM-dd', 2);
                   } else if (dateformateselect == 3 && customdate != null) {
                     String fixedDate = fixDateFormat(customdate!);
-                    context
-                        .read<DateProvider>()
-                        .updateDateFormat(fixedDate, 3);
+                    context.read<DateProvider>().updateDateFormat(fixedDate, 3);
                   }
                   Fluttertoast.showToast(
                     msg: "Date format updated successfully",
@@ -4678,7 +4688,9 @@ class _TabBarExampleState extends State<TabBarExample>
               Icons.category_outlined),
         ]),
         _SettingsMenuSection('TEAM', [
-          _SettingsMenuItem('Team & Access', 'Team members, roles & permissions',
+          _SettingsMenuItem(
+              'Team & Access',
+              'Team members, roles & permissions',
               Icons.manage_accounts_outlined),
         ]),
         _SettingsMenuSection('FINANCIAL', [
@@ -4978,8 +4990,8 @@ class _TabBarExampleState extends State<TabBarExample>
                         color: const Color(0xFFEFF1F5),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(Icons.chevron_left,
-                          color: blueColor, size: 28),
+                      child:
+                          Icon(Icons.chevron_left, color: blueColor, size: 28),
                     ),
                   ),
                 ),
@@ -5042,501 +5054,2564 @@ class _TabBarExampleState extends State<TabBarExample>
                 : Container(
                     color: const Color(0xFFF1F4F9),
                     child: ListView(padding: EdgeInsets.zero, children: [
-                _buildSettingsDetailHeader(),
-                const SizedBox(
-                  height: 16,
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 18, right: 18),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      //border: Border.all(color: blueColor),
-                    ),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 8),
-                        if (issurge)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      _buildSettingsDetailHeader(),
+                      const SizedBox(
+                        height: 16,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 18, right: 18),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            //border: Border.all(color: blueColor),
+                          ),
+                          child: Column(
                             children: [
-                              const SizedBox(height: 12),
-                              Text(
-                                "Surcharge",
-                                style: TextStyle(
-                                  color: blueColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width < 500
-                                          ? 20
-                                          : 25,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _canEditSettings
-                                    ? "You can set the default surcharge percentage from here."
-                                    : "Default surcharge percentages set by your Admin.",
-                                style: TextStyle(
-                                  fontSize:
-                                      MediaQuery.of(context).size.width < 500
-                                          ? 14
-                                          : 18,
-                                  color: const Color(0xFF8A95A8),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              if (!_canEditSettings) ...[
-                                const SizedBox(height: 12),
-                                _viewOnlyNotice(),
-                              ],
-                              const SizedBox(height: 22),
-                              Text(
-                                "Account to receive surcharges",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: blueColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                               const SizedBox(height: 8),
-                              Container(
-                                height: 54,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border:
-                                      Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton2<String?>(
-                                    isExpanded: true,
-                                    alignment: AlignmentDirectional.centerStart,
-                                    value: selectedAccount != null &&
-                                            accounts.any((account) =>
-                                                account.accountId ==
-                                                selectedAccount)
-                                        ? selectedAccount
-                                        : null,
-                                    hint: Text(
-                                      "Select Account",
+                              if (issurge)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      "Surcharge",
                                       style: TextStyle(
-                                        fontSize: 15,
-                                        color: Colors.grey.shade500,
+                                        color: blueColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize:
+                                            MediaQuery.of(context).size.width <
+                                                    500
+                                                ? 20
+                                                : 25,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _canEditSettings
+                                          ? "You can set the default surcharge percentage from here."
+                                          : "Default surcharge percentages set by your Admin.",
+                                      style: TextStyle(
+                                        fontSize:
+                                            MediaQuery.of(context).size.width <
+                                                    500
+                                                ? 14
+                                                : 18,
+                                        color: const Color(0xFF8A95A8),
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: blueColor,
-                                      fontWeight: FontWeight.w600,
+                                    if (!_canEditSettings) ...[
+                                      const SizedBox(height: 12),
+                                      _viewOnlyNotice(),
+                                    ],
+                                    const SizedBox(height: 22),
+                                    Text(
+                                      "Account to receive surcharges",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: blueColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                    // dropdown_button2 only adds its own extra
-                                    // closed-state sizing padding when width is
-                                    // left unset on both the button and the
-                                    // dropdown menu — width: double.infinity
-                                    // turns that off, so this padding (matching
-                                    // the TextField's contentPadding exactly)
-                                    // is the only thing governing where the
-                                    // text starts.
-                                    buttonStyleData: const ButtonStyleData(
-                                      width: double.infinity,
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 16),
-                                    ),
-                                    iconStyleData: IconStyleData(
-                                      icon: Icon(Icons.keyboard_arrow_down,
-                                          color: blueColor),
-                                      iconSize: 26,
-                                    ),
-                                    dropdownStyleData: DropdownStyleData(
-                                      maxHeight: 260,
-                                      offset: const Offset(0, -6),
-                                      elevation: 3,
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      height: 54,
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                            color: Colors.grey.shade200),
+                                            color: Colors.grey.shade300),
                                       ),
-                                      scrollbarTheme: ScrollbarThemeData(
-                                        radius: const Radius.circular(8),
-                                        thickness: WidgetStateProperty.all(5),
-                                        thumbVisibility:
-                                            WidgetStateProperty.all(true),
-                                      ),
-                                    ),
-                                    menuItemStyleData: const MenuItemStyleData(
-                                      height: 48,
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 16),
-                                    ),
-                                    items: accounts.map((Setting4 account) {
-                                      return DropdownMenuItem<String>(
-                                        value: account.accountId,
-                                        child: Text(
-                                          account.account!,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      );
-                                    }).toList(),
-                                    // Settings are view-only for staff — null disables the dropdown.
-                                    onChanged: !_canEditSettings ? null : (String? newValue) {
-                                      setState(() {
-                                        selectedAccount = newValue;
-                                        _accountError = null;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                              if (_accountError != null) ...[
-                                const SizedBox(height: 6),
-                                Text(
-                                  _accountError!,
-                                  style: const TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 24),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Credit Card Surcharge %",
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: blueColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        _surchargeNumberField(
-                                          controller: credit,
-                                          showPercent: true,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Debit Card Surcharge %",
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: blueColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        _surchargeNumberField(
-                                          controller: debit,
-                                          showPercent: true,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                              Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border:
-                                      Border.all(color: Colors.grey.shade200),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 18, vertical: 16),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFEFF3F9),
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(16),
-                                          topRight: Radius.circular(16),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            "ACH SURCHARGE",
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton2<String?>(
+                                          isExpanded: true,
+                                          alignment:
+                                              AlignmentDirectional.centerStart,
+                                          value: selectedAccount != null &&
+                                                  accounts.any((account) =>
+                                                      account.accountId ==
+                                                      selectedAccount)
+                                              ? selectedAccount
+                                              : null,
+                                          hint: Text(
+                                            "Select Account",
                                             style: TextStyle(
-                                              fontSize: 16,
-                                              color: blueColor,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 0.3,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Supports a percentage, a flat fee, or both.",
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Color(0xFF8A95A8),
+                                              fontSize: 15,
+                                              color: Colors.grey.shade500,
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
-                                        ],
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            color: blueColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          // dropdown_button2 only adds its own extra
+                                          // closed-state sizing padding when width is
+                                          // left unset on both the button and the
+                                          // dropdown menu — width: double.infinity
+                                          // turns that off, so this padding (matching
+                                          // the TextField's contentPadding exactly)
+                                          // is the only thing governing where the
+                                          // text starts.
+                                          buttonStyleData:
+                                              const ButtonStyleData(
+                                            width: double.infinity,
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 16),
+                                          ),
+                                          iconStyleData: IconStyleData(
+                                            icon: Icon(
+                                                Icons.keyboard_arrow_down,
+                                                color: blueColor),
+                                            iconSize: 26,
+                                          ),
+                                          dropdownStyleData: DropdownStyleData(
+                                            maxHeight: 260,
+                                            offset: const Offset(0, -6),
+                                            elevation: 3,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                  color: Colors.grey.shade200),
+                                            ),
+                                            scrollbarTheme: ScrollbarThemeData(
+                                              radius: const Radius.circular(8),
+                                              thickness:
+                                                  WidgetStateProperty.all(5),
+                                              thumbVisibility:
+                                                  WidgetStateProperty.all(true),
+                                            ),
+                                          ),
+                                          menuItemStyleData:
+                                              const MenuItemStyleData(
+                                            height: 48,
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 16),
+                                          ),
+                                          items:
+                                              accounts.map((Setting4 account) {
+                                            return DropdownMenuItem<String>(
+                                              value: account.accountId,
+                                              child: Text(
+                                                account.account!,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            );
+                                          }).toList(),
+                                          // Settings are view-only for staff — null disables the dropdown.
+                                          onChanged: !_canEditSettings
+                                              ? null
+                                              : (String? newValue) {
+                                                  setState(() {
+                                                    selectedAccount = newValue;
+                                                    _accountError = null;
+                                                  });
+                                                },
+                                        ),
                                       ),
                                     ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                                    if (_accountError != null) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _accountError!,
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 24),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Credit Card Surcharge %",
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: blueColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              _surchargeNumberField(
+                                                controller: credit,
+                                                showPercent: true,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Debit Card Surcharge %",
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: blueColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              _surchargeNumberField(
+                                                controller: debit,
+                                                showPercent: true,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                            color: Colors.grey.shade200),
+                                      ),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          _achOptionCard(
-                                            value: 1,
-                                            label: "Percentage only",
-                                          ),
-                                          _achOptionCard(
-                                            value: 2,
-                                            label: "Flat fee only",
-                                          ),
-                                          _achOptionCard(
-                                            value: 3,
-                                            label:
-                                                "Both percentage and flat fee",
-                                          ),
-                                          if (_selectedRadio == 1 ||
-                                              _selectedRadio == 3) ...[
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              "ACH Percentage",
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: blueColor,
-                                                fontWeight: FontWeight.bold,
+                                          Container(
+                                            width: double.infinity,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 18, vertical: 16),
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFEFF3F9),
+                                              borderRadius: BorderRadius.only(
+                                                topLeft: Radius.circular(16),
+                                                topRight: Radius.circular(16),
                                               ),
                                             ),
-                                            const SizedBox(height: 8),
-                                            _surchargeNumberField(
-                                              controller: percent,
-                                              showPercent: true,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "ACH SURCHARGE",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: blueColor,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 0.3,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  "Supports a percentage, a flat fee, or both.",
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: Color(0xFF8A95A8),
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                          if (_selectedRadio == 2 ||
-                                              _selectedRadio == 3) ...[
-                                            const SizedBox(height: 16),
-                                            Text(
-                                              "ACH Flat Fee",
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: blueColor,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                16, 16, 16, 16),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                _achOptionCard(
+                                                  value: 1,
+                                                  label: "Percentage only",
+                                                ),
+                                                _achOptionCard(
+                                                  value: 2,
+                                                  label: "Flat fee only",
+                                                ),
+                                                _achOptionCard(
+                                                  value: 3,
+                                                  label:
+                                                      "Both percentage and flat fee",
+                                                ),
+                                                if (_selectedRadio == 1 ||
+                                                    _selectedRadio == 3) ...[
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    "ACH Percentage",
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: blueColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  _surchargeNumberField(
+                                                    controller: percent,
+                                                    showPercent: true,
+                                                  ),
+                                                ],
+                                                if (_selectedRadio == 2 ||
+                                                    _selectedRadio == 3) ...[
+                                                  const SizedBox(height: 16),
+                                                  Text(
+                                                    "ACH Flat Fee",
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: blueColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  _surchargeNumberField(
+                                                    controller: flat,
+                                                    hint: '\$0.00',
+                                                  ),
+                                                ],
+                                              ],
                                             ),
-                                            const SizedBox(height: 8),
-                                            _surchargeNumberField(
-                                              controller: flat,
-                                              hint: '\$0.00',
-                                            ),
-                                          ],
+                                          ),
                                         ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 28),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: GestureDetector(
-                                      // Same gap as the Late Fee Reset button:
-                                      // this can't save (gated separately by
-                                      // _canEditSettings on the Save/Update
-                                      // action), but .clear() still blanks the
-                                      // readOnly fields visibly. Staff could
-                                      // wipe every surcharge value and the
-                                      // selected account on screen.
-                                      onTap: !_canEditSettings
-                                          ? null
-                                          : () {
-                                              debit.clear();
-                                              credit.clear();
-                                              flat.clear();
-                                              percent.clear();
-                                              setState(() {
-                                                selectedAccount = null;
-                                              });
-                                            },
-                                      child: Opacity(
-                                        opacity: _canEditSettings ? 1.0 : 0.5,
-                                        child: Container(
-                                        height: 54,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                              color: blueColor, width: 1.5),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            "Reset",
-                                            style: TextStyle(
-                                              color: blueColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                    const SizedBox(height: 28),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 2,
+                                          child: GestureDetector(
+                                            // Same gap as the Late Fee Reset button:
+                                            // this can't save (gated separately by
+                                            // _canEditSettings on the Save/Update
+                                            // action), but .clear() still blanks the
+                                            // readOnly fields visibly. Staff could
+                                            // wipe every surcharge value and the
+                                            // selected account on screen.
+                                            onTap: !_canEditSettings
+                                                ? null
+                                                : () {
+                                                    debit.clear();
+                                                    credit.clear();
+                                                    flat.clear();
+                                                    percent.clear();
+                                                    setState(() {
+                                                      selectedAccount = null;
+                                                    });
+                                                  },
+                                            child: Opacity(
+                                              opacity:
+                                                  _canEditSettings ? 1.0 : 0.5,
+                                              child: Container(
+                                                height: 54,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                      color: blueColor,
+                                                      width: 1.5),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    "Reset",
+                                                    style: TextStyle(
+                                                      color: blueColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    flex: 3,
-                                    child: GestureDetector(
-                                      onTap: _hasSurchargeChanges()
-                                          ? () async {
-                                              if (selectedAccount == null) {
-                                                setState(() {
-                                                  _accountError =
-                                                      "Please select an account";
-                                                });
-                                                return;
-                                              }
-                                              setState(() {
-                                                _accountError = null;
-                                              });
-                                              if (isupdate)
-                                                await updateSurcharge();
-                                              else
-                                                await AddSurgedata();
-                                            }
-                                          : null,
-                                      child: Opacity(
-                                        opacity: _hasSurchargeChanges()
-                                            ? 1.0
-                                            : 0.5,
-                                        child: Container(
-                                          height: 54,
-                                          decoration: BoxDecoration(
-                                            color: blueColor,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                        const SizedBox(width: 14),
+                                        Expanded(
+                                          flex: 3,
+                                          child: GestureDetector(
+                                            onTap: _hasSurchargeChanges()
+                                                ? () async {
+                                                    if (selectedAccount ==
+                                                        null) {
+                                                      setState(() {
+                                                        _accountError =
+                                                            "Please select an account";
+                                                      });
+                                                      return;
+                                                    }
+                                                    setState(() {
+                                                      _accountError = null;
+                                                    });
+                                                    if (isupdate)
+                                                      await updateSurcharge();
+                                                    else
+                                                      await AddSurgedata();
+                                                  }
+                                                : null,
+                                            child: Opacity(
+                                              opacity: _hasSurchargeChanges()
+                                                  ? 1.0
+                                                  : 0.5,
+                                              child: Container(
+                                                height: 54,
+                                                decoration: BoxDecoration(
+                                                  color: blueColor,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    const Icon(Icons.check,
+                                                        color: Colors.white,
+                                                        size: 20),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      "Update",
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
                                           ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(
+                                        height: MediaQuery.of(context)
+                                                .padding
+                                                .bottom +
+                                            24),
+                                  ],
+                                ),
+                              if (isteamaccess) _buildTeamAccessSection(),
+                              if (iscompanyprofile)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 15),
+                                    _buildCompanyProfileForm(),
+                                  ],
+                                ),
+                              if (ismail) _buildMailServiceSection(),
+                              if (islatefee) _buildLateFeeSection(),
+                              if (isaccounts)
+                                Column(
+                                  children: [
+                                    const SizedBox(height: 15),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Manage Account",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: blueColor,
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    500
+                                                ? 18
+                                                : 25,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            _showAccount(context);
+                                          },
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(5.0),
+                                            child: Container(
+                                              height: MediaQuery.of(context)
+                                                      .size
+                                                      .height *
+                                                  .045,
+                                              width: MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      500
+                                                  ? 120
+                                                  : 180,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(5.0),
+                                                color: blueColor,
+                                                boxShadow: [
+                                                  const BoxShadow(
+                                                    color: Colors.grey,
+                                                    offset: Offset(
+                                                        0.0, 1.0), //(x,y)
+                                                    blurRadius: 6.0,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Center(
+                                                child: isLoading
+                                                    ? const SpinKitFadingCircle(
+                                                        color: Colors.white,
+                                                        size: 25.0,
+                                                      )
+                                                    : Text(
+                                                        "Add Account",
+                                                        style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: MediaQuery.of(
+                                                                            context)
+                                                                        .size
+                                                                        .width <
+                                                                    500
+                                                                ? 15
+                                                                : 18),
+                                                      ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 15),
+                                    if (MediaQuery.of(context).size.width > 500)
+                                      const SizedBox(height: 25),
+                                    if (MediaQuery.of(context).size.width < 500)
+                                      if (MediaQuery.of(context).size.width <
+                                          500)
+                                        FutureBuilder<List<Setting4>>(
+                                          future: futureaccount,
+                                          builder: (context, snapshot) {
+                                            if (snapshot.connectionState ==
+                                                ConnectionState.waiting) {
+                                              return ColabShimmerLoadingWidget();
+                                            } else if (snapshot.hasError) {
+                                              return Center(
+                                                  child: Text(
+                                                      friendlyErrorMessage(
+                                                          snapshot.error)));
+                                            } else if (!snapshot.hasData ||
+                                                snapshot.data!.isEmpty) {
+                                              return Container(
+                                                height: MediaQuery.of(context)
+                                                        .size
+                                                        .height *
+                                                    .5,
+                                                child: Center(
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Image.asset(
+                                                        "assets/images/no_data.jpg",
+                                                        height: 200,
+                                                        width: 200,
+                                                      ),
+                                                      const SizedBox(
+                                                        height: 10,
+                                                      ),
+                                                      Text(
+                                                        "No Data Available",
+                                                        style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: blueColor,
+                                                            fontSize: 16),
+                                                      )
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            } else {
+                                              var data = snapshot.data!;
+                                              if (searchValue == null ||
+                                                  searchValue!.isEmpty) {
+                                                data = snapshot.data!;
+                                              } else if (searchValue == "All") {
+                                                data = snapshot.data!;
+                                              } else if (searchValue!
+                                                  .isNotEmpty) {
+                                                data = snapshot.data!
+                                                    .where((staff) => (staff
+                                                                .account ??
+                                                            '')
+                                                        .toLowerCase()
+                                                        .contains(searchValue!
+                                                            .toLowerCase()))
+                                                    .toList();
+                                              } else {
+                                                data = snapshot.data!
+                                                    .where((staff) =>
+                                                        staff.accountType ==
+                                                        searchValue)
+                                                    .toList();
+                                              }
+                                              sortData(data);
+                                              final totalPages = (data.isEmpty
+                                                  ? 1
+                                                  : (data.length / itemsPerPage)
+                                                      .ceil());
+                                              final currentPageData = data
+                                                  .skip(currentPage *
+                                                      itemsPerPage)
+                                                  .take(itemsPerPage)
+                                                  .toList();
+                                              return SingleChildScrollView(
+                                                child: Column(
+                                                  children: [
+                                                    const SizedBox(height: 10),
+                                                    _buildHeaders(),
+                                                    const SizedBox(height: 10),
+                                                    Container(
+                                                      // decoration: BoxDecoration(
+                                                      //   border: Border.all(
+                                                      //       color: Color.fromRGBO(
+                                                      //           152, 162, 179, .5)),
+                                                      // ),
+                                                      // decoration: BoxDecoration(
+                                                      //     border: Border.all(color: blueColor)),
+                                                      child: Column(
+                                                        children: currentPageData
+                                                                .isEmpty
+                                                            ? [
+                                                                kNoSearchResults(
+                                                                    context)
+                                                              ]
+                                                            : currentPageData
+                                                                .asMap()
+                                                                .entries
+                                                                .map((entry) {
+                                                                int index =
+                                                                    entry.key;
+                                                                bool
+                                                                    isExpanded =
+                                                                    expandedIndex ==
+                                                                        index;
+                                                                Setting4
+                                                                    account =
+                                                                    entry.value;
+                                                                //return CustomExpansionTile(data: Propertytype, index: index);
+                                                                return Container(
+                                                                  margin: const EdgeInsets
+                                                                      .symmetric(
+                                                                      vertical:
+                                                                          6),
+                                                                  decoration:
+                                                                      BoxDecoration(
+                                                                    color: index %
+                                                                                2 !=
+                                                                            0
+                                                                        ? const Color(
+                                                                            0xFFF4F8FF)
+                                                                        : Colors
+                                                                            .white,
+                                                                    border: Border.all(
+                                                                        color: const Color(
+                                                                            0xFFDBE0E5)),
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                            10),
+                                                                  ),
+                                                                  // decoration: BoxDecoration(
+                                                                  //   border: Border.all(color: blueColor),
+                                                                  // ),
+                                                                  child: Column(
+                                                                    children: <Widget>[
+                                                                      ListTile(
+                                                                        contentPadding:
+                                                                            EdgeInsets.zero,
+                                                                        title:
+                                                                            Padding(
+                                                                          padding: const EdgeInsets
+                                                                              .all(
+                                                                              2.0),
+                                                                          child:
+                                                                              Row(
+                                                                            mainAxisAlignment:
+                                                                                MainAxisAlignment.start,
+                                                                            crossAxisAlignment:
+                                                                                CrossAxisAlignment.center,
+                                                                            children: <Widget>[
+                                                                              InkWell(
+                                                                                onTap: () {
+                                                                                  // setState(() {
+                                                                                  //    isExpanded = !isExpanded;
+                                                                                  // //  expandedIndex = !expandedIndex;
+                                                                                  //
+                                                                                  // });
+                                                                                  // setState(() {
+                                                                                  //   if (isExpanded) {
+                                                                                  //     expandedIndex = null;
+                                                                                  //     isExpanded = !isExpanded;
+                                                                                  //   } else {
+                                                                                  //     expandedIndex = index;
+                                                                                  //   }
+                                                                                  // });
+                                                                                  setState(() {
+                                                                                    if (expandedIndex == index) {
+                                                                                      expandedIndex = null;
+                                                                                    } else {
+                                                                                      expandedIndex = index;
+                                                                                    }
+                                                                                  });
+                                                                                },
+                                                                                child: Container(
+                                                                                  margin: const EdgeInsets.only(left: 5, right: 5),
+                                                                                  padding: !isExpanded ? const EdgeInsets.only(bottom: 10) : const EdgeInsets.only(top: 10),
+                                                                                  child: FaIcon(
+                                                                                    isExpanded ? FontAwesomeIcons.sortUp : FontAwesomeIcons.sortDown,
+                                                                                    size: 20,
+                                                                                    color: blueColor,
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                              Expanded(
+                                                                                child: InkWell(
+                                                                                  onTap: () {
+                                                                                    setState(() {
+                                                                                      if (expandedIndex == index) {
+                                                                                        expandedIndex = null;
+                                                                                      } else {
+                                                                                        expandedIndex = index;
+                                                                                      }
+                                                                                    });
+                                                                                  },
+                                                                                  child: Text(
+                                                                                    '${account.account}',
+                                                                                    style: TextStyle(
+                                                                                      color: blueColor,
+                                                                                      fontWeight: FontWeight.bold,
+                                                                                      fontSize: 13,
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                              SizedBox(width: MediaQuery.of(context).size.width * .07),
+                                                                              Expanded(
+                                                                                child: Text(
+                                                                                  '${account.accountType}',
+                                                                                  style: TextStyle(
+                                                                                    color: blueColor,
+                                                                                    fontWeight: FontWeight.bold,
+                                                                                    fontSize: 13,
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                              SizedBox(width: MediaQuery.of(context).size.width * .03),
+                                                                              Expanded(
+                                                                                child: Text(
+                                                                                  '${account.fundType}',
+                                                                                  style: TextStyle(
+                                                                                    color: blueColor,
+                                                                                    fontWeight: FontWeight.bold,
+                                                                                    fontSize: 13,
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                              SizedBox(width: MediaQuery.of(context).size.width * .02),
+                                                                            ],
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      if (isExpanded)
+                                                                        Container(
+                                                                          padding: const EdgeInsets
+                                                                              .only(
+                                                                              left: 2,
+                                                                              right: 2),
+                                                                          margin: const EdgeInsets
+                                                                              .only(
+                                                                              bottom: 2),
+                                                                          child:
+                                                                              SingleChildScrollView(
+                                                                            child:
+                                                                                Container(
+                                                                              //color: Colors.blue,
+                                                                              child: Column(
+                                                                                children: [
+                                                                                  Row(
+                                                                                    mainAxisAlignment: MainAxisAlignment.end,
+                                                                                    //mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                                    children: [
+                                                                                      GestureDetector(
+                                                                                        onTap: () async {
+                                                                                          _showEditAccount(context, account);
+                                                                                        },
+                                                                                        child: Container(
+                                                                                          height: 35,
+                                                                                          width: 35,
+                                                                                          decoration: BoxDecoration(
+                                                                                            color: Colors.green.shade50,
+                                                                                            borderRadius: BorderRadius.circular(8),
+                                                                                          ),
+                                                                                          child: Row(
+                                                                                            mainAxisAlignment: MainAxisAlignment.center,
+                                                                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                                                                            children: [
+                                                                                              FaIcon(
+                                                                                                FontAwesomeIcons.edit,
+                                                                                                size: 15,
+                                                                                                color: Colors.green,
+                                                                                              ),
+                                                                                            ],
+                                                                                          ),
+                                                                                        ),
+                                                                                      ),
+                                                                                      SizedBox(width: 10),
+                                                                                      GestureDetector(
+                                                                                        onTap: () {
+                                                                                          _showDeleteAlert(context, account.accountId!);
+                                                                                        },
+                                                                                        child: Container(
+                                                                                          height: 35,
+                                                                                          width: 35,
+                                                                                          decoration: BoxDecoration(
+                                                                                            color: Colors.red.shade50,
+                                                                                            borderRadius: BorderRadius.circular(8),
+                                                                                          ),
+                                                                                          child: const Row(
+                                                                                            mainAxisAlignment: MainAxisAlignment.center,
+                                                                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                                                                            children: [
+                                                                                              FaIcon(
+                                                                                                FontAwesomeIcons.trashCan,
+                                                                                                size: 15,
+                                                                                                color: Colors.red,
+                                                                                              ),
+                                                                                            ],
+                                                                                          ),
+                                                                                        ),
+                                                                                      ),
+                                                                                      const SizedBox(width: 10),
+                                                                                    ],
+                                                                                  ),
+                                                                                  const SizedBox(height: 10),
+                                                                                ],
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                    ],
+                                                                  ),
+                                                                );
+                                                              }).toList(),
+                                                      ),
+                                                    ),
+                                                    if (totalPages > 1) ...[
+                                                      const SizedBox(
+                                                          height: 20),
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .end,
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              // Text('Rows per page:'),
+                                                              const SizedBox(
+                                                                  width: 10),
+                                                              Material(
+                                                                elevation: 3,
+                                                                child:
+                                                                    Container(
+                                                                  height: 40,
+                                                                  padding: const EdgeInsets
+                                                                      .symmetric(
+                                                                      horizontal:
+                                                                          12.0),
+                                                                  decoration:
+                                                                      BoxDecoration(
+                                                                    border: Border.all(
+                                                                        color: Colors
+                                                                            .grey),
+                                                                  ),
+                                                                  child:
+                                                                      DropdownButtonHideUnderline(
+                                                                    child:
+                                                                        DropdownButton<
+                                                                            int>(
+                                                                      value:
+                                                                          itemsPerPage,
+                                                                      items: itemsPerPageOptions
+                                                                          .map((int
+                                                                              value) {
+                                                                        return DropdownMenuItem<
+                                                                            int>(
+                                                                          value:
+                                                                              value,
+                                                                          child:
+                                                                              Text(value.toString()),
+                                                                        );
+                                                                      }).toList(),
+                                                                      onChanged: data.length >
+                                                                              itemsPerPageOptions.first // Condition to check if dropdown should be enabled
+                                                                          ? (newValue) {
+                                                                              setState(() {
+                                                                                itemsPerPage = newValue!;
+                                                                                currentPage = 0; // Reset to first page when items per page change
+                                                                              });
+                                                                            }
+                                                                          : null,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          Row(
+                                                            children: [
+                                                              IconButton(
+                                                                icon: FaIcon(
+                                                                  FontAwesomeIcons
+                                                                      .circleChevronLeft,
+                                                                  color: currentPage ==
+                                                                          0
+                                                                      ? Colors
+                                                                          .grey
+                                                                      : blueColor,
+                                                                ),
+                                                                onPressed:
+                                                                    currentPage ==
+                                                                            0
+                                                                        ? null
+                                                                        : () {
+                                                                            setState(() {
+                                                                              currentPage--;
+                                                                            });
+                                                                          },
+                                                              ),
+                                                              // IconButton(
+                                                              //   icon: Icon(Icons.arrow_back),
+                                                              //   onPressed: currentPage > 0
+                                                              //       ? () {
+                                                              //     setState(() {
+                                                              //       currentPage--;
+                                                              //     });
+                                                              //   }
+                                                              //       : null,
+                                                              // ),
+                                                              Text(
+                                                                  'Page ${currentPage + 1} of $totalPages'),
+                                                              // IconButton(
+                                                              //   icon: Icon(Icons.arrow_forward),
+                                                              //   onPressed: currentPage < totalPages - 1
+                                                              //       ? () {
+                                                              //     setState(() {
+                                                              //       currentPage++;
+                                                              //     });
+                                                              //   }
+                                                              //       : null,
+                                                              // ),
+                                                              IconButton(
+                                                                icon: FaIcon(
+                                                                  FontAwesomeIcons
+                                                                      .circleChevronRight,
+                                                                  color: currentPage <
+                                                                          totalPages -
+                                                                              1
+                                                                      ? blueColor
+                                                                      : Colors
+                                                                          .grey,
+                                                                ),
+                                                                onPressed:
+                                                                    currentPage <
+                                                                            totalPages -
+                                                                                1
+                                                                        ? () {
+                                                                            setState(() {
+                                                                              currentPage++;
+                                                                            });
+                                                                          }
+                                                                        : null,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                    if (MediaQuery.of(context).size.width > 500)
+                                      FutureBuilder<List<Setting4>>(
+                                        future: futureaccount,
+                                        builder: (context, snapshot) {
+                                          if (snapshot.connectionState ==
+                                              ConnectionState.waiting) {
+                                            return ShimmerTabletTable();
+                                          } else if (snapshot.hasError) {
+                                            return Center(
+                                                child: Text(
+                                                    friendlyErrorMessage(
+                                                        snapshot.error),
+                                                    textAlign:
+                                                        TextAlign.center));
+                                          } else if (!snapshot.hasData ||
+                                              snapshot.data!.isEmpty) {
+                                            return Container(
+                                              height: MediaQuery.of(context)
+                                                      .size
+                                                      .height *
+                                                  .5,
+                                              child: Center(
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
+                                                    Image.asset(
+                                                      "assets/images/no_data.jpg",
+                                                      height: 200,
+                                                      width: 200,
+                                                    ),
+                                                    const SizedBox(
+                                                      height: 10,
+                                                    ),
+                                                    Text(
+                                                      "No Data Available",
+                                                      style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: blueColor,
+                                                          fontSize: 16),
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            List<Setting4>? filteredData = [];
+                                            if (selectedRole == null &&
+                                                searchValue == "") {
+                                              filteredData = snapshot.data;
+                                            } else if (selectedRole == "All") {
+                                              filteredData = snapshot.data;
+                                            } else if (searchValue.isNotEmpty) {
+                                              filteredData = snapshot.data!
+                                                  .where((staff) =>
+                                                      (staff.account ?? '')
+                                                          .toLowerCase()
+                                                          .contains(searchValue
+                                                              .toLowerCase()) ||
+                                                      (staff.accountType ?? '')
+                                                          .toLowerCase()
+                                                          .contains(searchValue
+                                                              .toLowerCase()))
+                                                  .toList();
+                                            } else {
+                                              filteredData = snapshot.data!
+                                                  .where((staff) =>
+                                                      staff.accountType ==
+                                                      selectedRole)
+                                                  .toList();
+                                            }
+                                            //_tableData = snapshot.data!;
+                                            // _tableData = snapshot.data!;
+                                            _tableData = filteredData!;
+                                            totalrecords = _tableData.length;
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5.0,
+                                                      vertical: 5),
+                                              child: Column(
+                                                children: [
+                                                  SingleChildScrollView(
+                                                    scrollDirection:
+                                                        Axis.horizontal,
+                                                    child: Container(
+                                                      width:
+                                                          MediaQuery.of(context)
+                                                                  .size
+                                                                  .width *
+                                                              .91,
+                                                      child: Table(
+                                                        defaultColumnWidth:
+                                                            const IntrinsicColumnWidth(),
+                                                        children: [
+                                                          TableRow(
+                                                            decoration:
+                                                                BoxDecoration(
+                                                                    border: Border
+                                                                        .all()),
+                                                            children: [
+                                                              _buildHeader(
+                                                                  'Account',
+                                                                  0,
+                                                                  (staff) => staff
+                                                                      .account!),
+                                                              _buildHeader(
+                                                                  'Type',
+                                                                  1,
+                                                                  (staff) => staff
+                                                                      .accountType!),
+                                                              _buildHeader(
+                                                                  'ChargeType',
+                                                                  2,
+                                                                  null),
+                                                              _buildHeader(
+                                                                  'FundType',
+                                                                  3,
+                                                                  null),
+                                                              _buildHeader(
+                                                                  'Actions',
+                                                                  4,
+                                                                  null),
+                                                            ],
+                                                          ),
+                                                          TableRow(
+                                                            decoration:
+                                                                const BoxDecoration(
+                                                              border: Border.symmetric(
+                                                                  horizontal:
+                                                                      BorderSide
+                                                                          .none),
+                                                            ),
+                                                            children: List.generate(
+                                                                5,
+                                                                (index) => TableCell(
+                                                                    child: Container(
+                                                                        height:
+                                                                            20))),
+                                                          ),
+                                                          for (var i = 0;
+                                                              i <
+                                                                  _pagedData
+                                                                      .length;
+                                                              i++)
+                                                            TableRow(
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                border: Border(
+                                                                  left: const BorderSide(
+                                                                      color: Color
+                                                                          .fromRGBO(
+                                                                              21,
+                                                                              43,
+                                                                              81,
+                                                                              1)),
+                                                                  right: const BorderSide(
+                                                                      color: Color
+                                                                          .fromRGBO(
+                                                                              21,
+                                                                              43,
+                                                                              81,
+                                                                              1)),
+                                                                  top: const BorderSide(
+                                                                      color: Color
+                                                                          .fromRGBO(
+                                                                              21,
+                                                                              43,
+                                                                              81,
+                                                                              1)),
+                                                                  bottom: i ==
+                                                                          _pagedData.length -
+                                                                              1
+                                                                      ? const BorderSide(
+                                                                          color: Color.fromRGBO(
+                                                                              21,
+                                                                              43,
+                                                                              81,
+                                                                              1))
+                                                                      : BorderSide
+                                                                          .none,
+                                                                ),
+                                                              ),
+                                                              children: [
+                                                                _buildDataCell(
+                                                                    _pagedData[
+                                                                            i]
+                                                                        .account!),
+                                                                _buildDataCell(
+                                                                    _pagedData[
+                                                                            i]
+                                                                        .accountType!),
+                                                                _buildDataCell(
+                                                                    _pagedData[
+                                                                            i]
+                                                                        .chargeType!),
+                                                                _buildDataCell(
+                                                                    _pagedData[
+                                                                            i]
+                                                                        .fundType!),
+                                                                _buildActionsCell(
+                                                                    _pagedData[
+                                                                        i]),
+                                                              ],
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 25),
+                                                  _buildPaginationControls(),
+                                                ],
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              if (isdateformate) _buildDateTimeSettings(),
+                              if (isworkorder)
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 15),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Manage Work Order",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: blueColor,
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    500
+                                                ? 18
+                                                : 25,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 15),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Configure Notifications",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: blueColor,
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    500
+                                                ? 15
+                                                : 28,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 0, vertical: 4),
+                                          // decoration: BoxDecoration(
+                                          //   color: Colors.white,
+                                          //   borderRadius:
+                                          //       BorderRadius.circular(10),
+                                          //   boxShadow: [
+                                          //     BoxShadow(
+                                          //       color: Colors.grey
+                                          //           .withOpacity(0.1),
+                                          //       spreadRadius: 1,
+                                          //       blurRadius: 5,
+                                          //       offset: const Offset(0, 2),
+                                          //     ),
+                                          //   ],
+                                          // ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              const Icon(Icons.check,
-                                                  color: Colors.white,
-                                                  size: 20),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                "Update",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
+                                              // Create Section
+                                              Container(
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 10),
+                                                padding:
+                                                    const EdgeInsets.all(10),
+                                                decoration: BoxDecoration(
+                                                  color: Color(0xFFF4F8FF),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: blueColor
+                                                        .withOpacity(0.3),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Create',
+                                                      style: TextStyle(
+                                                        fontSize: MediaQuery.of(
+                                                                        context)
+                                                                    .size
+                                                                    .width <
+                                                                500
+                                                            ? 15
+                                                            : 18,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: blueColor,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 6),
+                                                    Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Administrator',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  createAdmin,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  createAdmin =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Assignee',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  createAssignee,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  createAssignee =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Tenant',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  createTenant,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  createTenant =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              // Update Section
+                                              Container(
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 10),
+                                                padding:
+                                                    const EdgeInsets.all(10),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      const Color(0xFFF4F8FF),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: blueColor
+                                                        .withOpacity(0.3),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Update',
+                                                      style: TextStyle(
+                                                        fontSize: MediaQuery.of(
+                                                                        context)
+                                                                    .size
+                                                                    .width <
+                                                                500
+                                                            ? 15
+                                                            : 18,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: blueColor,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 6),
+                                                    Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Administrator',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  updateAdmin,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  updateAdmin =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Assignee',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  updateAssignee,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  updateAssignee =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Tenant',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  updateTenant,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  updateTenant =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              // Complete Section
+                                              Container(
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 10),
+                                                padding:
+                                                    const EdgeInsets.all(10),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      const Color(0xFFF4F8FF),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: blueColor
+                                                        .withOpacity(0.3),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Complete',
+                                                      style: TextStyle(
+                                                        fontSize: MediaQuery.of(
+                                                                        context)
+                                                                    .size
+                                                                    .width <
+                                                                500
+                                                            ? 15
+                                                            : 18,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: blueColor,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 6),
+                                                    Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Administrator',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  completeAdmin,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  completeAdmin =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Assignee',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  completeAssignee,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  completeAssignee =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            Text(
+                                                              'Tenant',
+                                                              style: TextStyle(
+                                                                fontSize: MediaQuery.of(context)
+                                                                            .size
+                                                                            .width <
+                                                                        500
+                                                                    ? 14
+                                                                    : 16,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            Checkbox(
+                                                              value:
+                                                                  completeTenant,
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  completeTenant =
+                                                                      value ??
+                                                                          false;
+                                                                });
+                                                              },
+                                                              activeColor:
+                                                                  blueColor,
+                                                              materialTapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(
-                                  height:
-                                      MediaQuery.of(context).padding.bottom +
-                                          24),
-                            ],
-                          ),
-                        if (isteamaccess) _buildTeamAccessSection(),
-                        if (iscompanyprofile)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 15),
-                              _buildCompanyProfileForm(),
-                            ],
-                          ),
-                        if (ismail) _buildMailServiceSection(),
-                        if (islatefee) _buildLateFeeSection(),
-                        if (isaccounts)
-                          Column(
-                            children: [
-                              const SizedBox(height: 15),
-                              Row(
-                                children: [
-                                  Text(
-                                    "Manage Account",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  500
-                                              ? 18
-                                              : 25,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  GestureDetector(
-                                    onTap: () async {
-                                      _showAccount(context);
-                                    },
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(5.0),
-                                      child: Container(
-                                        height:
-                                            MediaQuery.of(context).size.height *
-                                                .045,
-                                        width:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 120
-                                                : 180,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(5.0),
-                                          color: blueColor,
-                                          boxShadow: [
-                                            const BoxShadow(
-                                              color: Colors.grey,
-                                              offset: Offset(0.0, 1.0), //(x,y)
-                                              blurRadius: 6.0,
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
+                                          children: [
+                                            Container(
+                                              height: 50,
+                                              width: 100,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(8.0),
+                                              ),
+                                              child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: blueColor,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8.0),
+                                                  ),
+                                                ),
+                                                onPressed: isSavingNotifications
+                                                    ? null
+                                                    : () async {
+                                                        await saveWorkOrderNotificationSettings();
+                                                      },
+                                                child: isSavingNotifications
+                                                    ? const Center(
+                                                        child:
+                                                            SpinKitFadingCircle(
+                                                          color: Colors.white,
+                                                          size: 30.0,
+                                                        ),
+                                                      )
+                                                    : Text(
+                                                        'Save',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: MediaQuery.of(
+                                                                          context)
+                                                                      .size
+                                                                      .width <
+                                                                  500
+                                                              ? 16
+                                                              : 25,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                              ),
                                             ),
                                           ],
                                         ),
-                                        child: Center(
-                                          child: isLoading
-                                              ? const SpinKitFadingCircle(
-                                                  color: Colors.white,
-                                                  size: 25.0,
-                                                )
-                                              : Text(
-                                                  "Add Account",
+                                      ],
+                                    ),
+                                    const SizedBox(
+                                      height: 15,
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Category",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: blueColor,
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    500
+                                                ? 16
+                                                : 25,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 15),
+                                    // Dynamic categories dropdown for work order
+                                    DropdownButtonHideUnderline(
+                                      child:
+                                          DropdownButton2<allcategories_model>(
+                                        isExpanded: true,
+                                        hint: Text(_isLoadingCategories
+                                            ? 'Loading categories...'
+                                            : 'Select Category'),
+                                        value: _dropdownCategories.contains(
+                                                _selectedDropdownCategory)
+                                            ? _selectedDropdownCategory
+                                            : null,
+                                        items: _dropdownCategories.map((cat) {
+                                          return DropdownMenuItem<
+                                              allcategories_model>(
+                                            value: cat,
+                                            child: Text(cat.name ?? ''),
+                                          );
+                                        }).toList(),
+                                        onChanged: _isLoadingCategories
+                                            ? null // disables dropdown while loading
+                                            : (allcategories_model? newValue) {
+                                                setState(() {
+                                                  _selectedDropdownCategory =
+                                                      newValue;
+                                                  _showTextField =
+                                                      newValue?.name == 'Other';
+                                                });
+                                              },
+                                        buttonStyleData: ButtonStyleData(
+                                          height: 45,
+                                          padding: const EdgeInsets.only(
+                                              left: 14, right: 14),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            color: Colors.white,
+                                          ),
+                                          elevation: 2,
+                                        ),
+                                        iconStyleData: const IconStyleData(
+                                          icon: Icon(Icons.arrow_drop_down),
+                                          iconSize: 24,
+                                          iconEnabledColor: Color(0xFFb0b6c3),
+                                          iconDisabledColor: Colors.grey,
+                                        ),
+                                        dropdownStyleData: DropdownStyleData(
+                                          maxHeight: 250,
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            color: Colors.white,
+                                          ),
+                                          scrollbarTheme: ScrollbarThemeData(
+                                            radius: const Radius.circular(6),
+                                            thickness:
+                                                MaterialStateProperty.all(6),
+                                            thumbVisibility:
+                                                MaterialStateProperty.all(true),
+                                          ),
+                                        ),
+                                        menuItemStyleData:
+                                            const MenuItemStyleData(
+                                          height: 50,
+                                          padding: EdgeInsets.only(
+                                              left: 14, right: 14),
+                                        ),
+                                      ),
+                                    ),
+                                    if (_showTextField)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 10, bottom: 10),
+                                        child: buildTextField('Other Category',
+                                            'Enter Other Category', other),
+                                      ),
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                    Text(
+                                      'Vendor *',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: blueColor,
+                                        fontSize:
+                                            MediaQuery.of(context).size.width <
+                                                    500
+                                                ? 16
+                                                : 25,
+                                      ),
+                                    ),
+                                    const SizedBox(
+                                      height: 2,
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        FormField<String>(
+                                          validator: (value) {
+                                            if (_selectedvendorsId == null ||
+                                                _selectedvendorsId!.isEmpty) {
+                                              return 'Please select a vendor';
+                                            }
+                                            return null;
+                                          },
+                                          builder:
+                                              (FormFieldState<String> state) {
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                DropdownButtonHideUnderline(
+                                                  child:
+                                                      DropdownButtonFormField2<
+                                                          String>(
+                                                    decoration:
+                                                        const InputDecoration(
+                                                      border: InputBorder.none,
+                                                    ),
+                                                    isExpanded: true,
+                                                    hint: const Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            'Select here',
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w400,
+                                                              color: Color(
+                                                                  0xFFb0b6c3),
+                                                            ),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    items: vendors.keys
+                                                        .map((vender_id) {
+                                                      return DropdownMenuItem<
+                                                          String>(
+                                                        value: vender_id,
+                                                        child: Text(
+                                                          vendors[vender_id]!,
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w400,
+                                                            color:
+                                                                Colors.black87,
+                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      );
+                                                    }).toList(),
+                                                    value: _selectedvendorsId,
+                                                    onChanged: (value) {
+                                                      setState(() {
+                                                        _selectedvendorsId =
+                                                            value;
+                                                        _selectedVendors =
+                                                            vendors[value];
+                                                        vendorId =
+                                                            value.toString();
+                                                        _loadUnits(value!);
+                                                        state.didChange(
+                                                            value); // Fetch units for the selected vendor
+                                                      });
+                                                      state.reset();
+                                                      // Notify form field of the change
+                                                    },
+                                                    buttonStyleData:
+                                                        ButtonStyleData(
+                                                      height: 45,
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              left: 14,
+                                                              right: 14),
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(6),
+                                                        color: Colors.white,
+                                                      ),
+                                                      elevation: 2,
+                                                    ),
+                                                    iconStyleData:
+                                                        const IconStyleData(
+                                                      icon: Icon(Icons
+                                                          .arrow_drop_down),
+                                                      iconSize: 24,
+                                                      iconEnabledColor:
+                                                          Color(0xFFb0b6c3),
+                                                      iconDisabledColor:
+                                                          Colors.grey,
+                                                    ),
+                                                    dropdownStyleData:
+                                                        DropdownStyleData(
+                                                      maxHeight: 250,
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(6),
+                                                        color: Colors.white,
+                                                      ),
+                                                      scrollbarTheme:
+                                                          ScrollbarThemeData(
+                                                        radius: const Radius
+                                                            .circular(6),
+                                                        thickness:
+                                                            MaterialStateProperty
+                                                                .all(6),
+                                                        thumbVisibility:
+                                                            MaterialStateProperty
+                                                                .all(true),
+                                                      ),
+                                                    ),
+                                                    menuItemStyleData:
+                                                        const MenuItemStyleData(
+                                                      height: 50,
+                                                      padding: EdgeInsets.only(
+                                                          left: 14, right: 14),
+                                                    ),
+                                                    // validator: (value) {
+                                                    //   if (value == null || value.isEmpty) {
+                                                    //     return 'Please select a vendor';
+                                                    //   }
+                                                    //   return null;
+                                                    // },
+                                                  ),
+                                                ),
+                                                if (state.hasError)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            left: 14, top: 8),
+                                                    child: Text(
+                                                      state.errorText!,
+                                                      style: const TextStyle(
+                                                        color: Colors.red,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                    Text(
+                                      'Entry Allowed ',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: blueColor,
+                                        fontSize:
+                                            MediaQuery.of(context).size.width <
+                                                    500
+                                                ? 16
+                                                : 25,
+                                      ),
+                                    ),
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                    DropdownButtonHideUnderline(
+                                      child: DropdownButton2<String>(
+                                        isExpanded: true,
+                                        hint: const Text('Select'),
+                                        value: _selectedEntry,
+                                        items: _entry.map((method) {
+                                          return DropdownMenuItem<String>(
+                                            value: method,
+                                            child: Text(method),
+                                          );
+                                        }).toList(),
+                                        onChanged: (String? newValue) {
+                                          setState(() {
+                                            _selectedEntry = newValue;
+                                            //_selectedPaymentMethod = addRow();
+                                            // if(_selectedCategory == 'Other')
+                                            // addRow();
+                                          });
+                                        },
+                                        buttonStyleData: ButtonStyleData(
+                                          height: 45,
+                                          // width: 200,
+                                          padding: const EdgeInsets.only(
+                                              left: 14, right: 14),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            color: Colors.white,
+                                          ),
+                                          elevation: 2,
+                                        ),
+                                        iconStyleData: const IconStyleData(
+                                          icon: Icon(
+                                            Icons.arrow_drop_down,
+                                          ),
+                                          iconSize: 24,
+                                          iconEnabledColor: Color(0xFFb0b6c3),
+                                          iconDisabledColor: Colors.grey,
+                                        ),
+                                        dropdownStyleData: DropdownStyleData(
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            color: Colors.white,
+                                          ),
+                                          scrollbarTheme: ScrollbarThemeData(
+                                            radius: const Radius.circular(6),
+                                            thickness:
+                                                MaterialStateProperty.all(6),
+                                            thumbVisibility:
+                                                MaterialStateProperty.all(true),
+                                          ),
+                                        ),
+                                        menuItemStyleData:
+                                            const MenuItemStyleData(
+                                          height: 40,
+                                          padding: EdgeInsets.only(
+                                              left: 14, right: 14),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                    Text(
+                                      'Assigned To *',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: blueColor,
+                                        fontSize:
+                                            MediaQuery.of(context).size.width <
+                                                    500
+                                                ? 16
+                                                : 25,
+                                      ),
+                                    ),
+                                    const SizedBox(
+                                      height: 2,
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        FormField<String>(
+                                          validator: (value) {
+                                            if (_selectedstaffId == null ||
+                                                _selectedstaffId!.isEmpty) {
+                                              return 'Please select a staff member';
+                                            }
+                                            return null;
+                                          },
+                                          builder:
+                                              (FormFieldState<String> state) {
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                DropdownButtonHideUnderline(
+                                                  child:
+                                                      DropdownButtonFormField2<
+                                                          String>(
+                                                    decoration:
+                                                        const InputDecoration(
+                                                      border: InputBorder.none,
+                                                    ),
+                                                    isExpanded: true,
+                                                    hint: const Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            'Select here',
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w400,
+                                                              color: Color(
+                                                                  0xFFb0b6c3),
+                                                            ),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    items: staffs.keys
+                                                        .map((staffmember_id) {
+                                                      return DropdownMenuItem<
+                                                          String>(
+                                                        value: staffmember_id,
+                                                        child: Text(
+                                                          staffs[
+                                                              staffmember_id]!,
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w400,
+                                                            color:
+                                                                Colors.black87,
+                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      );
+                                                    }).toList(),
+                                                    value: _selectedstaffId,
+                                                    onChanged: (value) {
+                                                      setState(() {
+                                                        _selectedstaffId =
+                                                            value;
+                                                        _selectedStaffs =
+                                                            staffs[value];
+                                                        StaffId =
+                                                            value.toString();
+                                                        state.didChange(value);
+                                                      });
+                                                      state.reset();
+                                                      // Notify form field of the change
+                                                    },
+                                                    buttonStyleData:
+                                                        ButtonStyleData(
+                                                      height: 45,
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              left: 14,
+                                                              right: 14),
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(6),
+                                                        color: Colors.white,
+                                                      ),
+                                                      elevation: 2,
+                                                    ),
+                                                    iconStyleData:
+                                                        const IconStyleData(
+                                                      icon: Icon(Icons
+                                                          .arrow_drop_down),
+                                                      iconSize: 24,
+                                                      iconEnabledColor:
+                                                          Color(0xFFb0b6c3),
+                                                      iconDisabledColor:
+                                                          Colors.grey,
+                                                    ),
+                                                    dropdownStyleData:
+                                                        DropdownStyleData(
+                                                      maxHeight: 250,
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(6),
+                                                        color: Colors.white,
+                                                      ),
+                                                      scrollbarTheme:
+                                                          ScrollbarThemeData(
+                                                        radius: const Radius
+                                                            .circular(6),
+                                                        thickness:
+                                                            MaterialStateProperty
+                                                                .all(6),
+                                                        thumbVisibility:
+                                                            MaterialStateProperty
+                                                                .all(true),
+                                                      ),
+                                                    ),
+                                                    menuItemStyleData:
+                                                        const MenuItemStyleData(
+                                                      height: 50,
+                                                      padding: EdgeInsets.only(
+                                                          left: 14, right: 14),
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (state.hasError)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            left: 14, top: 8),
+                                                    child: Text(
+                                                      state.errorText!,
+                                                      style: const TextStyle(
+                                                        color: Colors.red,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(
+                                      height: 30,
+                                    ),
+                                    // Configure Notifications Section
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Container(
+                                          height: 50,
+                                          width: 100,
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(8.0),
+                                          ),
+                                          child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: blueColor,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8.0),
+                                              ),
+                                            ),
+                                            onPressed: () async {
+                                              updateWorkOrderSettings();
+                                            },
+                                            child: isLoading
+                                                ? const Center(
+                                                    child: SpinKitFadingCircle(
+                                                      color: Colors.white,
+                                                      size: 55.0,
+                                                    ),
+                                                  )
+                                                : Text(
+                                                    'Save',
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize:
+                                                          MediaQuery.of(context)
+                                                                      .size
+                                                                      .width <
+                                                                  500
+                                                              ? 16
+                                                              : 25,
+                                                    ),
+                                                  ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                  ],
+                                ),
+                              if (ismanagetemplate) const manage_templates(),
+                              if (ischargesetting)
+                                Column(
+                                  children: [
+                                    const SizedBox(
+                                      height: 15,
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Manage Charges",
+                                          style: TextStyle(
+                                            color: blueColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    500
+                                                ? 18
+                                                : 25,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            "Configure how charges should be recorded — either as a single bundled charge or as separate individual charges.",
+                                            style: TextStyle(
+                                              color: greyColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      500
+                                                  ? 14
+                                                  : 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16.0),
+                                      child: Row(
+                                        children: [
+                                          Switch(
+                                            value: chargesetting == null
+                                                ? true
+                                                : chargesetting![
+                                                    "unbundle_charges"],
+                                            onChanged: (value) {
+                                              setState(() {
+                                                if (chargesetting != null)
+                                                  chargesetting![
+                                                          "unbundle_charges"] =
+                                                      !chargesetting![
+                                                          "unbundle_charges"];
+                                                else
+                                                  chargesetting = {
+                                                    "unbundle_charges": value
+                                                  };
+                                              });
+                                            },
+                                            activeColor:
+                                                blueColor, // Color when switch is on
+                                            inactiveThumbColor: Colors
+                                                .grey, // Color when switch is off
+                                          ),
+                                          const SizedBox(
+                                            width: 10,
+                                          ),
+                                          Text(
+                                            'Unbundle Charges',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: blueColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () async {
+                                            SharedPreferences prefs =
+                                                await SharedPreferences
+                                                    .getInstance();
+                                            String? token =
+                                                prefs.getString('token');
+                                            String? id =
+                                                prefs.getString('adminId');
+                                            bool success =
+                                                await AddChargeSettingData(id, {
+                                              "admin_id": id,
+                                              "unbundle_charges":
+                                                  chargesetting![
+                                                      "unbundle_charges"]
+                                            });
+                                            if (success) {
+                                              // Refresh the charge settings data
+                                              loadChargeSetting();
+                                            }
+                                          },
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(5.0),
+                                            child: Container(
+                                              height: MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      500
+                                                  ? 35
+                                                  : 50,
+                                              width: MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      500
+                                                  ? 100
+                                                  : 150,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(5.0),
+                                                color: blueColor,
+                                                boxShadow: [
+                                                  const BoxShadow(
+                                                    color: Colors.grey,
+                                                    offset: Offset(
+                                                        0.0, 1.0), //(x,y)
+                                                    blurRadius: 6.0,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  "Save",
                                                   style: TextStyle(
                                                       color: Colors.white,
                                                       fontWeight:
@@ -5546,2577 +7621,686 @@ class _TabBarExampleState extends State<TabBarExample>
                                                                       .size
                                                                       .width <
                                                                   500
-                                                              ? 15
-                                                              : 18),
+                                                              ? 16
+                                                              : 20),
                                                 ),
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 15),
-                              if (MediaQuery.of(context).size.width > 500)
-                                const SizedBox(height: 25),
-                              if (MediaQuery.of(context).size.width < 500)
-                                if (MediaQuery.of(context).size.width < 500)
-                                  FutureBuilder<List<Setting4>>(
-                                    future: futureaccount,
-                                    builder: (context, snapshot) {
-                                      if (snapshot.connectionState ==
-                                          ConnectionState.waiting) {
-                                        return ColabShimmerLoadingWidget();
-                                      } else if (snapshot.hasError) {
-                                        return Center(
-                                            child: Text(
-                                                friendlyErrorMessage(snapshot.error)));
-                                      } else if (!snapshot.hasData ||
-                                          snapshot.data!.isEmpty) {
-                                        return Container(
-                                          height: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              .5,
-                                          child: Center(
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
-                                              children: [
-                                                Image.asset(
-                                                  "assets/images/no_data.jpg",
-                                                  height: 200,
-                                                  width: 200,
-                                                ),
-                                                const SizedBox(
-                                                  height: 10,
-                                                ),
-                                                Text(
-                                                  "No Data Available",
+                                        const SizedBox(
+                                          width: 10,
+                                        ),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            setState(() {
+                                              chargesetting = null;
+                                            });
+                                          },
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(5.0),
+                                            child: Container(
+                                              height: MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      500
+                                                  ? 35
+                                                  : 50,
+                                              width: MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      500
+                                                  ? 100
+                                                  : 150,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(5.0),
+                                                color: Colors.white,
+                                                border: Border.all(
+                                                    color: blueColor),
+                                                boxShadow: [
+                                                  const BoxShadow(
+                                                    color: Colors.grey,
+                                                    offset: Offset(
+                                                        0.0, 1.0), //(x,y)
+                                                    blurRadius: 6.0,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  "Reset",
                                                   style: TextStyle(
+                                                      color: blueColor,
                                                       fontWeight:
                                                           FontWeight.bold,
-                                                      color: blueColor,
-                                                      fontSize: 16),
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      } else {
-                                        var data = snapshot.data!;
-                                        if (searchValue == null ||
-                                            searchValue!.isEmpty) {
-                                          data = snapshot.data!;
-                                        } else if (searchValue == "All") {
-                                          data = snapshot.data!;
-                                        } else if (searchValue!.isNotEmpty) {
-                                          data = snapshot.data!
-                                              .where((staff) => (staff.account ?? '')
-                                                  .toLowerCase()
-                                                  .contains(searchValue!
-                                                      .toLowerCase()))
-                                              .toList();
-                                        } else {
-                                          data = snapshot.data!
-                                              .where((staff) =>
-                                                  staff.accountType ==
-                                                  searchValue)
-                                              .toList();
-                                        }
-                                        sortData(data);
-                                        final totalPages =
-                                            (data.isEmpty ? 1 : (data.length / itemsPerPage).ceil());
-                                        final currentPageData = data
-                                            .skip(currentPage * itemsPerPage)
-                                            .take(itemsPerPage)
-                                            .toList();
-                                        return SingleChildScrollView(
-                                          child: Column(
-                                            children: [
-                                              const SizedBox(height: 10),
-                                              _buildHeaders(),
-                                              const SizedBox(height: 10),
-                                              Container(
-                                                // decoration: BoxDecoration(
-                                                //   border: Border.all(
-                                                //       color: Color.fromRGBO(
-                                                //           152, 162, 179, .5)),
-                                                // ),
-                                                // decoration: BoxDecoration(
-                                                //     border: Border.all(color: blueColor)),
-                                                child: Column(
-                                                  children: currentPageData.isEmpty
-                                                      ? [kNoSearchResults(context)]
-                                                      : currentPageData
-                                                      .asMap()
-                                                      .entries
-                                                      .map((entry) {
-                                                    int index = entry.key;
-                                                    bool isExpanded =
-                                                        expandedIndex == index;
-                                                    Setting4 account =
-                                                        entry.value;
-                                                    //return CustomExpansionTile(data: Propertytype, index: index);
-                                                    return Container(
-                                                      margin: const EdgeInsets
-                                                          .symmetric(
-                                                          vertical: 6),
-                                                      decoration: BoxDecoration(
-                                                        color: index % 2 != 0
-                                                            ? const Color(
-                                                                0xFFF4F8FF)
-                                                            : Colors.white,
-                                                        border: Border.all(
-                                                            color: const Color(
-                                                                0xFFDBE0E5)),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(10),
-                                                      ),
-                                                      // decoration: BoxDecoration(
-                                                      //   border: Border.all(color: blueColor),
-                                                      // ),
-                                                      child: Column(
-                                                        children: <Widget>[
-                                                          ListTile(
-                                                            contentPadding:
-                                                                EdgeInsets.zero,
-                                                            title: Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(2.0),
-                                                              child: Row(
-                                                                mainAxisAlignment:
-                                                                    MainAxisAlignment
-                                                                        .start,
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .center,
-                                                                children: <Widget>[
-                                                                  InkWell(
-                                                                    onTap: () {
-                                                                      // setState(() {
-                                                                      //    isExpanded = !isExpanded;
-                                                                      // //  expandedIndex = !expandedIndex;
-                                                                      //
-                                                                      // });
-                                                                      // setState(() {
-                                                                      //   if (isExpanded) {
-                                                                      //     expandedIndex = null;
-                                                                      //     isExpanded = !isExpanded;
-                                                                      //   } else {
-                                                                      //     expandedIndex = index;
-                                                                      //   }
-                                                                      // });
-                                                                      setState(
-                                                                          () {
-                                                                        if (expandedIndex ==
-                                                                            index) {
-                                                                          expandedIndex =
-                                                                              null;
-                                                                        } else {
-                                                                          expandedIndex =
-                                                                              index;
-                                                                        }
-                                                                      });
-                                                                    },
-                                                                    child:
-                                                                        Container(
-                                                                      margin: const EdgeInsets
-                                                                          .only(
-                                                                          left:
-                                                                              5,
-                                                                          right:
-                                                                              5),
-                                                                      padding: !isExpanded
-                                                                          ? const EdgeInsets
-                                                                              .only(
-                                                                              bottom:
-                                                                                  10)
-                                                                          : const EdgeInsets
-                                                                              .only(
-                                                                              top: 10),
-                                                                      child:
-                                                                          FaIcon(
-                                                                        isExpanded
-                                                                            ? FontAwesomeIcons.sortUp
-                                                                            : FontAwesomeIcons.sortDown,
-                                                                        size:
-                                                                            20,
-                                                                        color:
-                                                                            blueColor,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                  Expanded(
-                                                                    child:
-                                                                        InkWell(
-                                                                      onTap:
-                                                                          () {
-                                                                        setState(
-                                                                            () {
-                                                                          if (expandedIndex ==
-                                                                              index) {
-                                                                            expandedIndex =
-                                                                                null;
-                                                                          } else {
-                                                                            expandedIndex =
-                                                                                index;
-                                                                          }
-                                                                        });
-                                                                      },
-                                                                      child:
-                                                                          Text(
-                                                                        '${account.account}',
-                                                                        style:
-                                                                            TextStyle(
-                                                                          color:
-                                                                              blueColor,
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                          fontSize:
-                                                                              13,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                  SizedBox(
-                                                                      width: MediaQuery.of(context)
-                                                                              .size
-                                                                              .width *
-                                                                          .07),
-                                                                  Expanded(
-                                                                    child: Text(
-                                                                      '${account.accountType}',
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color:
-                                                                            blueColor,
-                                                                        fontWeight:
-                                                                            FontWeight.bold,
-                                                                        fontSize:
-                                                                            13,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                  SizedBox(
-                                                                      width: MediaQuery.of(context)
-                                                                              .size
-                                                                              .width *
-                                                                          .03),
-                                                                  Expanded(
-                                                                    child: Text(
-                                                                      '${account.fundType}',
-                                                                      style:
-                                                                          TextStyle(
-                                                                        color:
-                                                                            blueColor,
-                                                                        fontWeight:
-                                                                            FontWeight.bold,
-                                                                        fontSize:
-                                                                            13,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                  SizedBox(
-                                                                      width: MediaQuery.of(context)
-                                                                              .size
-                                                                              .width *
-                                                                          .02),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          if (isExpanded)
-                                                            Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .only(
-                                                                      left: 2,
-                                                                      right: 2),
-                                                              margin:
-                                                                  const EdgeInsets
-                                                                      .only(
-                                                                      bottom:
-                                                                          2),
-                                                              child:
-                                                                  SingleChildScrollView(
-                                                                child:
-                                                                    Container(
-                                                                  //color: Colors.blue,
-                                                                  child: Column(
-                                                                    children: [
-                                                                      Row(
-                                                                        mainAxisAlignment:
-                                                                            MainAxisAlignment.end,
-                                                                        //mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                                        children: [
-                                                                          GestureDetector(
-                                                                            onTap:
-                                                                                () async {
-                                                                              _showEditAccount(context, account);
-                                                                            },
-                                                                            child:
-                                                                                Container(
-                                                                              height: 35,
-                                                                              width: 35,
-                                                                              decoration: BoxDecoration(
-                                                                                color: Colors.green.shade50,
-                                                                                borderRadius: BorderRadius.circular(8),
-                                                                              ),
-                                                                              child: Row(
-                                                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                                                children: [
-                                                                                  FaIcon(
-                                                                                    FontAwesomeIcons.edit,
-                                                                                    size: 15,
-                                                                                    color: Colors.green,
-                                                                                  ),
-                                                                                ],
-                                                                              ),
-                                                                            ),
-                                                                          ),
-                                                                          SizedBox(
-                                                                              width: 10),
-                                                                          GestureDetector(
-                                                                            onTap:
-                                                                                () {
-                                                                              _showDeleteAlert(context, account.accountId!);
-                                                                            },
-                                                                            child:
-                                                                                Container(
-                                                                              height: 35,
-                                                                              width: 35,
-                                                                              decoration: BoxDecoration(
-                                                                                color: Colors.red.shade50,
-                                                                                borderRadius: BorderRadius.circular(8),
-                                                                              ),
-                                                                              child: const Row(
-                                                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                                                children: [
-                                                                                  FaIcon(
-                                                                                    FontAwesomeIcons.trashCan,
-                                                                                    size: 15,
-                                                                                    color: Colors.red,
-                                                                                  ),
-                                                                                ],
-                                                                              ),
-                                                                            ),
-                                                                          ),
-                                                                          const SizedBox(
-                                                                              width: 10),
-                                                                        ],
-                                                                      ),
-                                                                      const SizedBox(
-                                                                          height:
-                                                                              10),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                        ],
-                                                      ),
-                                                    );
-                                                  }).toList(),
-                                                ),
-                                              ),
-                                              if (totalPages > 1) ...[
-                                                const SizedBox(height: 20),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.end,
-                                                children: [
-                                                  Row(
-                                                    children: [
-                                                      // Text('Rows per page:'),
-                                                      const SizedBox(width: 10),
-                                                      Material(
-                                                        elevation: 3,
-                                                        child: Container(
-                                                          height: 40,
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  horizontal:
-                                                                      12.0),
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            border: Border.all(
-                                                                color: Colors
-                                                                    .grey),
-                                                          ),
-                                                          child:
-                                                              DropdownButtonHideUnderline(
-                                                            child:
-                                                                DropdownButton<
-                                                                    int>(
-                                                              value:
-                                                                  itemsPerPage,
-                                                              items:
-                                                                  itemsPerPageOptions
-                                                                      .map((int
-                                                                          value) {
-                                                                return DropdownMenuItem<
-                                                                    int>(
-                                                                  value: value,
-                                                                  child: Text(value
-                                                                      .toString()),
-                                                                );
-                                                              }).toList(),
-                                                              onChanged: data
-                                                                          .length >
-                                                                      itemsPerPageOptions
-                                                                          .first // Condition to check if dropdown should be enabled
-                                                                  ? (newValue) {
-                                                                      setState(
-                                                                          () {
-                                                                        itemsPerPage =
-                                                                            newValue!;
-                                                                        currentPage =
-                                                                            0; // Reset to first page when items per page change
-                                                                      });
-                                                                    }
-                                                                  : null,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    children: [
-                                                      IconButton(
-                                                        icon: FaIcon(
-                                                          FontAwesomeIcons
-                                                              .circleChevronLeft,
-                                                          color:
-                                                              currentPage == 0
-                                                                  ? Colors.grey
-                                                                  : blueColor,
-                                                        ),
-                                                        onPressed:
-                                                            currentPage == 0
-                                                                ? null
-                                                                : () {
-                                                                    setState(
-                                                                        () {
-                                                                      currentPage--;
-                                                                    });
-                                                                  },
-                                                      ),
-                                                      // IconButton(
-                                                      //   icon: Icon(Icons.arrow_back),
-                                                      //   onPressed: currentPage > 0
-                                                      //       ? () {
-                                                      //     setState(() {
-                                                      //       currentPage--;
-                                                      //     });
-                                                      //   }
-                                                      //       : null,
-                                                      // ),
-                                                      Text(
-                                                          'Page ${currentPage + 1} of $totalPages'),
-                                                      // IconButton(
-                                                      //   icon: Icon(Icons.arrow_forward),
-                                                      //   onPressed: currentPage < totalPages - 1
-                                                      //       ? () {
-                                                      //     setState(() {
-                                                      //       currentPage++;
-                                                      //     });
-                                                      //   }
-                                                      //       : null,
-                                                      // ),
-                                                      IconButton(
-                                                        icon: FaIcon(
-                                                          FontAwesomeIcons
-                                                              .circleChevronRight,
-                                                          color: currentPage <
-                                                                  totalPages - 1
-                                                              ? blueColor
-                                                              : Colors.grey,
-                                                        ),
-                                                        onPressed: currentPage <
-                                                                totalPages - 1
-                                                            ? () {
-                                                                setState(() {
-                                                                  currentPage++;
-                                                                });
-                                                              }
-                                                            : null,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                              ],
-                                            ],
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  ),
-                              if (MediaQuery.of(context).size.width > 500)
-                                FutureBuilder<List<Setting4>>(
-                                  future: futureaccount,
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return ShimmerTabletTable();
-                                    } else if (snapshot.hasError) {
-                                      return Center(
-                                          child:
-                                              Text(friendlyErrorMessage(snapshot.error), textAlign: TextAlign.center));
-                                    } else if (!snapshot.hasData ||
-                                        snapshot.data!.isEmpty) {
-                                      return Container(
-                                        height:
-                                            MediaQuery.of(context).size.height *
-                                                .5,
-                                        child: Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              Image.asset(
-                                                "assets/images/no_data.jpg",
-                                                height: 200,
-                                                width: 200,
-                                              ),
-                                              const SizedBox(
-                                                height: 10,
-                                              ),
-                                              Text(
-                                                "No Data Available",
-                                                style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: blueColor,
-                                                    fontSize: 16),
-                                              )
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    } else {
-                                      List<Setting4>? filteredData = [];
-                                      if (selectedRole == null &&
-                                          searchValue == "") {
-                                        filteredData = snapshot.data;
-                                      } else if (selectedRole == "All") {
-                                        filteredData = snapshot.data;
-                                      } else if (searchValue.isNotEmpty) {
-                                        filteredData = snapshot.data!
-                                            .where((staff) =>
-                                                (staff.account ?? '')
-                                                    .toLowerCase()
-                                                    .contains(searchValue
-                                                        .toLowerCase()) ||
-                                                (staff.accountType ?? '')
-                                                    .toLowerCase()
-                                                    .contains(searchValue
-                                                        .toLowerCase()))
-                                            .toList();
-                                      } else {
-                                        filteredData = snapshot.data!
-                                            .where((staff) =>
-                                                staff.accountType ==
-                                                selectedRole)
-                                            .toList();
-                                      }
-                                      //_tableData = snapshot.data!;
-                                      // _tableData = snapshot.data!;
-                                      _tableData = filteredData!;
-                                      totalrecords = _tableData.length;
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 5.0, vertical: 5),
-                                        child: Column(
-                                          children: [
-                                            SingleChildScrollView(
-                                              scrollDirection: Axis.horizontal,
-                                              child: Container(
-                                                width: MediaQuery.of(context)
-                                                        .size
-                                                        .width *
-                                                    .91,
-                                                child: Table(
-                                                  defaultColumnWidth:
-                                                      const IntrinsicColumnWidth(),
-                                                  children: [
-                                                    TableRow(
-                                                      decoration: BoxDecoration(
-                                                          border: Border.all()),
-                                                      children: [
-                                                        _buildHeader(
-                                                            'Account',
-                                                            0,
-                                                            (staff) =>
-                                                                staff.account!),
-                                                        _buildHeader(
-                                                            'Type',
-                                                            1,
-                                                            (staff) => staff
-                                                                .accountType!),
-                                                        _buildHeader(
-                                                            'ChargeType',
-                                                            2,
-                                                            null),
-                                                        _buildHeader('FundType',
-                                                            3, null),
-                                                        _buildHeader(
-                                                            'Actions', 4, null),
-                                                      ],
-                                                    ),
-                                                    TableRow(
-                                                      decoration:
-                                                          const BoxDecoration(
-                                                        border:
-                                                            Border.symmetric(
-                                                                horizontal:
-                                                                    BorderSide
-                                                                        .none),
-                                                      ),
-                                                      children: List.generate(
-                                                          5,
-                                                          (index) => TableCell(
-                                                              child: Container(
-                                                                  height: 20))),
-                                                    ),
-                                                    for (var i = 0;
-                                                        i < _pagedData.length;
-                                                        i++)
-                                                      TableRow(
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          border: Border(
-                                                            left: const BorderSide(
-                                                                color: Color
-                                                                    .fromRGBO(
-                                                                        21,
-                                                                        43,
-                                                                        81,
-                                                                        1)),
-                                                            right:
-                                                                const BorderSide(
-                                                                    color: Color
-                                                                        .fromRGBO(
-                                                                            21,
-                                                                            43,
-                                                                            81,
-                                                                            1)),
-                                                            top: const BorderSide(
-                                                                color: Color
-                                                                    .fromRGBO(
-                                                                        21,
-                                                                        43,
-                                                                        81,
-                                                                        1)),
-                                                            bottom: i ==
-                                                                    _pagedData
-                                                                            .length -
-                                                                        1
-                                                                ? const BorderSide(
-                                                                    color: Color
-                                                                        .fromRGBO(
-                                                                            21,
-                                                                            43,
-                                                                            81,
-                                                                            1))
-                                                                : BorderSide
-                                                                    .none,
-                                                          ),
-                                                        ),
-                                                        children: [
-                                                          _buildDataCell(
-                                                              _pagedData[i]
-                                                                  .account!),
-                                                          _buildDataCell(
-                                                              _pagedData[i]
-                                                                  .accountType!),
-                                                          _buildDataCell(
-                                                              _pagedData[i]
-                                                                  .chargeType!),
-                                                          _buildDataCell(
-                                                              _pagedData[i]
-                                                                  .fundType!),
-                                                          _buildActionsCell(
-                                                              _pagedData[i]),
-                                                        ],
-                                                      ),
-                                                  ],
+                                                      fontSize:
+                                                          MediaQuery.of(context)
+                                                                      .size
+                                                                      .width <
+                                                                  500
+                                                              ? 16
+                                                              : 20),
                                                 ),
                                               ),
                                             ),
-                                            const SizedBox(height: 25),
-                                            _buildPaginationControls(),
-                                          ],
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                            ],
-                          ),
-                        if (isdateformate) _buildDateTimeSettings(),
-                        if (isworkorder)
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 15),
-                              Row(
-                                children: [
-                                  Text(
-                                    "Manage Work Order",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  500
-                                              ? 18
-                                              : 25,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                ],
-                              ),
-                              const SizedBox(height: 15),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Configure Notifications",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  500
-                                              ? 15
-                                              : 28,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 0, vertical: 4),
-                                    // decoration: BoxDecoration(
-                                    //   color: Colors.white,
-                                    //   borderRadius:
-                                    //       BorderRadius.circular(10),
-                                    //   boxShadow: [
-                                    //     BoxShadow(
-                                    //       color: Colors.grey
-                                    //           .withOpacity(0.1),
-                                    //       spreadRadius: 1,
-                                    //       blurRadius: 5,
-                                    //       offset: const Offset(0, 2),
-                                    //     ),
-                                    //   ],
-                                    // ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Create Section
-                                        Container(
-                                          margin:
-                                              const EdgeInsets.only(bottom: 10),
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFFF4F8FF),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: blueColor.withOpacity(0.3),
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Create',
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 15
-                                                          : 18,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: blueColor,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Administrator',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: createAdmin,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            createAdmin =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Assignee',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: createAssignee,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            createAssignee =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Tenant',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: createTenant,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            createTenant =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        // Update Section
-                                        Container(
-                                          margin:
-                                              const EdgeInsets.only(bottom: 10),
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF4F8FF),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: blueColor.withOpacity(0.3),
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Update',
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 15
-                                                          : 18,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: blueColor,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Administrator',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: updateAdmin,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            updateAdmin =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Assignee',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: updateAssignee,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            updateAssignee =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Tenant',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: updateTenant,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            updateTenant =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        // Complete Section
-                                        Container(
-                                          margin:
-                                              const EdgeInsets.only(bottom: 10),
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF4F8FF),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: blueColor.withOpacity(0.3),
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Complete',
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 15
-                                                          : 18,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: blueColor,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Administrator',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: completeAdmin,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            completeAdmin =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Assignee',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: completeAssignee,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            completeAssignee =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        'Tenant',
-                                                        style: TextStyle(
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Checkbox(
-                                                        value: completeTenant,
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            completeTenant =
-                                                                value ?? false;
-                                                          });
-                                                        },
-                                                        activeColor: blueColor,
-                                                        materialTapTargetSize:
-                                                            MaterialTapTargetSize
-                                                                .shrinkWrap,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Container(
-                                        height: 50,
-                                        width: 100,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(8.0),
-                                        ),
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: blueColor,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8.0),
-                                            ),
-                                          ),
-                                          onPressed: isSavingNotifications
-                                              ? null
-                                              : () async {
-                                                  await saveWorkOrderNotificationSettings();
-                                                },
-                                          child: isSavingNotifications
-                                              ? const Center(
-                                                  child: SpinKitFadingCircle(
-                                                    color: Colors.white,
-                                                    size: 30.0,
-                                                  ),
-                                                )
-                                              : Text(
-                                                  'Save',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 16
-                                                            : 25,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 15,
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    "Category",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  500
-                                              ? 16
-                                              : 25,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 15),
-                              // Dynamic categories dropdown for work order
-                              DropdownButtonHideUnderline(
-                                child: DropdownButton2<allcategories_model>(
-                                  isExpanded: true,
-                                  hint: Text(_isLoadingCategories
-                                      ? 'Loading categories...'
-                                      : 'Select Category'),
-                                  value: _dropdownCategories
-                                          .contains(_selectedDropdownCategory)
-                                      ? _selectedDropdownCategory
-                                      : null,
-                                  items: _dropdownCategories.map((cat) {
-                                    return DropdownMenuItem<
-                                        allcategories_model>(
-                                      value: cat,
-                                      child: Text(cat.name ?? ''),
-                                    );
-                                  }).toList(),
-                                  onChanged: _isLoadingCategories
-                                      ? null // disables dropdown while loading
-                                      : (allcategories_model? newValue) {
-                                          setState(() {
-                                            _selectedDropdownCategory =
-                                                newValue;
-                                            _showTextField =
-                                                newValue?.name == 'Other';
-                                          });
-                                        },
-                                  buttonStyleData: ButtonStyleData(
-                                    height: 45,
-                                    padding: const EdgeInsets.only(
-                                        left: 14, right: 14),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(6),
-                                      color: Colors.white,
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  iconStyleData: const IconStyleData(
-                                    icon: Icon(Icons.arrow_drop_down),
-                                    iconSize: 24,
-                                    iconEnabledColor: Color(0xFFb0b6c3),
-                                    iconDisabledColor: Colors.grey,
-                                  ),
-                                  dropdownStyleData: DropdownStyleData(
-                                    maxHeight: 250,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(6),
-                                      color: Colors.white,
-                                    ),
-                                    scrollbarTheme: ScrollbarThemeData(
-                                      radius: const Radius.circular(6),
-                                      thickness: MaterialStateProperty.all(6),
-                                      thumbVisibility:
-                                          MaterialStateProperty.all(true),
-                                    ),
-                                  ),
-                                  menuItemStyleData: const MenuItemStyleData(
-                                    height: 50,
-                                    padding:
-                                        EdgeInsets.only(left: 14, right: 14),
-                                  ),
-                                ),
-                              ),
-                              if (_showTextField)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      top: 10, bottom: 10),
-                                  child: buildTextField('Other Category',
-                                      'Enter Other Category', other),
-                                ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              Text(
-                                'Vendor *',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: blueColor,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width < 500
-                                          ? 16
-                                          : 25,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 2,
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  FormField<String>(
-                                    validator: (value) {
-                                      if (_selectedvendorsId == null ||
-                                          _selectedvendorsId!.isEmpty) {
-                                        return 'Please select a vendor';
-                                      }
-                                      return null;
-                                    },
-                                    builder: (FormFieldState<String> state) {
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          DropdownButtonHideUnderline(
-                                            child: DropdownButtonFormField2<
-                                                String>(
-                                              decoration: const InputDecoration(
-                                                border: InputBorder.none,
-                                              ),
-                                              isExpanded: true,
-                                              hint: const Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      'Select here',
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w400,
-                                                        color:
-                                                            Color(0xFFb0b6c3),
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              items:
-                                                  vendors.keys.map((vender_id) {
-                                                return DropdownMenuItem<String>(
-                                                  value: vender_id,
-                                                  child: Text(
-                                                    vendors[vender_id]!,
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w400,
-                                                      color: Colors.black87,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                );
-                                              }).toList(),
-                                              value: _selectedvendorsId,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _selectedvendorsId = value;
-                                                  _selectedVendors =
-                                                      vendors[value];
-                                                  vendorId = value.toString();
-                                                  _loadUnits(value!);
-                                                  state.didChange(
-                                                      value); // Fetch units for the selected vendor
-                                                });
-                                                state.reset();
-                                                // Notify form field of the change
-                                              },
-                                              buttonStyleData: ButtonStyleData(
-                                                height: 45,
-                                                padding: const EdgeInsets.only(
-                                                    left: 14, right: 14),
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  color: Colors.white,
-                                                ),
-                                                elevation: 2,
-                                              ),
-                                              iconStyleData:
-                                                  const IconStyleData(
-                                                icon:
-                                                    Icon(Icons.arrow_drop_down),
-                                                iconSize: 24,
-                                                iconEnabledColor:
-                                                    Color(0xFFb0b6c3),
-                                                iconDisabledColor: Colors.grey,
-                                              ),
-                                              dropdownStyleData:
-                                                  DropdownStyleData(
-                                                maxHeight: 250,
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  color: Colors.white,
-                                                ),
-                                                scrollbarTheme:
-                                                    ScrollbarThemeData(
-                                                  radius:
-                                                      const Radius.circular(6),
-                                                  thickness:
-                                                      MaterialStateProperty.all(
-                                                          6),
-                                                  thumbVisibility:
-                                                      MaterialStateProperty.all(
-                                                          true),
-                                                ),
-                                              ),
-                                              menuItemStyleData:
-                                                  const MenuItemStyleData(
-                                                height: 50,
-                                                padding: EdgeInsets.only(
-                                                    left: 14, right: 14),
-                                              ),
-                                              // validator: (value) {
-                                              //   if (value == null || value.isEmpty) {
-                                              //     return 'Please select a vendor';
-                                              //   }
-                                              //   return null;
-                                              // },
-                                            ),
-                                          ),
-                                          if (state.hasError)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: 14, top: 8),
-                                              child: Text(
-                                                state.errorText!,
-                                                style: const TextStyle(
-                                                  color: Colors.red,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              Text(
-                                'Entry Allowed ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: blueColor,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width < 500
-                                          ? 16
-                                          : 25,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              DropdownButtonHideUnderline(
-                                child: DropdownButton2<String>(
-                                  isExpanded: true,
-                                  hint: const Text('Select'),
-                                  value: _selectedEntry,
-                                  items: _entry.map((method) {
-                                    return DropdownMenuItem<String>(
-                                      value: method,
-                                      child: Text(method),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? newValue) {
-                                    setState(() {
-                                      _selectedEntry = newValue;
-                                      //_selectedPaymentMethod = addRow();
-                                      // if(_selectedCategory == 'Other')
-                                      // addRow();
-                                    });
-                                  },
-                                  buttonStyleData: ButtonStyleData(
-                                    height: 45,
-                                    // width: 200,
-                                    padding: const EdgeInsets.only(
-                                        left: 14, right: 14),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(6),
-                                      color: Colors.white,
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  iconStyleData: const IconStyleData(
-                                    icon: Icon(
-                                      Icons.arrow_drop_down,
-                                    ),
-                                    iconSize: 24,
-                                    iconEnabledColor: Color(0xFFb0b6c3),
-                                    iconDisabledColor: Colors.grey,
-                                  ),
-                                  dropdownStyleData: DropdownStyleData(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(6),
-                                      color: Colors.white,
-                                    ),
-                                    scrollbarTheme: ScrollbarThemeData(
-                                      radius: const Radius.circular(6),
-                                      thickness: MaterialStateProperty.all(6),
-                                      thumbVisibility:
-                                          MaterialStateProperty.all(true),
-                                    ),
-                                  ),
-                                  menuItemStyleData: const MenuItemStyleData(
-                                    height: 40,
-                                    padding:
-                                        EdgeInsets.only(left: 14, right: 14),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              Text(
-                                'Assigned To *',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: blueColor,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width < 500
-                                          ? 16
-                                          : 25,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 2,
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  FormField<String>(
-                                    validator: (value) {
-                                      if (_selectedstaffId == null ||
-                                          _selectedstaffId!.isEmpty) {
-                                        return 'Please select a staff member';
-                                      }
-                                      return null;
-                                    },
-                                    builder: (FormFieldState<String> state) {
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          DropdownButtonHideUnderline(
-                                            child: DropdownButtonFormField2<
-                                                String>(
-                                              decoration: const InputDecoration(
-                                                border: InputBorder.none,
-                                              ),
-                                              isExpanded: true,
-                                              hint: const Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      'Select here',
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w400,
-                                                        color:
-                                                            Color(0xFFb0b6c3),
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              items: staffs.keys
-                                                  .map((staffmember_id) {
-                                                return DropdownMenuItem<String>(
-                                                  value: staffmember_id,
-                                                  child: Text(
-                                                    staffs[staffmember_id]!,
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w400,
-                                                      color: Colors.black87,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                );
-                                              }).toList(),
-                                              value: _selectedstaffId,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _selectedstaffId = value;
-                                                  _selectedStaffs =
-                                                      staffs[value];
-                                                  StaffId = value.toString();
-                                                  state.didChange(value);
-                                                });
-                                                state.reset();
-                                                // Notify form field of the change
-                                              },
-                                              buttonStyleData: ButtonStyleData(
-                                                height: 45,
-                                                padding: const EdgeInsets.only(
-                                                    left: 14, right: 14),
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  color: Colors.white,
-                                                ),
-                                                elevation: 2,
-                                              ),
-                                              iconStyleData:
-                                                  const IconStyleData(
-                                                icon:
-                                                    Icon(Icons.arrow_drop_down),
-                                                iconSize: 24,
-                                                iconEnabledColor:
-                                                    Color(0xFFb0b6c3),
-                                                iconDisabledColor: Colors.grey,
-                                              ),
-                                              dropdownStyleData:
-                                                  DropdownStyleData(
-                                                maxHeight: 250,
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  color: Colors.white,
-                                                ),
-                                                scrollbarTheme:
-                                                    ScrollbarThemeData(
-                                                  radius:
-                                                      const Radius.circular(6),
-                                                  thickness:
-                                                      MaterialStateProperty.all(
-                                                          6),
-                                                  thumbVisibility:
-                                                      MaterialStateProperty.all(
-                                                          true),
-                                                ),
-                                              ),
-                                              menuItemStyleData:
-                                                  const MenuItemStyleData(
-                                                height: 50,
-                                                padding: EdgeInsets.only(
-                                                    left: 14, right: 14),
-                                              ),
-                                            ),
-                                          ),
-                                          if (state.hasError)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: 14, top: 8),
-                                              child: Text(
-                                                state.errorText!,
-                                                style: const TextStyle(
-                                                  color: Colors.red,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 30,
-                              ),
-                              // Configure Notifications Section
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    height: 50,
-                                    width: 100,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: blueColor,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8.0),
-                                        ),
-                                      ),
-                                      onPressed: () async {
-                                        updateWorkOrderSettings();
-                                      },
-                                      child: isLoading
-                                          ? const Center(
-                                              child: SpinKitFadingCircle(
-                                                color: Colors.white,
-                                                size: 55.0,
-                                              ),
-                                            )
-                                          : Text(
-                                              'Save',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: MediaQuery.of(context)
-                                                            .size
-                                                            .width <
-                                                        500
-                                                    ? 16
-                                                    : 25,
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                            ],
-                          ),
-                        if (ismanagetemplate) const manage_templates(),
-                        if (ischargesetting)
-                          Column(
-                            children: [
-                              const SizedBox(
-                                height: 15,
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    "Manage Charges",
-                                    style: TextStyle(
-                                      color: blueColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  500
-                                              ? 18
-                                              : 25,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      "Configure how charges should be recorded — either as a single bundled charge or as separate individual charges.",
-                                      style: TextStyle(
-                                        color: greyColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 14
-                                                : 18,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16.0),
-                                child: Row(
-                                  children: [
-                                    Switch(
-                                      value: chargesetting == null
-                                          ? true
-                                          : chargesetting!["unbundle_charges"],
-                                      onChanged: (value) {
-                                        setState(() {
-                                          if (chargesetting != null)
-                                            chargesetting!["unbundle_charges"] =
-                                                !chargesetting![
-                                                    "unbundle_charges"];
-                                          else
-                                            chargesetting = {
-                                              "unbundle_charges": value
-                                            };
-                                        });
-
-                                      },
-                                      activeColor:
-                                          blueColor, // Color when switch is on
-                                      inactiveThumbColor: Colors
-                                          .grey, // Color when switch is off
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Text(
-                                      'Unbundle Charges',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: blueColor,
-                                      ),
-                                    ),
                                   ],
                                 ),
-                              ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () async {
-                                      SharedPreferences prefs =
-                                          await SharedPreferences.getInstance();
-                                      String? token = prefs.getString('token');
-                                      String? id = prefs.getString('adminId');
-                                      bool success = await AddChargeSettingData(
-                                          id, {
-                                        "admin_id": id,
-                                        "unbundle_charges":
-                                            chargesetting!["unbundle_charges"]
-                                      });
-                                      if (success) {
-                                        // Refresh the charge settings data
-                                        loadChargeSetting();
-                                      }
-                                    },
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(5.0),
-                                      child: Container(
-                                        height:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 35
-                                                : 50,
-                                        width:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 100
-                                                : 150,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(5.0),
-                                          color: blueColor,
-                                          boxShadow: [
-                                            const BoxShadow(
-                                              color: Colors.grey,
-                                              offset: Offset(0.0, 1.0), //(x,y)
-                                              blurRadius: 6.0,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            "Save",
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: MediaQuery.of(context)
-                                                            .size
-                                                            .width <
-                                                        500
-                                                    ? 16
-                                                    : 20),
-                                          ),
-                                        ),
-                                      ),
+                              if (iscategories)
+                                Column(
+                                  children: [
+                                    const SizedBox(
+                                      height: 15,
                                     ),
-                                  ),
-                                  const SizedBox(
-                                    width: 10,
-                                  ),
-                                  GestureDetector(
-                                    onTap: () async {
-                                      setState(() {
-                                        chargesetting = null;
-                                      });
-                                    },
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(5.0),
-                                      child: Container(
-                                        height:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 35
-                                                : 50,
-                                        width:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 100
-                                                : 150,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(5.0),
-                                          color: Colors.white,
-                                          border: Border.all(color: blueColor),
-                                          boxShadow: [
-                                            const BoxShadow(
-                                              color: Colors.grey,
-                                              offset: Offset(0.0, 1.0), //(x,y)
-                                              blurRadius: 6.0,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            "Reset",
-                                            style: TextStyle(
-                                                color: blueColor,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: MediaQuery.of(context)
-                                                            .size
-                                                            .width <
-                                                        500
-                                                    ? 16
-                                                    : 20),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        if (iscategories)
-                          Column(
-                            children: [
-                              const SizedBox(
-                                height: 15,
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    "Manage Categories",
-                                    style: TextStyle(
-                                      color: blueColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  500
-                                              ? 18
-                                              : 25,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 15,
-                              ),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16),
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                            color: Colors.grey.shade400),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      alignment: Alignment.centerLeft,
-                                      child: TextField(
-                                        controller: categories,
-                                        decoration:
-                                            const InputDecoration.collapsed(
-                                          hintText: 'Enter category name',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 15,
-                              ),
-                              Row(
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      if (_editingCategoryId == null) {
-                                        addCategory();
-                                      } else {
-                                        updateCategory();
-                                      }
-                                    },
-                                    child: Container(
-                                      height: 43,
-                                      width: 150,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 20),
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                            0xFF1A2F5B), // Dark blue like the image
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        _editingCategoryId == null
-                                            ? 'Add Category'
-                                            : 'Update',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  if (_editingCategoryId != null) ...[
-                                    const SizedBox(width: 12),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _editingCategoryId = null;
-                                          categories.clear();
-                                        });
-                                      },
-                                      child: Container(
-                                        height: 43,
-                                        width: 110,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 20),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          border:
-                                              Border.all(color: blueColor),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          'Cancel',
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Manage Categories",
                                           style: TextStyle(
                                             color: blueColor,
                                             fontWeight: FontWeight.bold,
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    500
+                                                ? 18
+                                                : 25,
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              // Category Table
-                              FutureBuilder<List<categories_model>>(
-                                future: futureCategories,
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Center(
-                                        child: SpinKitFadingCircle(
-                                      color: Colors.black,
-                                      size: 40.0,
-                                    ));
-                                  } else if (snapshot.hasError) {
-                                    return Center(
-                                        child:
-                                            Text('Error: \\${friendlyErrorMessage(snapshot.error)}'));
-                                  } else if (!snapshot.hasData ||
-                                      snapshot.data!.isEmpty) {
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Header
-                                        Container(
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                              color: Colors.grey.shade400,
-                                              width: 1,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                            color: const Color(0xFFF4F8FF),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 12, horizontal: 8),
-                                          child: const Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  'Category Name',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    letterSpacing: 1.1,
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(width: 10),
-                                              Text(
-                                                'Action',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 1.1,
-                                                  color: Colors.black87,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 30),
-                                        Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Image.asset(
-                                                "assets/images/no_data.jpg",
-                                                height: 120,
-                                                width: 120,
-                                              ),
-                                              const SizedBox(height: 10),
-                                              Text(
-                                                "No Data Available",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: blueColor,
-                                                  fontSize: 15,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 20),
                                       ],
-                                    );
-                                  } else {
-                                    final categoriesList = snapshot.data!;
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                    ),
+                                    const SizedBox(
+                                      height: 15,
+                                    ),
+                                    Row(
                                       children: [
-                                        // Header
-                                        Container(
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                              color: Colors.grey.shade400,
-                                              width: 1,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                            color: const Color(0xFFF4F8FF),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 12, horizontal: 8),
-                                          child: const Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  'Category Name',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    letterSpacing: 1.1,
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(width: 10),
-                                              Text(
-                                                'Action',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 1.1,
-                                                  color: Colors.black87,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        // Rows
-                                        ...categoriesList
-                                            .asMap()
-                                            .entries
-                                            .map((entry) {
-                                          int idx = entry.key;
-                                          var cat = entry.value;
-                                          return Container(
-                                            margin: const EdgeInsets.only(
-                                                bottom: 8),
+                                        Expanded(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16),
+                                            height: 48,
                                             decoration: BoxDecoration(
                                               border: Border.all(
-                                                  color: Colors.grey.shade400,
-                                                  width: 1),
+                                                  color: Colors.grey.shade400),
                                               borderRadius:
-                                                  BorderRadius.circular(4),
-                                              color: idx % 2 == 0
-                                                  ? Colors.white
-                                                  : const Color(0xFFF4F8FF),
+                                                  BorderRadius.circular(6),
                                             ),
-                                            child: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Padding(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        vertical: 16,
-                                                        horizontal: 12),
-                                                    child: Text(
-                                                      cat.name ?? '',
-                                                      style: const TextStyle(
-                                                          fontSize: 16,
-                                                          color:
-                                                              Colors.black87),
-                                                    ),
-                                                  ),
-                                                ),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    setState(() {
-                                                      categories.text =
-                                                          cat.name ?? '';
-                                                      _editingCategoryId =
-                                                          cat.categoryId;
-                                                    });
-                                                  },
-                                                  child: Container(
-                                                    height: 35,
-                                                    width: 35,
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          Colors.green.shade50,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                    ),
-                                                    child: const Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        FaIcon(
-                                                          FontAwesomeIcons.edit,
-                                                          size: 15,
-                                                          color: Colors.green,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    _showDeleteCategoryAlert(
-                                                        context,
-                                                        cat.categoryId ?? '');
-                                                  },
-                                                  child: Container(
-                                                    height: 35,
-                                                    width: 35,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.red.shade50,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                    ),
-                                                    child: const Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        FaIcon(
-                                                          FontAwesomeIcons
-                                                              .trashCan,
-                                                          size: 15,
-                                                          color: Colors.red,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                              ],
+                                            alignment: Alignment.centerLeft,
+                                            child: TextField(
+                                              controller: categories,
+                                              decoration: const InputDecoration
+                                                  .collapsed(
+                                                hintText: 'Enter category name',
+                                              ),
                                             ),
-                                          );
-                                        }).toList(),
+                                          ),
+                                        ),
                                       ],
-                                    );
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: 10),
-                            ],
-                          ),
-                        if (isvendor)
-                          _isStaff
-                              ? StaffVendor.Vendor_table(isEmbedded: true)
-                              : Vendor_table(isEmbedded: true),
-                        if (ispropertyowner)
-                          _isStaff
-                              ? StaffRentalOwner.Rentalowner_table(
-                                  isEmbedded: true)
-                              : Rentalowner_table(isEmbedded: true),
-                        if (ispropertytype)
-                          _isStaff
-                              ? StaffPropertyType.PropertyTable(
-                                  isEmbedded: true)
-                              : PropertyTable(isEmbedded: true),
-                        if (istwilio)
-                          Column(
-                            children: [
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Twilio Configuration',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor,
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 15),
-                              Row(children: [
-                                Text(
-                                  'SMS Notifications',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: blueColor,
-                                  ),
-                                ),
-                              ]),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Enable SMS Notifications',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey,
-                                      ),
+                                    const SizedBox(
+                                      height: 15,
                                     ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Switch(
-                                    value: twilioSmsEnabled,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        twilioSmsEnabled = value;
-                                      });
-                                    },
-                                    activeColor: blueColor,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Row(children: [
-                                Text(
-                                  'Twilio Account SID',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: blueColor,
-                                  ),
-                                ),
-                              ]),
-                              const SizedBox(height: 5),
-                              CustomTextField(
-                                controller: twilioAccountSid,
-                                hintText: 'Enter Twilio Account SID',
-                                keyboardType: TextInputType.text,
-                                readOnnly: !twilioSmsEnabled,
-                                error_mess: twilioAccountSidError,
-                              ),
-                              if (twilioAccountSidError != null)
-                                Row(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 4, left: 5),
-                                      child: Text(
-                                        twilioAccountSidError!,
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 12,
+                                    Row(
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (_editingCategoryId == null) {
+                                              addCategory();
+                                            } else {
+                                              updateCategory();
+                                            }
+                                          },
+                                          child: Container(
+                                            height: 43,
+                                            width: 150,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 20),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                  0xFF1A2F5B), // Dark blue like the image
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              _editingCategoryId == null
+                                                  ? 'Add Category'
+                                                  : 'Update',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        if (_editingCategoryId != null) ...[
+                                          const SizedBox(width: 12),
+                                          GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _editingCategoryId = null;
+                                                categories.clear();
+                                              });
+                                            },
+                                            child: Container(
+                                              height: 43,
+                                              width: 110,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 20),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                border: Border.all(
+                                                    color: blueColor),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                'Cancel',
+                                                style: TextStyle(
+                                                  color: blueColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                    // Category Table
+                                    FutureBuilder<List<categories_model>>(
+                                      future: futureCategories,
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return const Center(
+                                              child: SpinKitFadingCircle(
+                                            color: Colors.black,
+                                            size: 40.0,
+                                          ));
+                                        } else if (snapshot.hasError) {
+                                          return Center(
+                                              child: Text(
+                                                  'Error: \\${friendlyErrorMessage(snapshot.error)}'));
+                                        } else if (!snapshot.hasData ||
+                                            snapshot.data!.isEmpty) {
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              // Header
+                                              Container(
+                                                height: 50,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: Colors.grey.shade400,
+                                                    width: 1,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  color:
+                                                      const Color(0xFFF4F8FF),
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 12,
+                                                        horizontal: 8),
+                                                child: const Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Category Name',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          letterSpacing: 1.1,
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 10),
+                                                    Text(
+                                                      'Action',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        letterSpacing: 1.1,
+                                                        color: Colors.black87,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(height: 30),
+                                              Center(
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Image.asset(
+                                                      "assets/images/no_data.jpg",
+                                                      height: 120,
+                                                      width: 120,
+                                                    ),
+                                                    const SizedBox(height: 10),
+                                                    Text(
+                                                      "No Data Available",
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: blueColor,
+                                                        fontSize: 15,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(height: 20),
+                                            ],
+                                          );
+                                        } else {
+                                          final categoriesList = snapshot.data!;
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              // Header
+                                              Container(
+                                                height: 50,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: Colors.grey.shade400,
+                                                    width: 1,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  color:
+                                                      const Color(0xFFF4F8FF),
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 12,
+                                                        horizontal: 8),
+                                                child: const Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Category Name',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          letterSpacing: 1.1,
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 10),
+                                                    Text(
+                                                      'Action',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        letterSpacing: 1.1,
+                                                        color: Colors.black87,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              // Rows
+                                              ...categoriesList
+                                                  .asMap()
+                                                  .entries
+                                                  .map((entry) {
+                                                int idx = entry.key;
+                                                var cat = entry.value;
+                                                return Container(
+                                                  margin: const EdgeInsets.only(
+                                                      bottom: 8),
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                        color: Colors
+                                                            .grey.shade400,
+                                                        width: 1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4),
+                                                    color: idx % 2 == 0
+                                                        ? Colors.white
+                                                        : const Color(
+                                                            0xFFF4F8FF),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  vertical: 16,
+                                                                  horizontal:
+                                                                      12),
+                                                          child: Text(
+                                                            cat.name ?? '',
+                                                            style: const TextStyle(
+                                                                fontSize: 16,
+                                                                color: Colors
+                                                                    .black87),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      GestureDetector(
+                                                        onTap: () {
+                                                          setState(() {
+                                                            categories.text =
+                                                                cat.name ?? '';
+                                                            _editingCategoryId =
+                                                                cat.categoryId;
+                                                          });
+                                                        },
+                                                        child: Container(
+                                                          height: 35,
+                                                          width: 35,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: Colors
+                                                                .green.shade50,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                          ),
+                                                          child: const Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              FaIcon(
+                                                                FontAwesomeIcons
+                                                                    .edit,
+                                                                size: 15,
+                                                                color: Colors
+                                                                    .green,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 10),
+                                                      GestureDetector(
+                                                        onTap: () {
+                                                          _showDeleteCategoryAlert(
+                                                              context,
+                                                              cat.categoryId ??
+                                                                  '');
+                                                        },
+                                                        child: Container(
+                                                          height: 35,
+                                                          width: 35,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: Colors
+                                                                .red.shade50,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                          ),
+                                                          child: const Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              FaIcon(
+                                                                FontAwesomeIcons
+                                                                    .trashCan,
+                                                                size: 15,
+                                                                color:
+                                                                    Colors.red,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 10),
+                                                    ],
+                                                  ),
+                                                );
+                                              }).toList(),
+                                            ],
+                                          );
+                                        }
+                                      },
+                                    ),
+                                    const SizedBox(height: 10),
                                   ],
                                 ),
-                              const SizedBox(height: 10),
-                              Row(children: [
-                                Text(
-                                  'Twilio Auth Token',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: blueColor,
-                                  ),
-                                ),
-                              ]),
-                              const SizedBox(height: 5),
-                              CustomTextField(
-                                controller: twilioAuthToken,
-                                hintText: 'Enter Twilio Auth Token',
-                                keyboardType: TextInputType.text,
-                                obscureText: true,
-                                readOnnly: !twilioSmsEnabled,
-                                error_mess: twilioAuthTokenError,
-                              ),
-                              if (twilioAuthTokenError != null)
-                                Row(
+                              if (isvendor)
+                                _isStaff
+                                    ? StaffVendor.Vendor_table(isEmbedded: true)
+                                    : Vendor_table(isEmbedded: true),
+                              if (ispropertyowner)
+                                _isStaff
+                                    ? StaffRentalOwner.Rentalowner_table(
+                                        isEmbedded: true)
+                                    : Rentalowner_table(isEmbedded: true),
+                              if (ispropertytype)
+                                _isStaff
+                                    ? StaffPropertyType.PropertyTable(
+                                        isEmbedded: true)
+                                    : PropertyTable(isEmbedded: true),
+                              if (istwilio)
+                                Column(
                                   children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 4, left: 5),
-                                      child: Text(
-                                        twilioAuthTokenError!,
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              const SizedBox(height: 10),
-                              Row(children: [
-                                Text(
-                                  'Twilio Phone Number',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: blueColor,
-                                  ),
-                                ),
-                              ]),
-                              const SizedBox(height: 5),
-                              CustomTextField(
-                                controller: twilioPhoneNumber,
-                                hintText: 'Enter Twilio Phone Number',
-                                keyboardType: TextInputType.text,
-                                readOnnly: !twilioSmsEnabled,
-                                error_mess: twilioPhoneNumberError,
-                              ),
-                              if (twilioPhoneNumberError != null)
-                                Row(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 4, left: 5),
-                                      child: Text(
-                                        twilioPhoneNumberError!,
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              const SizedBox(height: 20),
-                              Row(children: [
-                                GestureDetector(
-                                  onTap: saveTwilioSettings,
-                                  child: Container(
-                                    height: 45,
-                                    width: 150,
-                                    decoration: BoxDecoration(
-                                      color: blueColor,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'Save Settings',
-                                        style: TextStyle(
-                                            color: Colors.white,
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Twilio Configuration',
+                                          style: TextStyle(
+                                            fontSize: 18,
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 16),
-                                      ),
+                                            color: blueColor,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
+                                    const SizedBox(height: 15),
+                                    Row(children: [
+                                      Text(
+                                        'SMS Notifications',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: blueColor,
+                                        ),
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Enable SMS Notifications',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Switch(
+                                          value: twilioSmsEnabled,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              twilioSmsEnabled = value;
+                                            });
+                                          },
+                                          activeColor: blueColor,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(children: [
+                                      Text(
+                                        'Twilio Account SID',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: blueColor,
+                                        ),
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 5),
+                                    CustomTextField(
+                                      controller: twilioAccountSid,
+                                      hintText: 'Enter Twilio Account SID',
+                                      keyboardType: TextInputType.text,
+                                      readOnnly: !twilioSmsEnabled,
+                                      error_mess: twilioAccountSidError,
+                                    ),
+                                    if (twilioAccountSidError != null)
+                                      Row(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                top: 4, left: 5),
+                                            child: Text(
+                                              twilioAccountSidError!,
+                                              style: const TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    const SizedBox(height: 10),
+                                    Row(children: [
+                                      Text(
+                                        'Twilio Auth Token',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: blueColor,
+                                        ),
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 5),
+                                    CustomTextField(
+                                      controller: twilioAuthToken,
+                                      hintText: 'Enter Twilio Auth Token',
+                                      keyboardType: TextInputType.text,
+                                      obscureText: true,
+                                      readOnnly: !twilioSmsEnabled,
+                                      error_mess: twilioAuthTokenError,
+                                    ),
+                                    if (twilioAuthTokenError != null)
+                                      Row(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                top: 4, left: 5),
+                                            child: Text(
+                                              twilioAuthTokenError!,
+                                              style: const TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    const SizedBox(height: 10),
+                                    Row(children: [
+                                      Text(
+                                        'Twilio Phone Number',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: blueColor,
+                                        ),
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 5),
+                                    CustomTextField(
+                                      controller: twilioPhoneNumber,
+                                      hintText: 'Enter Twilio Phone Number',
+                                      keyboardType: TextInputType.text,
+                                      readOnnly: !twilioSmsEnabled,
+                                      error_mess: twilioPhoneNumberError,
+                                    ),
+                                    if (twilioPhoneNumberError != null)
+                                      Row(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                top: 4, left: 5),
+                                            child: Text(
+                                              twilioPhoneNumberError!,
+                                              style: const TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    const SizedBox(height: 20),
+                                    Row(children: [
+                                      GestureDetector(
+                                        onTap: saveTwilioSettings,
+                                        child: Container(
+                                          height: 45,
+                                          width: 150,
+                                          decoration: BoxDecoration(
+                                            color: blueColor,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              'Save Settings',
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ]),
+                                  ],
                                 ),
-                              ]),
                             ],
                           ),
-                      ],
-                    ),
-                  ),
-                ),
-              ])))
+                        ),
+                      ),
+                    ])))
             : NoInternetView(onRetry: retryNow),
       ),
     );
@@ -8432,7 +8616,6 @@ class _TabBarExampleState extends State<TabBarExample>
     String categoryName = categories.text.trim();
     String? token = prefs.getString('token');
 
-
     if (categoryName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a category name')),
@@ -8646,7 +8829,6 @@ class _TabBarExampleState extends State<TabBarExample>
                     hintText: 'Enter account name',
                     controller: accountname,
                     showElevation: false,
-                    
                     borderColor: const Color(0xFFCED4DA),
                     borderWidth: 1.0,
                   ),
@@ -8788,7 +8970,9 @@ class _TabBarExampleState extends State<TabBarExample>
                                     )
                                   : const Text(
                                       'Add',
-                                      style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
                                     ),
                             ),
                           ),
@@ -8810,7 +8994,9 @@ class _TabBarExampleState extends State<TabBarExample>
                             child: Center(
                               child: Text(
                                 'Cancel',
-                                style: TextStyle(color: blueColor,fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    color: blueColor,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -9046,7 +9232,9 @@ class _TabBarExampleState extends State<TabBarExample>
                                     )
                                   : const Text(
                                       'Update',
-                                      style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
                                     ),
                             ),
                           ),
@@ -9068,7 +9256,9 @@ class _TabBarExampleState extends State<TabBarExample>
                             child: Center(
                               child: Text(
                                 'Cancel',
-                                style: TextStyle(color: blueColor,fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    color: blueColor,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -9213,8 +9403,12 @@ class _TabBarExampleState extends State<TabBarExample>
   void vendorSortData(List<Vendor> data) {
     if (vendorSorting1) {
       data.sort((a, b) => vendorAscending1
-          ? (a.vendorName ?? '').toLowerCase().compareTo((b.vendorName ?? '').toLowerCase())
-          : (b.vendorName ?? '').toLowerCase().compareTo((a.vendorName ?? '').toLowerCase()));
+          ? (a.vendorName ?? '')
+              .toLowerCase()
+              .compareTo((b.vendorName ?? '').toLowerCase())
+          : (b.vendorName ?? '')
+              .toLowerCase()
+              .compareTo((a.vendorName ?? '').toLowerCase()));
     } else if (vendorSorting2) {
       // Was previously safe only because vendorPhoneNumber could never be
       // null (a missing phone came through as the literal string "null").

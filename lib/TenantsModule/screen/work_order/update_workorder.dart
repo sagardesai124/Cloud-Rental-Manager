@@ -249,13 +249,27 @@ class _UpdateWorkOrderTenantState extends State<UpdateWorkOrderTenant> {
       "workOrderUpdate_images": _uploadedFileNames,
       "notificationTime": notificationTime,
     };
+    // Web parity (TAddWork.jsx:593-604): a success navigates away, anything
+    // else reports the failure and stays put. The old `catch (_)` swallowed
+    // every failure — offline, 401, timeout — and popped with `true`, so a
+    // tenant's update vanished while the screen said it had saved. It was
+    // there to work around a 500 from this route, but web never needed such a
+    // workaround, so a genuine failure is a genuine failure.
     try {
       await WorkOrderRepository.updateworkorderSummary(
           values, widget.workorderId,
           notificationTime: notificationTime);
-    } catch (_) {
-      // The backend currently returns a 500 on this endpoint even though the
-      // record is saved, so we still pop & let the caller refresh the history.
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update work order. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
     }
     if (mounted) {
       setState(() => _saving = false);

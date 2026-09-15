@@ -742,7 +742,15 @@ class _add_insuranceState extends State<add_insurance> {
                                   borderRadius: BorderRadius.circular(10.0),
                                 ),
                               ),
-                              onPressed: () {
+                              // `isLoading` only swapped the button's child for
+                              // a spinner — the callback stayed live. The save
+                              // uploads a document and then POSTs, so the
+                              // window is seconds wide, and this route carries
+                              // no idempotency key (api_helpers only adds one
+                              // for payment paths). Two taps meant two policies.
+                              onPressed: isLoading
+                                  ? null
+                                  : () {
                                 if (_formkey.currentState!.validate()) {
                                   if (_validateDates()) {
                                     setState(() {

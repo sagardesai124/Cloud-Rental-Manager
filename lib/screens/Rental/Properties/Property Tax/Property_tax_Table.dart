@@ -48,12 +48,16 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
   int currentPage = 0;
   int itemsPerPage = 10;
   String selectedStatus = "All";
+  // These were the mortgage screen's statuses, copied in with the rest of the
+  // table. A tax record is only ever Pending, Paid, Overdue or Cancelled, so
+  // none of the old options could match a row. Matches web's dropdown
+  // (PropDetails.jsx:20296-20298).
   final List<String> statusOptions = [
     "All",
-    "Active",
-    "Paid Off",
-    "Defaulted",
-    "Refinanced"
+    "Pending",
+    "Paid",
+    "Overdue",
+    "Cancelled"
   ];
 
   List<int> itemsPerPageOptions = [10, 25, 50, 100];
@@ -232,7 +236,7 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
       context: context,
       type: AlertType.warning,
       title: "Are you sure?",
-      desc: "Once deleted, you will not be able to recover this property!",
+      desc: "Once deleted, you will not be able to recover this tax record!",
       content: Column(
         children: <Widget>[
           const SizedBox(
@@ -800,10 +804,8 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
                                                   ),
                                                   child: Center(
                                                     child: Text(
-                                                      (tax['status'] ??
-                                                              'unknown')
-                                                          .toString()
-                                                          .toUpperCase(),
+                                                      _statusLabel(
+                                                          tax['status']),
                                                       style: TextStyle(
                                                         color: _getStatusColor(
                                                             tax['status']),
@@ -1211,6 +1213,17 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
     }
   }
 
+  /// Web parity (PropDetails.jsx:6922 `tax.status || "Pending"`, and :4237
+  /// which maps a stored "Unpaid" onto "Pending" before display). Mobile
+  /// printed the raw value in capitals, so the same record read "UNPAID" or
+  /// "UNKNOWN" here and "Pending" on web.
+  String _statusLabel(dynamic status) {
+    final value = status?.toString().trim() ?? '';
+    if (value.isEmpty) return 'Pending';
+    if (value.toLowerCase() == 'unpaid') return 'Pending';
+    return value;
+  }
+
   Color _getStatusColor(String? status) {
     if (status == null) return Colors.grey;
 
@@ -1224,7 +1237,8 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
       case 'pending':
         return Colors.orange;
       default:
-        return Colors.grey;
+        // Web falls through to the pending colour, not a neutral grey.
+        return Colors.orange;
     }
   }
 }
