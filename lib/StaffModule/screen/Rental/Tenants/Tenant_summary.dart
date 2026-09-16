@@ -5938,6 +5938,14 @@ class _TenantSummaryTabletState extends State<TenantSummaryTablet>
                     return Text(friendlyErrorMessage(snapshot.error), textAlign: TextAlign.center);
                   } else {
                     List<Tenant> tenantsummery = snapshot.data ?? [];
+                    // `?? []` only turns a null into an empty list — every widget below
+                    // this point reads tenantsummery.first (11 sites, through :6963),
+                    // which throws StateError on an empty list. The isNotEmpty check just
+                    // below only gates scroll scheduling; it does not return. Bail out here
+                    // so one guard covers all of them. Mirrors the Admin copy.
+                    if (tenantsummery.isEmpty) {
+                      return const Center(child: Text('No Data Available'));
+                    }
                     if (widget.initialSummaryTabIndex == 1 &&
                         tenantsummery.isNotEmpty &&
                         !_scheduledLeaseSectionScroll) {

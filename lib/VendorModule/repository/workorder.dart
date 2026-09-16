@@ -240,9 +240,7 @@ class WorkOrderRepository {
     final response = await apiPut(
         url,
         headers: {"authorization" : "CRM $token","id":"CRM $id", 'Content-Type': 'application/json; charset=UTF-8',},
-        body: jsonEncode({
-          "workOrder": workorder
-        })
+        body: jsonEncode(workOrderUpdateBody(workorder))
     );
 
     if (response.statusCode == 200) {

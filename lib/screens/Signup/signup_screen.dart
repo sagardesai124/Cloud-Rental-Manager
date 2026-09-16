@@ -81,7 +81,7 @@ class _SignupState extends State<Signup> {
                     lastname: lastname.text.trim(),
                     email: email,
                   )));
-          Fluttertoast.showToast(msg: "added succesfully");
+          Fluttertoast.showToast(msg: "added successfully");
           setState(() {
             loading = false;
           });

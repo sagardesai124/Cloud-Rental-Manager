@@ -1051,10 +1051,10 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
           _originalRentDueReminderEmail = rentDueReminderEmail;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('mail Updated Successfully')));
+            const SnackBar(content: Text('Email Updated Successfully')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to Update mail')));
+            const SnackBar(content: Text('Failed to Update Email')));
       }
     } catch (e) {
       logError('Failed to update mail data: $e');
@@ -1124,10 +1124,10 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         // After successful add, fetch the data to get the updated values and update original values
         await fetchMailData();
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('mail Updated Successfully')));
+            const SnackBar(content: Text('Email Updated Successfully')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to Update ,ail')));
+            const SnackBar(content: Text('Failed to Update Email')));
       }
     } catch (e) {
       logError('Failed to update mail data: $e');

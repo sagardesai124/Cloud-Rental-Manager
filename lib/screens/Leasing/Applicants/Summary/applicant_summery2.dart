@@ -134,7 +134,16 @@ class _applicant_summeryState extends State<applicant_summery>
     });
 
   }
-  Future<bool> updateApplicantStatus(
+  /// Updates the applicant's status and hands the server's own message back
+  /// to the caller.
+  ///
+  /// Single-owner messaging: this method deliberately shows no toast. It used
+  /// to toast on every outcome while the call sites toasted again, so one tap
+  /// put two messages on screen - and on failure the server's real reason was
+  /// immediately followed by a generic one that contradicted it. The call site
+  /// owns the message now; `message` carries the server's text so a failure can
+  /// say why instead of just "Failed".
+  Future<({bool ok, String? message})> updateApplicantStatus(
       String applicantId, String status, String rentalId, String unitId,
       {String rejectionReason = ''}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -163,26 +172,14 @@ class _applicant_summeryState extends State<applicant_summery>
 
       var responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        if (responseData['statusCode'] == 200) {
-          Fluttertoast.showToast(
-              msg: responseData['message'] ?? 'Status updated successfully');
-
-          return true;
-        } else {
-          Fluttertoast.showToast(
-              msg: responseData['message'] ?? 'Failed to update status');
-          return false;
-        }
-      } else {
-        Fluttertoast.showToast(
-            msg: responseData['message'] ?? 'Failed to update status');
-        return false;
+      final String? serverMessage = responseData['message'] as String?;
+      if (response.statusCode == 200 && responseData['statusCode'] == 200) {
+        return (ok: true, message: serverMessage);
       }
+      return (ok: false, message: serverMessage);
     } catch (error) {
       logError('Exception occurred: $error');
-      Fluttertoast.showToast(msg: 'An error occurred');
-      return false;
+      return (ok: false, message: null);
     }
   }
   int _selectedIndex = 0; // To track the selected tab
@@ -382,14 +379,14 @@ class _applicant_summeryState extends State<applicant_summery>
                               // Call the API to update the applicant status
                               // (web sends these empty when no lease data —
                               // never crash on a missing leaseData).
-                              bool success = await updateApplicantStatus(
+                              final result = await updateApplicantStatus(
                                   widget.applicant_id!,
                                   value,
                                   rentalId ?? '',
                                   unitId ?? '',
                                   rejectionReason: rejectionReason);
 
-                              if (success) {
+                              if (result.ok) {
                                 Fluttertoast.showToast(
                                   msg:
                                       'The Applicant Status has been changed to $value',
@@ -404,8 +401,12 @@ class _applicant_summeryState extends State<applicant_summery>
                                           widget.applicant_id!);
                                 });
                               } else {
+                                // Show the server's own reason when it sent
+                                // one; the generic text is only a fallback for
+                                // a transport failure with no body.
                                 Fluttertoast.showToast(
-                                  msg: 'Failed to update applicant status',
+                                  msg: result.message ??
+                                      'Failed to update applicant status',
                                   backgroundColor: Colors.red,
                                   textColor: Colors.white,
                                 );
@@ -798,18 +799,28 @@ class _applicant_summeryState extends State<applicant_summery>
                                                 snapshot.data?.leaseData?.unitId;
 
                                             // Call the API to update the applicant status
-                                            bool success =
+                                            final result =
                                                 await updateApplicantStatus(
                                                     widget.applicant_id!,
                                                     value,
                                                     rentalId!,
                                                     unitId!);
 
-                                            if (success) {
-                                              print('Status update successful');
-                                              Navigator.pop(context,true);
+                                            if (result.ok) {
+                                              Fluttertoast.showToast(
+                                                msg:
+                                                    'The Applicant Status has been changed to $value',
+                                                backgroundColor: Colors.green,
+                                                textColor: Colors.white,
+                                              );
+                                              Navigator.pop(context, true);
                                             } else {
-                                              print('Status update failed');
+                                              Fluttertoast.showToast(
+                                                msg: result.message ??
+                                                    'Failed to update applicant status',
+                                                backgroundColor: Colors.red,
+                                                textColor: Colors.white,
+                                              );
                                             }
                                           }
                                         },

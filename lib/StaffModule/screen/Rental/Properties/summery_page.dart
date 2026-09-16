@@ -2027,7 +2027,10 @@ class _Summery_pageState extends State<Summery_page>
 
   Widget _buildPaginationControls() {
     int numorpages = 1;
-    numorpages = (totalrecordsmulti / _rowsPerPage).ceil();
+    // Web parity: CommonPagination clamps the page count to a floor of 1
+    // (Math.max(1, ...)), so an empty search result reads "Page 1 of 1".
+    // This also gives the `= 1` initialiser above its intended effect.
+    if (totalrecordsmulti > 0) numorpages = (totalrecordsmulti / _rowsPerPage).ceil();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,

@@ -1664,10 +1664,13 @@ class _ApplicantContentState extends State<ApplicantContent> {
                                           Fluttertoast.showToast(
                                               msg:
                                                   'Applicant Added Successfully');
-                                        } else {
-                                          Fluttertoast.showToast(
-                                              msg: 'Failed to add applicant');
                                         }
+                                        // No failure toast here: addApplicantSummaryForm already raises the
+                                        // server's own reason, which is the only place that text exists. A
+                                        // generic 'Failed to add applicant' on top of it put two messages on
+                                        // screen for one tap, the second contradicting the first. The repo
+                                        // owns failure, this screen owns success - the split its comment
+                                        // already describes.
                                       } else {
                                         if (!checked) {
                                           // Fluttertoast.showToast(
@@ -3576,11 +3579,13 @@ class _ApplicantContentState extends State<ApplicantContent> {
                                                     Fluttertoast.showToast(
                                                         msg:
                                                             'Applicant Added Successfully');
-                                                  } else {
-                                                    Fluttertoast.showToast(
-                                                        msg:
-                                                            'Failed to add applicant');
                                                   }
+                                                  // No failure toast here: addApplicantSummaryForm already raises the
+                                                  // server's own reason, which is the only place that text exists. A
+                                                  // generic 'Failed to add applicant' on top of it put two messages on
+                                                  // screen for one tap, the second contradicting the first. The repo
+                                                  // owns failure, this screen owns success - the split its comment
+                                                  // already describes.
                                                 } else {
                                                   setState(
                                                       () {}); // Rebuild to show the error message

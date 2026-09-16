@@ -1390,6 +1390,35 @@ String workOrderFetchErrorMessage(String responseBody) {
   return kGenericErrorMessage;
 }
 
+/// Shapes the body of `PUT /api/work-order/work-order/{id}` the way the server
+/// actually reads it.
+///
+/// `notificationTime` has to sit at the ROOT of the body, as a sibling of
+/// `workOrder`. The route pulls it from `req.body.notificationTime`
+/// (Server/routes/api/superadmin/WorkOrder.js:695) and spends it on three
+/// things: the work order's `updatedAt`, the pushed history entry's
+/// `updatedAt`, and the notification row's `createdAt`/`updatedAt` (:938).
+///
+/// Nested inside `workOrder` it arrives `undefined`. The work order's
+/// `updatedAt` then never advances, and because Notification's `createdAt` is
+/// a plain String with no default (modals/superadmin/Notification.js:27) the
+/// row is written without one — it sinks to the bottom of every bell feed,
+/// which sorts `{ createdAt: -1 }`.
+///
+/// Mirrors the web clients, which all send it as a sibling:
+/// WorkOrderDetails.js:668, VendorAddWork.js:739, Tworkorderdetail.js:224.
+/// Callers may leave it in the map; it is lifted out here.
+Map<String, dynamic> workOrderUpdateBody(Map<String, dynamic> workorder) {
+  final Map<String, dynamic> payload = Map<String, dynamic>.from(workorder);
+  final Object? supplied = payload.remove('notificationTime');
+  return <String, dynamic>{
+    'workOrder': payload,
+    'notificationTime': (supplied is String && supplied.trim().isNotEmpty)
+        ? supplied
+        : DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+  };
+}
+
 /// Sanitises whatever a `FutureBuilder`/catch block hands us before it is
 /// rendered. Already-friendly messages pass through; anything carrying a JSON
 /// payload, URI, exception class name or errno is replaced with [fallback].

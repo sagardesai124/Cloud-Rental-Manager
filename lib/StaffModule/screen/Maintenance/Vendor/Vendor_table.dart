@@ -423,7 +423,7 @@ class _Vendor_tableState extends State<Vendor_table>
             // the dialog either way; the message has already been shown.
             try {
               var data = await VendorRepository(baseUrl: '')
-                  .DeleteVender(vender_id: id)
+                  .DeleteVender(vender_id: id, reason: reason.text)
                   .then((value) {
                 if (!mounted) return;
                 // Only refresh when the delete actually succeeded.

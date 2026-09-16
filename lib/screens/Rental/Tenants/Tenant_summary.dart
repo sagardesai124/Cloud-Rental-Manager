@@ -5919,6 +5919,14 @@ class _TenantSummaryTabletState extends State<TenantSummaryTablet> {
               return Text(friendlyErrorMessage(snapshot.error), textAlign: TextAlign.center);
             } else {
               List<Tenant> tenantsummery = snapshot.data ?? [];
+              // `?? []` only turns a null into an empty list — every widget
+              // below this point reads tenantsummery.first (12 sites, through
+              // :6898), which throws StateError on an empty list. Bail out here
+              // so one guard covers all of them, matching the empty handling the
+              // rest of this screen already uses.
+              if (tenantsummery.isEmpty) {
+                return const Center(child: Text('No Data Available'));
+              }
               //   Provider.of<Tenants_counts>(context).setOwnerDetails(tenants.length);
               return ListView(
                 scrollDirection: Axis.vertical,

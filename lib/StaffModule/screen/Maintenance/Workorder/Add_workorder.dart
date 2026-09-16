@@ -1930,6 +1930,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                         child: DropdownButtonFormField2<String>(
                                           decoration: const InputDecoration(
                                             border: InputBorder.none,
+                                            contentPadding: EdgeInsets.only(top: 12),
                                           ),
                                           isExpanded: true,
                                           hint: const Row(
@@ -2029,12 +2030,12 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                       if (state.hasError)
                                         Padding(
                                           padding: const EdgeInsets.only(
-                                              left: 14, top: 8),
+                                              left: 0, top: 4),
                                           child: Text(
                                             state.errorText!,
                                             style: const TextStyle(
                                               color: Colors.red,
-                                              fontSize: 12,
+                                              fontSize: 11,
                                             ),
                                           ),
                                         ),
@@ -2042,6 +2043,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                   );
                                 },
                               ),
+                              const SizedBox(height: 10),
                               units.isNotEmpty &&
                                       units.values
                                           .any((unit) => unit.trim().isNotEmpty)
@@ -2074,6 +2076,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                                 decoration:
                                                     const InputDecoration(
                                                   border: InputBorder.none,
+                                                  contentPadding: EdgeInsets.only(top: 12),
                                                 ),
                                                 isExpanded: true,
                                                 hint: const Row(
@@ -2216,12 +2219,12 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                             if (state.hasError)
                                               Padding(
                                                 padding: const EdgeInsets.only(
-                                                    left: 14, top: 8),
+                                                    left: 0, top: 4),
                                                 child: Text(
                                                   state.errorText!,
                                                   style: const TextStyle(
                                                     color: Colors.red,
-                                                    fontSize: 12,
+                                                    fontSize: 11,
                                                   ),
                                                 ),
                                               ),
@@ -2459,6 +2462,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                         child: DropdownButtonFormField2<String>(
                                           decoration: const InputDecoration(
                                             border: InputBorder.none,
+                                            contentPadding: EdgeInsets.only(top: 12),
                                           ),
                                           isExpanded: true,
                                           hint: const Row(
@@ -2558,12 +2562,12 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                       if (state.hasError)
                                         Padding(
                                           padding: const EdgeInsets.only(
-                                              left: 14, top: 8),
+                                              left: 0, top: 4),
                                           child: Text(
                                             state.errorText!,
                                             style: const TextStyle(
                                               color: Colors.red,
-                                              fontSize: 12,
+                                              fontSize: 11,
                                             ),
                                           ),
                                         ),
@@ -2662,14 +2666,11 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Web parity: Vendor is optional on the web
+                              // form (AddWorkorder.jsx has no required rule
+                              // for it), so there is no validator here and
+                              // the label carries no asterisk.
                               FormField<String>(
-                                validator: (value) {
-                                  if (_selectedvendorsId == null ||
-                                      _selectedvendorsId!.isEmpty) {
-                                    return 'Please select a vendor';
-                                  }
-                                  return null;
-                                },
                                 builder: (FormFieldState<String> state) {
                                   return Column(
                                     crossAxisAlignment:
@@ -2679,6 +2680,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                         child: DropdownButtonFormField2<String>(
                                           decoration: const InputDecoration(
                                             border: InputBorder.none,
+                                            contentPadding: EdgeInsets.only(top: 12),
                                           ),
                                           isExpanded: true,
                                           hint: const Row(
@@ -2780,12 +2782,12 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                       if (state.hasError)
                                         Padding(
                                           padding: const EdgeInsets.only(
-                                              left: 14, top: 8),
+                                              left: 0, top: 4),
                                           child: Text(
                                             state.errorText!,
                                             style: const TextStyle(
                                               color: Colors.red,
-                                              fontSize: 12,
+                                              fontSize: 11,
                                             ),
                                           ),
                                         ),
@@ -3326,12 +3328,12 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                   if (state.hasError)
                                     Padding(
                                       padding: const EdgeInsets.only(
-                                          left: 14, top: 8),
+                                          left: 0, top: 4),
                                       child: Text(
                                         state.errorText!,
                                         style: const TextStyle(
                                           color: Colors.red,
-                                          fontSize: 12,
+                                          fontSize: 11,
                                         ),
                                       ),
                                     ),
@@ -3428,12 +3430,12 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                 ),
                                   if (state.hasError)
                                     Padding(
-                                      padding: const EdgeInsets.only(left: 14, top: 8),
+                                      padding: const EdgeInsets.only(left: 0, top: 4),
                                       child: Text(
                                         state.errorText!,
                                         style: const TextStyle(
                                           color: Colors.red,
-                                          fontSize: 12,
+                                          fontSize: 11,
                                         ),
                                       ),
                                     ),
@@ -5064,6 +5066,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                               DropdownButtonFormField2<String>(
                                             decoration: const InputDecoration(
                                               border: InputBorder.none,
+                                              contentPadding: EdgeInsets.only(top: 12),
                                             ),
                                             isExpanded: true,
                                             hint: const Row(
@@ -5171,12 +5174,12 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                         if (state.hasError)
                                           Padding(
                                             padding: const EdgeInsets.only(
-                                                left: 14, top: 8),
+                                                left: 0, top: 4),
                                             child: Text(
                                               state.errorText!,
                                               style: const TextStyle(
                                                 color: Colors.red,
-                                                fontSize: 12,
+                                                fontSize: 11,
                                               ),
                                             ),
                                           ),
@@ -5184,6 +5187,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                     );
                                   },
                                 ),
+                                const SizedBox(height: 10),
                                 // units.isNotEmpty
                                 units.isNotEmpty &&
                                         units.values.any(
@@ -5219,6 +5223,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                                   decoration:
                                                       const InputDecoration(
                                                     border: InputBorder.none,
+                                                    contentPadding: EdgeInsets.only(top: 12),
                                                   ),
                                                   isExpanded: true,
                                                   hint: const Row(
@@ -5363,12 +5368,12 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                                 Padding(
                                                   padding:
                                                       const EdgeInsets.only(
-                                                          left: 14, top: 8),
+                                                          left: 0, top: 4),
                                                   child: Text(
                                                     state.errorText!,
                                                     style: const TextStyle(
                                                       color: Colors.red,
-                                                      fontSize: 12,
+                                                      fontSize: 11,
                                                     ),
                                                   ),
                                                 ),
@@ -5380,7 +5385,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                               ],
                             ),
                             const SizedBox(
-                              height: 6,
+                              height: 10,
                             ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.start,
@@ -5759,7 +5764,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text('Vendors *',
+                                        const Text('Vendor ',
                                             style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.bold,
@@ -5910,13 +5915,6 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                                                 left: 14,
                                                                 right: 14),
                                                       ),
-                                                      validator: (value) {
-                                                        if (value == null ||
-                                                            value.isEmpty) {
-                                                          return 'Please select an option';
-                                                        }
-                                                        return null;
-                                                      },
                                                     ),
                                                   ),
                                                 ],
@@ -6708,12 +6706,12 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                   ),
                                     if (state.hasError)
                                       Padding(
-                                        padding: const EdgeInsets.only(left: 14, top: 8),
+                                        padding: const EdgeInsets.only(left: 0, top: 4),
                                         child: Text(
                                           state.errorText!,
                                           style: const TextStyle(
                                             color: Colors.red,
-                                            fontSize: 12,
+                                            fontSize: 11,
                                           ),
                                         ),
                                       ),

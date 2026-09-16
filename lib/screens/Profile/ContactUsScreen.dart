@@ -103,9 +103,8 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     if (value.trim().length < 2) {
       return 'Name must be at least 2 characters';
     }
-    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-      return 'Name can only contain letters and spaces';
-    }
+    // Web parity: ContactSupport.jsx only requires the name (yup.required),
+    // no character rule — so apostrophes, hyphens and accented letters pass.
     return null;
   }
 
@@ -545,9 +544,6 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                 controller: _nameController,
                 hintText: 'Your name',
                 keyboardType: TextInputType.name,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                ],
                 showErrorInTooltip: false,
                 hasError: _nameError != null,
                 errorMessage: _nameError ?? '',

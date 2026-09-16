@@ -203,11 +203,18 @@ class _RecurringChargeDialogContentState
       final decoded = json.decode(response.body);
       if (response.statusCode == 200 &&
           (decoded['statusCode'] == 200 || decoded['statusCode'] == null)) {
-        Fluttertoast.showToast(msg: decoded['message'] ?? 'Recurring charge added.');
+        // Wording matches Add/Edit Lease exactly ('Recurring Charge Added
+        // Successfully'), so the same action reads the same wherever it is
+        // done. The server's success message is not used here - it is only a
+        // confirmation and its phrasing differs from the rest of the app.
+        Fluttertoast.showToast(msg: 'Recurring Charge Added Successfully');
         widget.onSuccess();
       } else {
+        // Failure keeps the server's message: unlike the success case it
+        // carries the reason, which exists nowhere else.
         Fluttertoast.showToast(
-            msg: decoded['message']?.toString() ?? 'Failed to add recurring charge');
+            msg: decoded['message']?.toString() ??
+                'Failed to Add Recurring Charge');
       }
     } catch (e) {
       Fluttertoast.showToast(msg: 'Network error. Please try again.');

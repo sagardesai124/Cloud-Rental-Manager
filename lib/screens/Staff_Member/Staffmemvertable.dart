@@ -544,16 +544,25 @@ class _StaffTableState extends State<StaffTable>
                                 StaffMemberRepository().fetchStaffmembers();
                           });
 
-                          Fluttertoast.showToast(
-                            msg: "Staff member updated successfully",
-                            toastLength: Toast.LENGTH_LONG,
-                          );
+                          // Single-owner messaging: Edit_staff_member already
+                          // toasts the server's own message on both outcomes,
+                          // and six other call sites rely on it as their only
+                          // feedback - so the message stays there and the
+                          // duplicate is removed here. Previously one save put
+                          // two toasts on screen, and on failure the server's
+                          // real reason was followed by a generic line that
+                          // contradicted it.
                         } catch (e) {
                           logError('Error updating staff member: $e');
-                          Fluttertoast.showToast(
-                            msg: "Failed to update staff member",
-                            toastLength: Toast.LENGTH_LONG,
-                          );
+                          // Only speak up for a failure the repository never
+                          // saw: a transport error throws inside apiPut before
+                          // any response body exists, so nothing was toasted.
+                          if (isNetworkError(e)) {
+                            Fluttertoast.showToast(
+                              msg: "Failed to update staff member",
+                              toastLength: Toast.LENGTH_LONG,
+                            );
+                          }
                         } finally {
                           setState(() => isLoading = false);
                         }

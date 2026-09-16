@@ -684,7 +684,7 @@ class _AddCardState extends State<AddCard> {
                                                 const SizedBox(
                                                   height: 8,
                                                 ),
-                                                const Text('Recieved From *',
+                                                const Text('Received From *',
                                                     style: TextStyle(
                                                         fontSize: 13,
                                                         fontWeight:
@@ -1322,7 +1322,7 @@ class _AddCardState extends State<AddCard> {
                                         const SizedBox(
                                           height: 8,
                                         ),
-                                        const Text('Recieved From *',
+                                        const Text('Received From *',
                                             style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.bold,

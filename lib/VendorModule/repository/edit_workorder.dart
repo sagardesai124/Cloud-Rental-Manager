@@ -233,8 +233,15 @@ class WorkOrderRepository {
       // the screen's `.catchError`, which builds its own message from it.
       return responseData;
     } else {
-      Fluttertoast.showToast(msg: responseData["message"]);
-      throw Exception('Failed to update work order');
+      // Single-owner messaging: no toast here. All five EditWorkOrder call
+      // sites already show their own styled failure toast built with
+      // friendlyErrorMessage(e), so raising the server's message here too put
+      // two messages on screen for one save - the useful one followed by a
+      // generic one. The server's reason rides the exception instead, and
+      // friendlyErrorMessage passes it straight through, so the single
+      // remaining toast now says why the save failed. A transport error still
+      // resolves to the standard network message inside that same helper.
+      throw Exception(responseData["message"] ?? 'Failed to update work order');
     }
   }
 

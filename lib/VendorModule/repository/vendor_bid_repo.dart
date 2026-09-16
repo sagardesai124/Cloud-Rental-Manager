@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import '../../Model/bid_request.dart';
 import '../../constant/constant.dart';
 
@@ -53,14 +52,23 @@ class VendorBidRepository {
         final jsonData = json.decode(response.body);
         return BidRequestResponse.fromJson(jsonData);
       } else {
+        // Single-owner messaging: no toast here. The sole call site
+        // (vendor_bid_room_table.dart) already shows its own message, and
+        // suppresses it when the screen has flipped to its offline view.
+        // Toasting here raised THREE messages for one failed load: this one,
+        // then the catch below (the throw lands in it), then the screen's -
+        // and on an offline failure it fired even though the screen had
+        // deliberately stayed quiet. The server's reason rides the exception
+        // instead; friendlyErrorMessage passes it straight through, so the
+        // one remaining toast now says why. The status code stays in the log
+        // rather than in the user's face.
         final jsonData = json.decode(response.body);
-        Fluttertoast.showToast(
-            msg: jsonData['message'] ?? 'Failed to fetch bid requests');
-        throw Exception('Failed to fetch bid requests: ${response.statusCode}');
+        logError(
+            'Vendor bid requests failed: HTTP ${response.statusCode}');
+        throw Exception(jsonData['message'] ?? 'Failed to fetch bid requests');
       }
     } catch (e) {
       logError('Error fetching vendor bid requests: $e');
-      Fluttertoast.showToast(msg: 'Error fetching bid requests: ${friendlyErrorMessage(e)}');
       rethrow;
     }
   }

@@ -847,13 +847,13 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
           ),
           const SizedBox(height: 14),
           _fieldLabel('Contact Name'),
+          // Web parity: no character filter here (TenantCosignerModel binds
+          // this field with plain formik.handleChange), so names like
+          // O'Brien, Mary-Jane and José are accepted as typed.
           _input(
               hint: 'Enter contact name',
               controller: row.name,
-              optional: true,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z ]')),
-              ]),
+              optional: true),
           const SizedBox(height: 14),
           _fieldLabel('Relationship to Tenant'),
           _input(

@@ -849,12 +849,12 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                                   if (state.hasError)
                                     Padding(
                                       padding: const EdgeInsets.only(
-                                          left: 5, top: 8),
+                                          left: 0, top: 4),
                                       child: Text(
                                         state.errorText!,
                                         style: const TextStyle(
                                           color: Colors.red,
-                                          fontSize: 12,
+                                          fontSize: 11,
                                         ),
                                       ),
                                     ),

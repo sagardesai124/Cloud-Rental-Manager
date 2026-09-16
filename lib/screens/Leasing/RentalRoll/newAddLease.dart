@@ -987,14 +987,14 @@ class _addLease3State extends State<addLease3>
                     // Update existing item
                     formDataOneTimeList[index] = data;
                     Fluttertoast.showToast(
-                        msg: 'Recurring Charge Updated Sucessfully');
+                        msg: 'One Time Charge Updated Successfully');
                     Navigator.pop(context);
                   } else {
                     // Add new item
                     formDataOneTimeList.add(data);
 
                     Fluttertoast.showToast(
-                        msg: 'Recurring Charge Added Sucessfully');
+                        msg: 'One Time Charge Added Successfully');
                     Navigator.pop(context);
                   }
                 });
@@ -1010,11 +1010,11 @@ class _addLease3State extends State<addLease3>
         result['rent_cycle'] = rent; // Add Rent value to the result map
         if (index != null) {
           formDataOneTimeList[index] = result;
-          Fluttertoast.showToast(msg: 'Recurring Charge Updated Suessfully');
+          Fluttertoast.showToast(msg: 'One Time Charge Updated Successfully');
         } else {
           formDataOneTimeList.add(result);
 
-          Fluttertoast.showToast(msg: 'Recurring Charge Added Sucessfully');
+          Fluttertoast.showToast(msg: 'One Time Charge Added Successfully');
         }
       });
     }
@@ -1040,12 +1040,12 @@ class _addLease3State extends State<addLease3>
                     // Update existing item
                     formDataRecurringList[index] = data;
                     Fluttertoast.showToast(
-                        msg: 'Recurring Charge Updated Sucessfully');
+                        msg: 'Recurring Charge Updated Successfully');
                   } else {
                     // Add new item
                     formDataRecurringList.add(data);
                     Fluttertoast.showToast(
-                        msg: 'Recurring Charge Added Sucessfully');
+                        msg: 'Recurring Charge Added Successfully');
                   }
                   Navigator.pop(context);
                 });
@@ -1060,10 +1060,10 @@ class _addLease3State extends State<addLease3>
       setState(() {
         if (index != null) {
           formDataRecurringList[index] = result;
-          Fluttertoast.showToast(msg: 'Recurring Charge Updated Sucessfully');
+          Fluttertoast.showToast(msg: 'Recurring Charge Updated Successfully');
         } else {
           formDataRecurringList.add(result);
-          Fluttertoast.showToast(msg: 'Recurring Charge Added Sucessfully');
+          Fluttertoast.showToast(msg: 'Recurring Charge Added Successfully');
         }
       });
     }
