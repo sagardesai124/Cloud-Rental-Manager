@@ -375,6 +375,13 @@ class _ChangepasswordState extends State<Changepassword> {
               ),
               GestureDetector(
                 onTap: () {
+                  // A second tap while the first request is in flight
+                  // submits again: `loading` only swaps the button's child to
+                  // a spinner, it never disables the tap. The duplicate reset
+                  // pushed a second Login_Screen onto the stack and raised a
+                  // second toast. Matches the guard already used on the OTP
+                  // screen (otp_vrify.dart).
+                  if (loading) return;
                   if (password.text.isEmpty) {
                     setState(() {
                       passworderror = true;

@@ -293,13 +293,10 @@ class WorkOrderRepository {
     });
 
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = jsonDecode(response.body)["data"];
-      return WorkOrderData_summery.fromJson(data);
-    } else {
-      // Never surface the raw body - it leaks the JSON payload to the UI.
-      throw Exception(workOrderFetchErrorMessage(response.body));
-    }
+    // Decode + validate in one guarded step; throws a user-safe message on
+    // any failure instead of the old unguarded hard cast (see the helper).
+    return WorkOrderData_summery.fromJson(
+        workOrderResponseData(response.statusCode, response.body));
   }
 
   static Future<bool> updateworkorderSummary(
@@ -319,12 +316,9 @@ class WorkOrderRepository {
         },
         body: jsonEncode(workOrderUpdateBody(workorder)));
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = jsonDecode(response.body)["data"];
-      return true;
-    } else {
-      // Never surface the raw body - it leaks the JSON payload to the UI.
-      throw Exception(workOrderFetchErrorMessage(response.body));
-    }
+    // The payload is not needed here - the old code decoded and hard-cast
+    // it only to discard it. Verify success and move on.
+    ensureWorkOrderSuccess(response.statusCode, response.body);
+    return true;
   }
 }

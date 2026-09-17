@@ -1,4 +1,5 @@
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
@@ -1417,6 +1418,81 @@ Map<String, dynamic> workOrderUpdateBody(Map<String, dynamic> workorder) {
         ? supplied
         : DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
   };
+}
+
+/// Decodes a work-order GET response and returns its `data` object, or throws
+/// an [Exception] carrying a user-safe message.
+///
+/// Replaces the one-liner
+/// `final Map<String, dynamic> data = jsonDecode(response.body)["data"];`
+/// which left two steps unguarded: `jsonDecode` on a non-JSON body (a proxy or
+/// gateway page served with HTTP 200) threw a FormatException, and a 200 whose
+/// body had no `data` object threw a type error. Both were uncaught and both
+/// red-screened the work-order detail page. The server now returns real 4xx
+/// codes for every failure it knows about, so this is hardening against
+/// transport faults and shape changes rather than a live path - but it also
+/// brings these methods in line with their siblings, which already trust the
+/// body's own `statusCode` (see the checks around EditWorkOrder/addWorkOrder).
+Map<String, dynamic> workOrderResponseData(int statusCode, String body) {
+  final decoded = workOrderDecodedBody(statusCode, body);
+  final dynamic data = decoded['data'];
+  if (data is! Map<String, dynamic>) {
+    throw Exception(kGenericErrorMessage);
+  }
+  return data;
+}
+
+/// Validates a work-order response and returns its decoded top-level map.
+///
+/// The shared prelude behind [workOrderResponseData]: HTTP status, then a
+/// guarded `jsonDecode`, then the body's own `statusCode` when it carries one.
+/// Callers that need to interpret `data` themselves use this directly - the
+/// Tenant summary endpoint can answer with a List, with `data.result`, or with
+/// a flat object, so it does its own shape handling on top of these checks.
+Map<String, dynamic> workOrderDecodedBody(int statusCode, String body) {
+  if (statusCode != 200) {
+    throw Exception(workOrderFetchErrorMessage(body));
+  }
+  final dynamic decoded;
+  try {
+    decoded = jsonDecode(body);
+  } on FormatException {
+    throw Exception(kGenericErrorMessage);
+  }
+  if (decoded is! Map<String, dynamic>) {
+    throw Exception(kGenericErrorMessage);
+  }
+  final dynamic bodyStatus = decoded['statusCode'];
+  if (bodyStatus is int && (bodyStatus < 200 || bodyStatus >= 300)) {
+    throw Exception(workOrderFetchErrorMessage(body));
+  }
+  return decoded;
+}
+
+/// Throws an [Exception] with a user-safe message unless [statusCode]/[body]
+/// describe a successful work-order write.
+///
+/// For the update path, where the payload itself is never read. The old code
+/// decoded and hard-cast `data` purely to discard it - taking the crash risk
+/// described on [workOrderResponseData] for nothing. This checks only what
+/// matters: the HTTP status and, when the body is JSON, its own `statusCode`.
+/// A 200 with a non-JSON body is treated as success - the write went through
+/// as far as HTTP is concerned, and failing a completed save over an
+/// unparseable body would be worse than the bug being fixed.
+void ensureWorkOrderSuccess(int statusCode, String body) {
+  if (statusCode != 200) {
+    throw Exception(workOrderFetchErrorMessage(body));
+  }
+  final dynamic decoded;
+  try {
+    decoded = jsonDecode(body);
+  } on FormatException {
+    return;
+  }
+  final dynamic bodyStatus = decoded is Map ? decoded['statusCode'] : null;
+  if (bodyStatus is int && (bodyStatus < 200 || bodyStatus >= 300)) {
+    throw Exception(workOrderFetchErrorMessage(body));
+  }
 }
 
 /// Sanitises whatever a `FutureBuilder`/catch block hands us before it is

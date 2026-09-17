@@ -1808,6 +1808,29 @@ class _Applicants_tableState extends State<Applicants_table>
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return ColabShimmerLoadingWidget();
+                        } else if (snapshot.hasError) {
+                          // fetchApplicants used to swallow failures and hand
+                          // back an empty list, so a server error rendered the
+                          // "No Data Available" artwork below and read as "this
+                          // company has no applicants". Offline is already
+                          // handled by NoInternetView; this is the server-error
+                          // case.
+                          return Container(
+                            height: MediaQuery.of(context).size.height * .5,
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Text(
+                                  friendlyErrorMessage(snapshot.error),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: blueColor,
+                                      fontSize: 16),
+                                ),
+                              ),
+                            ),
+                          );
                         } else if (!snapshot.hasData ||
                             snapshot.data!.isEmpty) {
                           return Container(

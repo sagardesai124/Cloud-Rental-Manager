@@ -4,6 +4,7 @@ import 'package:three_zero_two_property/screens/Leasing/RentalRoll/newAddLease.d
 
 
 import '../../constant/constant.dart';
+import '../../widgets/navigation_helper.dart';
 import '../screen/dashboard.dart';
 import '../screen/profile.dart';
 import '../screen/work_order/workorder_table.dart';
@@ -29,8 +30,14 @@ Widget buildListTile(
         /*  Navigator.push(
               context, MaterialPageRoute(builder: (context) => Dashboard_vendors()));*/
         } else if (title == "Profile") {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => Profile_screen()));
+          // Same as the other three drawers: replace the stack instead of
+          // growing it, so back returns to the dashboard rather than walking
+          // through a copy of every screen the user has opened.
+          NavigationHelper.navigateWithValidationBuilder(
+            context,
+            (context) => Profile_screen(),
+            "Profile",
+          );
         }/* else if (title == "Properties") {
           Navigator.push(
               context, MaterialPageRoute(builder: (context) => PropertyTable()));
@@ -40,8 +47,11 @@ Widget buildListTile(
               context, MaterialPageRoute(builder: (context) => FinancialTable()));
         }*/
         else if (title == "Work Order") {
-          Navigator.push(
-              context, MaterialPageRoute(builder: (context) => WorkOrderTable()));
+          NavigationHelper.navigateWithValidationBuilder(
+            context,
+            (context) => WorkOrderTable(),
+            "Work Order",
+          );
         }
 
       },

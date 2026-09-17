@@ -124,9 +124,31 @@ class _notificationsState extends State<notifications>
     }
   }
   String formatDateTime(String dateTime) {
-    DateTime parsedDateTime = DateTime.parse(dateTime);
+    // Same reasoning as [_relativeTime]: this field is an unvalidated String on
+    // the server, so fall back to showing it as-is rather than throwing.
+    final DateTime? parsedDateTime = DateTime.tryParse(dateTime);
+    if (parsedDateTime == null) return dateTime;
     return DateFormat('dd-MM-yyyy hh:mm a').format(parsedDateTime);
   }
+
+  /// Relative time for a notification's `createdAt`.
+  ///
+  /// The server declares this field as a plain String (Notification.js) with no
+  /// date coercion, and part of it is client-supplied (`notificationTime`), so
+  /// the value is only ever ISO-ish by convention. `DateTime.parse` throws a
+  /// FormatException on anything it cannot read, and this sits inside build() —
+  /// so one malformed row would take out the whole notifications list rather
+  /// than a single entry. tryParse degrades to the same 'No date available'
+  /// the empty case already shows, and toString() keeps a non-String value
+  /// (which `?.isEmpty` would have thrown on) from blowing up first.
+  String _relativeTime(dynamic raw) {
+    final String value = raw?.toString() ?? '';
+    if (value.isEmpty) return 'No date available';
+    final DateTime? parsed = DateTime.tryParse(value);
+    if (parsed == null) return 'No date available';
+    return timeago.format(parsed.toLocal(), locale: 'en_custom');
+  }
+
 
   // Future<void> handleNotificationTap(BuildContext context, bool isWorkOrder,String notificationId) async {
   //   // API endpoint
@@ -372,9 +394,7 @@ class _notificationsState extends State<notifications>
                                                 color: blueColor
                                             ),
                                           ),
-                                          Text(  notification['createdAt']?.isEmpty ?? true
-                                              ? 'No date available'
-                                              : timeago.format(DateTime.parse(notification['createdAt']).toLocal(), locale: 'en_custom'),
+                                          Text(  _relativeTime(notification['createdAt']),
                                             style: TextStyle(
                                               color: Colors.black.withOpacity(.7),
                                               fontSize: 14

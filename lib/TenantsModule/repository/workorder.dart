@@ -170,23 +170,26 @@ class WorkOrderRepository {
         headers: {"authorization" : "CRM $token","id":"CRM $id",}
     );
 
-    if (response.statusCode == 200) {
-      final dynamic dataRaw = jsonDecode(response.body)["data"];
-      Map<String, dynamic> data;
-      if (dataRaw is List) {
-        data = dataRaw.isNotEmpty ? dataRaw[0] as Map<String, dynamic> : {};
-      } else if (dataRaw is Map<String, dynamic>) {
-        // API may return data.result (e.g. from details) or flat object
-        final result = dataRaw["result"];
-        data = result is Map<String, dynamic> ? result : dataRaw;
-      } else {
-        data = {};
-      }
-      return WorkOrderData_summery.fromJson(data);
+    // Status check + guarded decode live in the shared helper; the bare
+    // `jsonDecode` here used to throw an uncaught FormatException on a 200
+    // carrying a proxy or gateway page. The shape handling below stays -
+    // this endpoint genuinely answers in three different shapes.
+    final decoded = workOrderDecodedBody(response.statusCode, response.body);
+    final dynamic dataRaw = decoded["data"];
+    Map<String, dynamic> data;
+    if (dataRaw is List) {
+      // `dataRaw[0] as Map<String, dynamic>` was a hard cast: a list holding
+      // anything else threw a type error.
+      final dynamic first = dataRaw.isNotEmpty ? dataRaw.first : null;
+      data = first is Map<String, dynamic> ? first : {};
+    } else if (dataRaw is Map<String, dynamic>) {
+      // API may return data.result (e.g. from details) or flat object
+      final result = dataRaw["result"];
+      data = result is Map<String, dynamic> ? result : dataRaw;
     } else {
-      // Never surface the raw body - it leaks the JSON payload to the UI.
-      throw Exception(workOrderFetchErrorMessage(response.body));
+      data = {};
     }
+    return WorkOrderData_summery.fromJson(data);
   }
   static Future<bool> updateworkorderSummary(
     Map<String, dynamic> workorder,
@@ -210,10 +213,11 @@ class WorkOrderRepository {
       },
       body: jsonEncode(body),
     );
-    if (response.statusCode == 200) {
-      return true;
-    } else {
-      throw Exception('Failed to update work order: ${response.body}');
-    }
+    // Was `throw Exception('Failed to update work order: ${response.body}')`,
+    // which put the whole raw JSON payload into a user-facing toast. The other
+    // three modules route failures through workOrderFetchErrorMessage for
+    // exactly that reason; this now matches them.
+    ensureWorkOrderSuccess(response.statusCode, response.body);
+    return true;
   }
 }

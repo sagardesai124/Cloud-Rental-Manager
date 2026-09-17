@@ -38,16 +38,64 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   List<Map<String, String>> get companies => _companies;
   String get selectedCompany => _selectedCompany;
   Future<void> submitEmail() async {
-    // Make API call to check email
-    final response = await apiPost(
-      Uri.parse('${Api_url}/api/auth/check_role'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.text}),
-    );
-    if (response.statusCode == 200) {
+    // `loading` used to be set only inside sendOTP(), so nothing covered the
+    // check_role request: the button showed no spinner and the in-flight guard
+    // on the tap handler could not see this call, letting a double tap fire
+    // two lookups. Set it here, synchronously, before the first await.
+    setState(() {
+      loading = true;
+    });
+    // Set once we hand off to sendOTP(), which owns `loading` from that point.
+    // Clearing it in the finally would switch the spinner off underneath it.
+    bool handedOffToSendOtp = false;
+    try {
+      // Make API call to check email
+      final response = await apiPost(
+        Uri.parse('${Api_url}/api/auth/check_role'),
+        headers: {'Content-Type': 'application/json'},
+        // Trimmed: the server trims before matching admin and staff, but
+        // looks tenants and vendors up on the raw string (tenant_email: email
+        // / vendor_email: email). A trailing space - which a phone keyboard
+        // adds readily - therefore locked a tenant out of recovery while an
+        // admin with the same space got straight in.
+        body: jsonEncode({'email': email.text.trim()}),
+      );
+      if (response.statusCode != 200) {
+        // The server answers a missing account and a deactivated one with 201,
+        // and an empty email with 202 - each carries its own `message` and no
+        // `data`. Showing that message beats the old blanket "Email does not
+        // exist", which told a user their address was wrong even when the
+        // server had returned a 500.
+        // Default to a retryable message. Telling a user their email does not
+        // exist because the API returned a 500/502/timeout is the worst
+        // possible wording here: there is nothing to retry from their point of
+        // view, so they give up or raise a ticket saying their account was
+        // deleted.
+        String message = "Couldn't check that email right now. Please try again.";
+        try {
+          final decoded = jsonDecode(response.body);
+          final serverMessage = decoded is Map ? decoded['message'] : null;
+          // 201 (no account / deactivated) and 202 (blank email) carry a
+          // message written for the user. A 5xx carries "Error: <exception>",
+          // which must never reach the screen.
+          if (response.statusCode < 500 &&
+              serverMessage is String &&
+              serverMessage.trim().isNotEmpty) {
+            message = serverMessage;
+          }
+        } catch (_) {
+          // Non-JSON body (a proxy error page) - keep the retryable default.
+        }
+        Fluttertoast.showToast(msg: message);
+        return;
+      }
       final data = jsonDecode(response.body);
-      List<dynamic> roles = data['data'];
-      if (roles.isEmpty) {
+      // Read defensively rather than casting. The live server always sends a
+      // non-empty `data` array on a 200, so this is belt-and-braces against a
+      // shape change - but an unguarded `List<dynamic> roles = data['data']`
+      // would throw on this screen, which a locked-out user has no way past.
+      final roles = data is Map ? data['data'] : null;
+      if (roles is! List || roles.isEmpty) {
         Fluttertoast.showToast(msg: "Email does not exist");
       } else {
         if (roles.length > 1) {
@@ -65,27 +113,35 @@ class _ForgotPasswordState extends State<ForgotPassword> {
           });
         } else {
           setState(() {
-            if (roles[0]['role'] == "admin") {
-              _hasMultipleCompanies = false;
-              //_selectedCompany = roles[0]['company_name'];
-              selectedrole = roles[0]['role']; // Set role directly
-              admin_id = roles[0]['admin_id'];
-              userId = roles[0]["user_id"];
-              _isEmailSubmitted = true;
-            } else {
-              _hasMultipleCompanies = false;
-              _selectedCompany = roles[0]['company_name'];
-              selectedrole = roles[0]['role']; // Set role directly
-              admin_id = roles[0]['admin_id'];
-              userId = roles[0]["user_id"];
-              _isEmailSubmitted = true;
-            }
+            // The admin and non-admin branches here were byte-identical except
+            // that the admin one had `_selectedCompany` commented out, so they
+            // have been collapsed. `_selectedCompany` is assigned uniformly:
+            // it is write-only in this screen today, but leaving one role
+            // silently skipping it was the kind of difference that turns into
+            // a blank company name the moment something starts reading it.
+            _hasMultipleCompanies = false;
+            _selectedCompany = roles[0]['company_name'] ?? '';
+            selectedrole = roles[0]['role'];
+            admin_id = roles[0]['admin_id'];
+            userId = roles[0]["user_id"];
+            _isEmailSubmitted = true;
           });
-          sendOTP(email.text);
+          // Trimmed to match the multi-company path below, which already
+          // sends email.text.trim(). The two paths used to disagree.
+          sendOTP(email.text.trim());
+          handedOffToSendOtp = true;
         }
       }
-    } else {
-      Fluttertoast.showToast(msg: "Email does not exist");
+    } catch (e) {
+      // jsonDecode on a non-JSON body (a proxy error page, a 502) used to
+      // throw uncaught on a screen with no session to fall back to.
+      Fluttertoast.showToast(msg: friendlyErrorMessage(e));
+    } finally {
+      if (!handedOffToSendOtp && mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 
@@ -398,6 +454,13 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   ),
                   GestureDetector(
                     onTap: () {
+                      // A second tap while the first request is in flight
+                      // submits again: `loading` only swaps the button's child to
+                      // a spinner, it never disables the tap. The duplicate reset
+                      // pushed a second Login_Screen onto the stack and raised a
+                      // second toast. Matches the guard already used on the OTP
+                      // screen (otp_vrify.dart).
+                      if (loading) return;
                       setState(() {
                         if (email.text.isEmpty) {
                           setState(() {

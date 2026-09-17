@@ -433,6 +433,11 @@ class _Change_passwordState extends State<Change_password> {
                                   ),
                                 ),
                                 onPressed: () {
+                                  // A second tap while the first request is in
+                                  // flight submits again: `loading` only drives
+                                  // the spinner, it never disables the button.
+                                  // Matches the Tenant/Vendor screens.
+                                  if (loading) return;
                                   //print("calling 111");
                                   if (_formkey.currentState!.validate()) {
                                     //  print("calling 22");
@@ -1027,6 +1032,9 @@ class _Change_passwordState extends State<Change_password> {
                                   ),
                                   GestureDetector(
                                     onTap: () async {
+                                      // Same in-flight guard as the other
+                                      // submit paths on this screen.
+                                      if (loading) return;
                                       SharedPreferences prefs =
                                           await SharedPreferences.getInstance();
                                       String? pass = prefs
@@ -1354,6 +1362,9 @@ class _Change_passwordState extends State<Change_password> {
                                   ),
                                 ),
                                 onPressed: (){
+                                  // Same in-flight guard as the primary
+                                  // submit button above.
+                                  if (loading) return;
                                   //print("calling 111");
                                   if(_formkey.currentState!.validate()){
                                     //  print("calling 22");

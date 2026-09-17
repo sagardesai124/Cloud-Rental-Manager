@@ -1349,7 +1349,7 @@ class _edit_vendorState extends State<edit_vendor> {
                               const SizedBox(
                                 height: 10,
                               ),
-                              Text('Password *',
+                              Text('Password',
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
@@ -1365,6 +1365,7 @@ class _edit_vendorState extends State<edit_vendor> {
                                       obscureText: obsecure,
                                       hintText: 'Enter password',
                                       controller: passWord,
+                                      optional: true,
                                       validator: (value) {
                                         if (value == null) {
                                           return 'please enter password';
@@ -1392,7 +1393,7 @@ class _edit_vendorState extends State<edit_vendor> {
                               const SizedBox(
                                 height: 10,
                               ),
-                              Text('Confirm Password *',
+                              Text('Confirm Password',
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
@@ -1408,6 +1409,7 @@ class _edit_vendorState extends State<edit_vendor> {
                                       obscureText: conobsecure,
                                       hintText: 'Re-enter password',
                                       controller: conpassWord,
+                                      optional: true,
                                       validator: (value) {
                                         if (value == null) {
                                           return 'please enter confirm password';
@@ -1732,7 +1734,7 @@ class _edit_vendorState extends State<edit_vendor> {
                                     style: TextStyle(color: Colors.red, fontSize: 12)),
                               ),
                             const SizedBox(height: 10),
-                            Text('Password *',
+                            Text('Password',
                                 style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
@@ -1743,6 +1745,7 @@ class _edit_vendorState extends State<edit_vendor> {
                               obscureText: obsecure,
                               hintText: 'Enter password',
                               controller: passWord,
+                              optional: true,
                               validator: (value) {
                                 if (value == null) {
                                   return 'please enter password';
@@ -1765,7 +1768,7 @@ class _edit_vendorState extends State<edit_vendor> {
                               pass: true,
                             ),
                             const SizedBox(height: 10),
-                            Text('Confirm Password *',
+                            Text('Confirm Password',
                                 style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
@@ -1776,6 +1779,7 @@ class _edit_vendorState extends State<edit_vendor> {
                               obscureText: conobsecure,
                               hintText: 'Re-enter password',
                               controller: conpassWord,
+                              optional: true,
                               validator: (value) {
                                 if (value == null) {
                                   return 'please enter confirm password';
@@ -3095,7 +3099,16 @@ class CustomTextField extends StatefulWidget {
   final void Function()? onSuffixIconPressed;
   final void Function()? onTap;
   final bool readOnnly;
-  bool? optional;
+
+  /// When true this field may be left blank, and every other rule below is
+  /// skipped while it is. Used for the Password / Confirm Password pair on
+  /// this EDIT screen - see the note on the validator.
+  ///
+  /// This previously disabled the validator outright (`optional != null ?
+  /// null : ...`), which would also have skipped the strength and match
+  /// checks on a password the user HAD typed. Nothing passed it, so nothing
+  /// depended on that meaning.
+  final bool? optional;
   final bool? pass;
   final bool? email;
   final bool? phone;
@@ -3211,9 +3224,31 @@ class CustomTextFieldState extends State<CustomTextField> {
       clipBehavior: Clip.none,
       children: <Widget>[
         FormField<String>(
-          validator: widget.optional != null
-              ? null
-              : (value) {
+          validator: (value) {
+                  // CRM-4068, web parity (AddVendor.jsx:76-95): on the EDIT
+                  // screen the password pair is optional. Leaving both blank
+                  // preserves the existing password - the server already does
+                  // this, deleting vendor_password from the update when it
+                  // arrives empty (Vendor.js:713-717). It matters because the
+                  // vendor GET stopped returning the password hash
+                  // (Vendor.js:595, deliberate - it is a credential), so these
+                  // boxes can never pre-fill any more and the blanket "every
+                  // field is required" rule below blocked EVERY vendor edit,
+                  // even one that only changed the name. When a password IS
+                  // typed, the strength and match rules still run.
+                  if (widget.optional == true) {
+                    final bool selfEmpty =
+                        (widget.controller?.text ?? '').trim().isEmpty;
+                    final bool pairEmpty =
+                        widget.passwordController == null ||
+                            widget.passwordController!.text.trim().isEmpty;
+                    if (selfEmpty && pairEmpty) {
+                      setState(() {
+                        _errorMessage = null;
+                      });
+                      return null;
+                    }
+                  }
                   if (widget.controller!.text.trim().isEmpty) {
                     setState(() {
                       String hintTextLower = widget.hintText.isEmpty

@@ -47,7 +47,7 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
   TeamData _data = TeamData();
   bool _isStaff = false; // staff users can't manage the team (admins/staff tabs)
 
-  int _selectedTab = 0; // 0 = Admins, 1 = Staff, 2 = Permissions
+  int _selectedTab = 0; // 0 = Admins, 1 = Staff, 2 = Permissions, 3 = Activity
 
   final TextEditingController _searchCtrl = TextEditingController();
   String _search = '';
@@ -55,6 +55,18 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
   bool _adminSortAsc = true;
 
   String? _expandedKey; // only one card expanded at a time (accordion)
+
+  // --- Activity tab ------------------------------------------------------
+  // Mirrors the web CRM's Activity Log (TeamAccess.jsx): fetched only when the
+  // tab is first opened (never in the background), re-fetched on filter/page
+  // change, and paged server-side.
+  bool _activityLoading = false;
+  List<TeamActivityEntry> _activity = const [];
+  int _activityTotal = 0;
+  int _activityPage = 1;
+  static const int _activityPageSize = 25;
+  String _activityAction = ''; // '' = All actions
+  bool _activityNewestFirst = true; // the server already sorts newest-first
 
   /// Required by [NetworkRetryState]: re-issue this view's own load.
   /// The data calls `initState` makes; controllers and defaults are not
@@ -147,7 +159,13 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
         if (_selectedTab == 2)
           _buildPermissionsTab() // loads on its own — never waits for the team API
         else if (_isStaff)
-          _buildStaffRestricted() // staff can't manage admins/staff
+          // Admins/Staff/Activity are all admin-only. The activity route is
+          // guarded server-side by requireAdminCaller, and web hides the whole
+          // Team & Access entry for non-admins, so a staff caller gets the same
+          // restricted view here rather than an empty list.
+          _buildStaffRestricted()
+        else if (_selectedTab == 3)
+          _buildActivityTab() // loads on its own when the tab is opened
         else if (_loading)
           _buildLoading()
         else if (_selectedTab == 0)
@@ -231,6 +249,7 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
           _tab('ADMINS (${_data.admins.length})', 0),
           _tab('STAFF (${_data.staff.length})', 1),
           _tab('PERMISSIONS', 2),
+          _tab('ACTIVITY', 3),
         ],
       ),
     );
@@ -240,7 +259,13 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
     final bool active = _selectedTab == index;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _selectedTab = index),
+        onTap: () {
+          setState(() => _selectedTab = index);
+          // Activity is fetched when the tab is opened and refreshed on every
+          // re-open, matching the web CRM — an audit trail should not go stale
+          // behind a tab. It is never fetched in the background.
+          if (index == 3 && !_isStaff) _loadActivity();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
@@ -251,14 +276,20 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
               ),
             ),
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12.5,
-              letterSpacing: 0.3,
-              fontWeight: FontWeight.w700,
-              color: active ? _navy : _muted,
+          // Four equal-width tabs: scaleDown lets the longest label shrink to
+          // fit its share of the row instead of overflowing on a narrow screen.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 12.5,
+                letterSpacing: 0.3,
+                fontWeight: FontWeight.w700,
+                color: active ? _navy : _muted,
+              ),
             ),
           ),
         ),
@@ -295,7 +326,11 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
         ),
         const SizedBox(height: 12),
         if (admins.isEmpty)
-          _emptyState('No Data Available')
+          _sectionEmptyState(
+            icon: Icons.shield_outlined,
+            title: 'No admins yet',
+            subtitle: 'Use Add Admin above to invite a co-administrator.',
+          )
         else
           ...admins.map(_buildAdminCard),
       ],
@@ -366,9 +401,15 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
         ),
         const SizedBox(height: 12),
         if (staff.isEmpty)
-          _emptyState(_search.trim().isEmpty
-              ? 'No Data Available'
-              : 'No Data Available for Selected Filters')
+          _sectionEmptyState(
+            icon: Icons.people_outline,
+            title: _search.trim().isEmpty
+                ? 'No staff members yet'
+                : 'No matching staff members',
+            subtitle: _search.trim().isEmpty
+                ? 'Use Add Staff above to invite a team member.'
+                : 'No staff members match your search.',
+          )
         else
           ...staff.map(_buildStaffCard),
       ],
@@ -434,6 +475,477 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
   // Permissions tab — full inline Staff / Vendor / Tenant matrix (shared widget,
   // also used by the standalone User Permission screen).
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Activity tab — the team audit trail, matching the web CRM's Activity Log.
+  //
+  // Data: GET /api/admin/team/activity (admin-only, paged, action-filtered).
+  // Layout is phone-first: the web renders a 5-column table (When / Action /
+  // Performed by / Target / Details), which cannot fit a phone without a
+  // sideways scroll, so the two identifying columns stay on the row and the
+  // remaining three move into the expanded body — the same accordion pattern
+  // the Admins and Staff tabs already use.
+  // ---------------------------------------------------------------------------
+
+  /// Label/code pairs for the filter chips, in the same order as the web CRM's
+  /// ACTION_FILTERS. An empty code means "no filter".
+  static const List<List<String>> _activityFilters = [
+    ['', 'All actions'],
+    ['TEAM_UPDATE_NAME', 'Renamed'],
+    ['TEAM_UPDATE_EMAIL', 'Email changed'],
+    ['TEAM_INVITE_RESEND', 'Invite resent'],
+    ['TEAM_INVITE_COADMIN', 'Invited co-admin'],
+    ['TEAM_INVITE_STAFF', 'Invited staff'],
+    ['TEAM_INVITE_CANCELLED', 'Cancelled invite'],
+    ['TEAM_RESET_LINK_SENT', 'Reset link sent'],
+    ['TEAM_MOVE_ROLE', 'Changed role'],
+    ['TEAM_ACTIVATE', 'Reactivated'],
+    ['TEAM_DEACTIVATE', 'Disabled'],
+  ];
+
+  Future<void> _loadActivity() async {
+    setState(() {
+      _activityLoading = true;
+    });
+    try {
+      final page = await _repo.fetchActivity(
+        page: _activityPage,
+        pageSize: _activityPageSize,
+        action: _activityAction,
+      );
+      if (!mounted) return;
+      setState(() {
+        _activity = page.items;
+        _activityTotal = page.total;
+        _activityLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // Leave whatever was on screen and stop the spinner; the empty state
+      // covers a first-load failure.
+      setState(() => _activityLoading = false);
+    }
+  }
+
+  /// "2026-07-10T22:07:44.000Z" -> "Jul 10, 10:07 PM". Falls back to the raw
+  /// value if it is not parseable, and to an em dash when absent.
+  String _formatWhen(String iso) {
+    if (iso.isEmpty) return '—';
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return iso;
+    final local = dt.toLocal();
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final int h24 = local.hour;
+    final int h12 = h24 % 12 == 0 ? 12 : h24 % 12;
+    final String mm = local.minute.toString().padLeft(2, '0');
+    final String ampm = h24 < 12 ? 'AM' : 'PM';
+    return '${months[local.month - 1]} ${local.day}, $h12:$mm $ampm';
+  }
+
+  Widget _buildActivityTab() {
+    // The server returns newest-first; the toggle reverses the page in place so
+    // the arrow behaves like the Name sort on the other tabs.
+    final rows = _activityNewestFirst ? _activity : _activity.reversed.toList();
+    final int shown = _activity.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _activityFilterChips(),
+        const SizedBox(height: 16),
+        Text.rich(
+          TextSpan(children: [
+            const TextSpan(text: 'Showing '),
+            TextSpan(
+              text: '$shown',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: _navy),
+            ),
+            TextSpan(text: ' of $_activityTotal event${_activityTotal == 1 ? '' : 's'}'),
+          ]),
+          style: const TextStyle(fontSize: 13.5, color: _muted),
+        ),
+        const SizedBox(height: 14),
+        if (_activityLoading)
+          _buildLoading()
+        else ...[
+          _activityHeader(),
+          const SizedBox(height: 12),
+          if (rows.isEmpty)
+            _sectionEmptyState(
+              icon: Icons.history,
+              title: _activityAction.isEmpty
+                  ? 'No team activity yet'
+                  : 'No matching activity',
+              subtitle: _activityAction.isEmpty
+                  ? 'Team changes will appear here as they happen.'
+                  : 'No events match this filter.',
+            )
+          else ...[
+            ...rows.map(_activityCard),
+            _activityPager(),
+          ],
+        ],
+      ],
+    );
+  }
+
+  /// The 11 action filters. A [Wrap] lets them flow onto as many lines as the
+  /// screen needs instead of overflowing sideways.
+  Widget _activityFilterChips() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: _activityFilters.map((f) {
+        final String code = f[0];
+        final String label = f[1];
+        final bool active = _activityAction == code;
+        return InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: () {
+            if (active) return;
+            setState(() {
+              _activityAction = code;
+              _activityPage = 1; // a new filter always starts at page 1
+            });
+            _loadActivity();
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: active ? _navy : Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: active ? _navy : _cardBorder),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: active ? Colors.white : _navy,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// Same shell as [_listHeader], with this tab's own two columns.
+  Widget _activityHeader() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F8FF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFDBE0E5)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      child: Row(
+        children: [
+          // Invisible leading matching each row's expand arrow, so the columns
+          // line up with the cards below.
+          const Icon(Icons.arrow_drop_down,
+              color: Colors.transparent, size: 24),
+          const SizedBox(width: 6),
+          Expanded(
+            flex: 5,
+            child: InkWell(
+              onTap: () => setState(
+                  () => _activityNewestFirst = !_activityNewestFirst),
+              child: Row(
+                children: [
+                  const Flexible(
+                    child: Text(
+                      'When',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: _navy,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _activityNewestFirst
+                        ? Icons.arrow_drop_down
+                        : Icons.arrow_drop_up,
+                    color: _navy,
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Expanded(
+            flex: 5,
+            child: Text(
+              'Performed by',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                color: _navy,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _activityCard(TeamActivityEntry e) {
+    final String key = 'activity_${e.id}';
+    final bool expanded = _expandedKey == key;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => setState(
+                () => _expandedKey = expanded ? null : key),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              child: Row(
+                children: [
+                  Icon(
+                    expanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                    color: _navy,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    flex: 5,
+                    child: Text(
+                      _formatWhen(e.when),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: _navy,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 5,
+                    child: Text(
+                      e.byName.isEmpty ? '—' : e.byName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: _navy,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expanded) ...[
+            const Divider(height: 1, color: _cardBorder),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Action carries its own pill so it reads as a status, the
+                  // way the web CRM chips it.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(
+                        width: 86,
+                        child: Text(
+                          'Action',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: _navy,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: _activityActionPill(e.actionLabel)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _activityDetail(
+                    'Target',
+                    e.targetEmail.isEmpty
+                        ? '—'
+                        : (e.targetRole.isEmpty
+                            ? e.targetEmail
+                            : '${e.targetEmail} (${e.targetRole})'),
+                  ),
+                  const SizedBox(height: 12),
+                  _activityDetail(
+                      'Details', e.description.isEmpty ? '—' : e.description),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Label above, value beside it — kept as a Row with a fixed label column so
+  /// Action / Target / Details line up, and the value wraps instead of
+  /// overflowing when it is a long sentence.
+  Widget _activityDetail(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 86,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: _navy,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 14.5, color: _muted),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _activityActionPill(String label) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: _amberBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE8C89A)),
+        ),
+        child: Text(
+          label.isEmpty ? '—' : label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: _amberText,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The empty state used by every tab in this section.
+  ///
+  /// The older [_emptyState] paints a 200x200 JPG whose own white background
+  /// shows as a hard white square against the page. This uses the soft circle
+  /// + icon treatment already used by [_buildStaffRestricted] — same palette,
+  /// no image asset, and a far smaller block of empty space.
+  Widget _sectionEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 44),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 92,
+            height: 92,
+            decoration: const BoxDecoration(
+              color: _emailBtnBg,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: _navy, size: 44),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: _navy,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: _muted,
+              fontSize: 13.5,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Only rendered when the result actually spans more than one page.
+  Widget _activityPager() {
+    final int totalPages =
+        _activityTotal == 0 ? 1 : (_activityTotal / _activityPageSize).ceil();
+    if (totalPages <= 1) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            color: _activityPage <= 1 ? _muted : _navy,
+            onPressed: _activityPage <= 1
+                ? null
+                : () {
+                    setState(() => _activityPage--);
+                    _loadActivity();
+                  },
+          ),
+          Text(
+            'Page $_activityPage of $totalPages',
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: _navy,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            color: _activityPage >= totalPages ? _muted : _navy,
+            onPressed: _activityPage >= totalPages
+                ? null
+                : () {
+                    setState(() => _activityPage++);
+                    _loadActivity();
+                  },
+          ),
+        ],
+      ),
+    );
+  }
+
+
   Widget _buildPermissionsTab() {
     return const PermissionMatrixView();
   }
@@ -1127,34 +1639,6 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
     return const Padding(
       padding: EdgeInsets.only(top: 60),
       child: Center(child: SpinKitFadingCircle(color: _navy, size: 40)),
-    );
-  }
-
-  Widget _emptyState(String text) {
-    // Matches the app's existing "no data" state (e.g. Tenants table) for
-    // consistency across the app.
-    return Container(
-      height: MediaQuery.of(context).size.height * .5,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            "assets/images/no_data.jpg",
-            height: 200,
-            width: 200,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            text,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: _navy,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

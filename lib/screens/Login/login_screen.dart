@@ -6283,7 +6283,12 @@ class _Login_ScreenState extends State<Login_Screen> {
           .fetchPermissions();
       // Refresh DateProvider to load new user's date format preferences
       await Provider.of<DateProvider>(context, listen: false).loadDateFormat();
-      Navigator.push(
+      // pushReplacement, not push: the dashboard must be the FIRST route.
+      // Admin already did this; Staff/Tenant/Vendor did not, which left
+      // Login_Screen underneath the dashboard — so back from the dashboard
+      // returned to login, and the drawer's stack-replacing navigation
+      // would have landed there too.
+      Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => Dashboard_staff()));
     } else {
       // Web parity: web clears the session and returns the user to login.
@@ -6353,7 +6358,8 @@ class _Login_ScreenState extends State<Login_Screen> {
           .fetchPermissions();
       // Refresh DateProvider to load new user's date format preferences
       await Provider.of<DateProvider>(context, listen: false).loadDateFormat();
-      Navigator.push(context,
+      // pushReplacement — see the note on the Staff branch.
+      Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (context) => Dashboard_tenants()));
     } else {
       // Web parity: web clears the session and returns the user to login.
@@ -6432,7 +6438,8 @@ class _Login_ScreenState extends State<Login_Screen> {
           .fetchPermissions();
       // Refresh DateProvider to load new user's date format preferences
       await Provider.of<DateProvider>(context, listen: false).loadDateFormat();
-      Navigator.push(
+      // pushReplacement — see the note on the Staff branch.
+      Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => MainScreen()));
     } else {
       // Web parity: web clears the session and returns the user to login.

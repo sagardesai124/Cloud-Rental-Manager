@@ -249,4 +249,46 @@ class TeamRepository {
       throw Exception('Failed to move role');
     }
   }
+
+  /// GET /api/admin/team/activity
+  ///
+  /// The Team & Access activity log, paged and optionally filtered by action
+  /// code. Mirrors the web CRM's Activity Log tab (`TeamAccess.jsx`), which
+  /// calls the same route with `page` / `pageSize` / `action`.
+  ///
+  /// The server caps `pageSize` at 200 and defaults it to 25; an unknown
+  /// `action` is ignored server-side and all team actions are returned.
+  /// The route is admin-only (`requireAdminCaller`), so a Staff caller gets a
+  /// non-200 — returned here as an empty page so the view shows its empty
+  /// state rather than throwing.
+  Future<TeamActivityPage> fetchActivity({
+    int page = 1,
+    int pageSize = 25,
+    String action = '',
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? id = _actingId(prefs);
+    String? token = prefs.getString('token');
+
+    final Map<String, String> query = {
+      'page': '$page',
+      'pageSize': '$pageSize',
+      if (action.isNotEmpty) 'action': action,
+    };
+
+    final response = await apiGet(
+      Uri.parse('${Api_url}/api/admin/team/activity')
+          .replace(queryParameters: query),
+      headers: {
+        "authorization": "CRM $token",
+        "id": "CRM $id",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> jsonResponse = json.decode(response.body);
+      return TeamActivityPage.fromJson(jsonResponse);
+    }
+    return TeamActivityPage();
+  }
 }

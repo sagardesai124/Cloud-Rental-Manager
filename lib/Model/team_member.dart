@@ -156,3 +156,88 @@ class TeamStaff {
         'updatedAt': updatedAt,
       };
 }
+
+/// One row of the Team & Access activity log.
+///
+/// Backs GET `${Api_url}/api/admin/team/activity`, whose server shape
+/// (`Server/routes/api/superadmin/TeamManagement.js` -> `/activity`) is:
+///   { statusCode, total, page, pageSize,
+///     items: [ { _id, action, action_label, when,
+///                by: { user_id, name },
+///                target: { user_id, role, email },
+///                description, extra } ] }
+///
+/// Parsed through the same safe-coercion helpers as the rest of this file, so a
+/// loosely-typed or missing nested object can never throw during a parse.
+class TeamActivityEntry {
+  final String id;
+  final String action;
+  final String actionLabel;
+  final String when; // ISO-8601 timestamp as sent by the server
+  final String byName;
+  final String targetEmail;
+  final String targetRole;
+  final String description;
+
+  TeamActivityEntry({
+    this.id = '',
+    this.action = '',
+    this.actionLabel = '',
+    this.when = '',
+    this.byName = '',
+    this.targetEmail = '',
+    this.targetRole = '',
+    this.description = '',
+  });
+
+  /// `by` and `target` are nested objects; a non-map (or absent) value falls
+  /// back to an empty map rather than throwing.
+  static Map<String, dynamic> _obj(dynamic value) =>
+      value is Map ? Map<String, dynamic>.from(value) : const {};
+
+  factory TeamActivityEntry.fromJson(Map<String, dynamic> json) {
+    final by = _obj(json['by']);
+    final target = _obj(json['target']);
+    return TeamActivityEntry(
+      id: asStr(json['_id']),
+      action: asStr(json['action']),
+      // The server already resolves a human label; fall back to the raw code so
+      // a newly added action type still renders something meaningful.
+      actionLabel: asStr(json['action_label']).isEmpty
+          ? asStr(json['action'])
+          : asStr(json['action_label']),
+      when: asStr(json['when']),
+      byName: asStr(by['name']),
+      targetEmail: asStr(target['email']),
+      targetRole: asStr(target['role']),
+      description: asStr(json['description']),
+    );
+  }
+}
+
+/// One page of [TeamActivityEntry] rows plus the server's total count, so the
+/// view can render "Showing X of Y events" and page through.
+class TeamActivityPage {
+  final List<TeamActivityEntry> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  TeamActivityPage({
+    this.items = const [],
+    this.total = 0,
+    this.page = 1,
+    this.pageSize = 25,
+  });
+
+  factory TeamActivityPage.fromJson(Map<String, dynamic> json) {
+    return TeamActivityPage(
+      items: asObjectList(json['items'])
+          .map((e) => TeamActivityEntry.fromJson(e))
+          .toList(),
+      total: asInt(json['total']),
+      page: asInt(json['page'], 1),
+      pageSize: asInt(json['pageSize'], 25),
+    );
+  }
+}

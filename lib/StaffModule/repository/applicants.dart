@@ -36,7 +36,13 @@ class ApplicantRepository {
     if (response.statusCode == 200) {
       Fluttertoast.showToast(msg: 'Applicant Added Successfully');
       return jsonDecode(response.body);
-    } else if (response.statusCode == 203) {
+    } else if (response.statusCode >= 200 && response.statusCode < 300) {
+      // A rejected add is NOT an HTTP error here: a duplicate email or phone
+      // comes back as 203 with the reason in the body, and the add screens
+      // already read `response['statusCode'] == 203` and show that message.
+      // Throwing on it made their handler unreachable, so a duplicate saved
+      // nothing and said nothing. Any other 2xx is returned for the same
+      // reason rather than being guessed at here.
       return jsonDecode(response.body);
     } else {
       // Log the response body for debugging
@@ -59,8 +65,11 @@ class ApplicantRepository {
       final List<dynamic> applicantJson = data['data'];
       return applicantJson.map((json) => Datum.fromJson(json)).toList();
     } else {
-      return [];
-      //throw Exception('Failed to load applicants');
+      // Was `return []`, which made a 500 or a 403 look exactly like "no
+      // applicants yet" - the list screen showed its empty-state artwork and
+      // the user had no idea the load had failed. Offline is handled higher
+      // up by NetworkRetryState/NoInternetView; this covers server errors.
+      throw Exception(friendlyErrorMessage(response.body));
     }
   }
 
@@ -89,8 +98,12 @@ class ApplicantRepository {
       }),
     );
 
-    if (response.statusCode == 200) {
-      // Fluttertoast.showToast(msg: 'Applicant Updated Successfully');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      // Accept any 2xx, not just 200: a successful update can come back as
+      // 201 (ApplicantService returns statusCode 201 on one of its success
+      // paths, and the route mirrors it into the HTTP status). The old
+      // `== 200` therefore threw on a save that had actually worked, and the
+      // caller's success toast was skipped.
       return jsonDecode(response.body);
     } else {
       // Log the response body for debugging

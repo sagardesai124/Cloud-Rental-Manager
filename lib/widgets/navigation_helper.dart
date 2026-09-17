@@ -24,27 +24,29 @@ class NavigationHelper {
     Widget targetWidget,
     String routeName,
   ) async {
-    // Check if we're already on the same screen
-    final currentRoute = ModalRoute.of(context);
-    if (currentRoute != null) {
-      final currentWidget = currentRoute.settings.arguments;
-      if (currentWidget != null &&
-          currentWidget.runtimeType == targetWidget.runtimeType) {
-        // Close drawer if open and return
-        if (Scaffold.of(context).isDrawerOpen) {
-          Navigator.of(context).pop();
-        }
-        return;
+    // Same screen? Compare route NAMES. This used to compare
+    // settings.arguments against the target widget, which meant every pushed
+    // screen stayed referenced from its own route settings for no other reason.
+    if (isCurrentRoute(context, routeName)) {
+      // Close drawer if open and return
+      if (Scaffold.of(context).isDrawerOpen) {
+        Navigator.of(context).pop();
       }
+      return;
     }
 
-    // Navigate to the new screen
-    await Navigator.push(
+    // Drawer destinations REPLACE the stack instead of growing it. A plain
+    // push left one live copy of every screen the user had ever opened — so
+    // back walked through all of them (5 drawer taps = 5 backs) and each copy
+    // held its own fetched lists. Keeping only the first route means back
+    // always returns to the dashboard, the way tab-style navigation behaves.
+    await Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
         builder: (context) => targetWidget,
-        settings: RouteSettings(name: routeName, arguments: targetWidget),
+        settings: RouteSettings(name: routeName),
       ),
+      (route) => route.isFirst,
     );
   }
 
@@ -63,13 +65,17 @@ class NavigationHelper {
       return;
     }
 
-    // Navigate to the new screen
-    await Navigator.push(
+    // Drawer destinations REPLACE the stack instead of growing it — see the
+    // note in [navigateWithValidation]. Safe because the dashboard is the
+    // first route: splash pushReplacement's to login, login pushReplacement's
+    // to Dashboard, so nothing below it can be reached.
+    await Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
         builder: builder,
         settings: RouteSettings(name: routeName),
       ),
+      (route) => route.isFirst,
     );
   }
 }

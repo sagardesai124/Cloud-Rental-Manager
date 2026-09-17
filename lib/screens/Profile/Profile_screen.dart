@@ -3100,6 +3100,14 @@ class _Profile_screenState extends State<Profile_screen>
                                       // ),
                                       GestureDetector(
                                         onTap: () async {
+                                          // A second tap while the first
+                                          // request is in flight submits
+                                          // again: `loading` only swaps the
+                                          // button's child to a spinner, it
+                                          // never disables the tap. Matches
+                                          // the Tenant/Vendor change-password
+                                          // screens and the OTP screen.
+                                          if (loading) return;
                                           SharedPreferences prefs =
                                               await SharedPreferences
                                                   .getInstance();
