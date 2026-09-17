@@ -18,8 +18,16 @@ class EmailLogRepository {
   Future<TenantCommunation> fetchEmailLog(String lease_id,{int page = 1,int limit =10,bool isTenant =false}) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? adminid = prefs.getString("adminId");
-      String? id = prefs.getString("staff_id");
+      // The `id` header must carry the CALLER's own id: staff_id for a Staff
+      // user, adminId for an Admin. This read staff_id unconditionally, which
+      // is null for an Admin — the header went out as "CRM null", the server
+      // rejected it, and the catch surfaced "Failed to Acknowledgement payment"
+      // (a message copy-pasted from the payment repo) in place of the tenant's
+      // communications. Staff was unaffected, which is why it went unnoticed.
+      // Matches _actingId in repository/team_repo.dart.
+      String? id = prefs.getString('role') == 'Staffmember'
+          ? prefs.getString("staff_id")
+          : prefs.getString("adminId");
       String? token = prefs.getString('token');
 
       String? ApiUrl = isTenant ? '${Api_url}/api/email-logs/tenant-email/$lease_id?page=$page&limit=$limit' :'$apiUrl/$lease_id?page=$page&limit=$limit';

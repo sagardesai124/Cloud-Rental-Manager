@@ -650,8 +650,11 @@ class _TenantSummaryMobileState extends State<TenantSummaryMobile>
       // Same source the Financial tab uses to show a lease balance
       // (GET /api/payment/charges_payments/{leaseId}). The server computes the
       // figure via LeaseController.CalculateBalanceForLease.
+      final leaseId = _effectiveLeaseId;
+      // No lease on file -> nothing to show; leave the badge hidden.
+      if (leaseId == null) return;
       final ledger =
-          await LeaseRepository().fetchLeaseLedger(leaseId: _effectiveLeaseId);
+          await LeaseRepository().fetchLeaseLedger(leaseId: leaseId);
       if (!mounted) return;
       setState(() => _tenantBalance = ledger?.totalBalance);
     } catch (_) {
@@ -3316,12 +3319,24 @@ class _TenantSummaryMobileState extends State<TenantSummaryMobile>
     );
   }
 
-  /// Lease ID for API calls: use first lease's ID when available, else tenant ID as fallback.
-  String get _effectiveLeaseId {
-    final leaseId = widget.tenants?.leaseData?.isNotEmpty == true
-        ? widget.tenants!.leaseData!.first.leaseId
-        : null;
-    return leaseId ?? widget.tenantId;
+  /// Lease whose balance the header badge shows.
+  ///
+  /// Web parity (TenantDetailPage.jsx:598-639): the ACTIVE lease wins — today
+  /// between start_date and end_date, inclusive — falling back to the first
+  /// lease on file. Taking the list's first entry unconditionally showed an old
+  /// lease's balance whenever the active one was not first in the array, which
+  /// is how the same tenant could read "Balance Due" on web and "Credit" here.
+  ///
+  /// Returns null when the tenant has no lease at all, so the badge stays
+  /// hidden — the previous tenantId fallback queried the LEASE ledger with a
+  /// TENANT id, which can only produce a meaningless figure or an error.
+  String? get _effectiveLeaseId {
+    final list = widget.tenants?.leaseData;
+    if (list == null || list.isEmpty) return null;
+    for (final lease in list) {
+      if (_isLeaseActive(lease.startDate, lease.endDate)) return lease.leaseId;
+    }
+    return list.first.leaseId;
   }
 
   /// True if lease is active (today between start and end). Used for lease tab.
