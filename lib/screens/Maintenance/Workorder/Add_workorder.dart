@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:three_zero_two_property/widgets/file_viewer.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
@@ -836,7 +838,16 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
   // could never be matched back to its filename.
   List<String?> _uploadedFileNames = [];
   Future<String?> uploadImage(File imageFile) async {
-    final String uploadUrl = '${image_upload_url}/api/images/upload';
+    // Work-order attachments post to the scoped endpoint, not the plain
+    // /api/images/upload. The plain one runs the shared filter, which is
+    // `makeFileFilter({ allowVideo: false })` (Server/config/uploadStorage.js),
+    // so every video was rejected with a 415 and surfaced here as "Failed to
+    // upload image". The backend added this endpoint for exactly this case -
+    // `attachmentUpload` sets `allowVideo: true` with a 250MB limit
+    // (Server/routes/api/Images.js:67, route at :266) - and the web client was
+    // moved onto it; mobile was not. Its response shape is identical
+    // ({status: "ok", files: [{filename}]}), so nothing below changes.
+    final String uploadUrl = '${image_upload_url}/api/images/upload-workorder';
 
     var request = http.MultipartRequest(
         'POST',
@@ -860,13 +871,32 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
     var response = await apiSend(request);
     var responseData = await http.Response.fromStream(response);
 
-    var responseBody = json.decode(responseData.body);
-    if (responseBody['status'] == 'ok') {
+    // 413 = the file exceeded the endpoint's limit. Checked BEFORE decoding:
+    // the body for an oversize rejection is often not JSON, so json.decode
+    // would throw a FormatException and the real reason would be lost behind
+    // a generic failure. Web words this case specially for the same reason
+    // (Client/src/views/source/AddCharge.jsx:502).
+    if (responseData.statusCode == 413) {
+      throw Exception(kUploadTooLargeMessage);
+    }
+
+    dynamic responseBody;
+    try {
+      responseBody = json.decode(responseData.body);
+    } catch (_) {
+      throw Exception(kUploadFailedMessage);
+    }
+    if (responseBody is Map && responseBody['status'] == 'ok') {
       List file = responseBody['files'];
       return file.first["filename"];
-    } else {
-      throw Exception('Failed to upload file: ${responseBody['message']}');
     }
+    // Surface the server's own reason (e.g. an unsupported type) rather than
+    // discarding it behind a generic message.
+    final String? serverMessage =
+        responseBody is Map ? responseBody['message']?.toString() : null;
+    throw Exception(serverMessage != null && serverMessage.trim().isNotEmpty
+        ? serverMessage
+        : kUploadFailedMessage);
   }
 
   // Show image source selection dialog
@@ -900,10 +930,14 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                 const SizedBox(height: 24),
 
                 // Options Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                // Wrap, not Row: three 100px tiles plus spacing overflow a
+                // narrow phone, and Wrap drops to a second line instead of
+                // throwing a layout overflow.
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 16,
+                  runSpacing: 16,
                   children: [
-                    // Gallery Option
                     _buildSourceOption(
                       icon: Icons.photo_library,
                       label: 'Gallery',
@@ -912,16 +946,20 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                         _pickImageFromSource(ImageSource.gallery);
                       },
                     ),
-
-                    const SizedBox(width: 20),
-
-                    // Camera Option
                     _buildSourceOption(
                       icon: Icons.camera_alt,
                       label: 'Camera',
                       onTap: () {
                         Navigator.of(context).pop();
                         _openCameraInterface();
+                      },
+                    ),
+                    _buildSourceOption(
+                      icon: Icons.insert_drive_file,
+                      label: 'Document',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _pickDocument();
                       },
                     ),
                   ],
@@ -992,12 +1030,38 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
   }
 
   // Pick image from specific source
+  /// Document extensions the work-order endpoint accepts. Photos and video
+  /// come through the photo picker instead, so only documents are listed here.
+  /// Mirrors the document half of web's ATTACHMENT_ACCEPT
+  /// (Client/src/utils/fileAccept.js) and the server's ALLOWED_EXTENSIONS.
+  static const List<String> _documentExtensions = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv',
+  ];
+
   Future<void> _pickImageFromSource(ImageSource source) async {
+    // Stays on the native photo/video picker. FilePicker was tried here so one
+    // button could cover documents too, but on iOS it opens the Files app
+    // rather than the camera roll - iOS keeps photos and files strictly apart -
+    // so "Gallery" would no longer show the user's photos. Documents get their
+    // own button in the dialog instead, which opens the right native UI on
+    // both platforms.
     final ImagePicker _picker = ImagePicker();
     final XFile? image = await _picker.pickMedia();
 
     if (image != null) {
       final File file = File(image.path);
+      // Same size guard as the document picker: a video is far more likely to
+      // be oversized than a document, so checking only there missed the common
+      // case - a large clip uploaded for minutes before failing.
+      if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+        Fluttertoast.showToast(
+          msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(image.path)),
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        return;
+      }
       // Lowercased first: the iPhone camera names videos .MOV (uppercase), which
       // failed this check and made a picked video vanish from the preview list.
       bool isVideo = image.path.toLowerCase().endsWith('.mp4') ||
@@ -1039,6 +1103,48 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
       }
       if (preview != null) _uploadImage(file, preview);
     }
+  }
+
+  /// Pick a document (PDF / Word / Excel / CSV).
+  ///
+  /// Separate from the photo/video picker on purpose: this opens the platform
+  /// document browser, which is where documents live on both Android and iOS.
+  /// Matches the FilePicker pattern already used by the Documents, Insurance
+  /// and Lease screens in this app.
+  Future<void> _pickDocument() async {
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _documentExtensions,
+    );
+    final String? pickedPath = result?.files.single.path;
+    if (pickedPath == null) return;
+
+    final File file = File(pickedPath);
+    // Refuse an obviously oversized file before spending minutes uploading
+    // it, the way web does (AddWorkorder.jsx:1038-1050). The in-flight 413
+    // check in uploadImage() is still the backstop, because the enforced
+    // ceiling is currently lower than this one.
+    if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+      Fluttertoast.showToast(
+        // Pre-check wording names the limit, as web's does
+        // (AddWorkorder.jsx:1044); the in-flight 413 message deliberately
+        // does not, matching web there too.
+        msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(pickedPath)),
+        toastLength: Toast.LENGTH_LONG,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+    // No thumbnail for a document - the tile works out what it is from the file
+    // name via attachmentKindOf(), so no extra state is needed.
+    setState(() {
+      _images.add(file);
+      isvideo.add(false);
+      videofiles.add(file);
+      _uploadedFileNames.add(null);
+    });
+    _uploadImage(file, file);
   }
 
   // Open unified camera interface for both photos and videos
@@ -1154,9 +1260,11 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
         setState(() => _removeImageRowAt(row));
       }
       Fluttertoast.showToast(
-        // No filename: the picker renames files to image_picker_<uuid>.jpg,
-        // which means nothing to the user and wrapped the toast over 4 lines.
-        msg: 'Failed to upload image. Please try again.',
+        // Still no filename - the picker renames photos to
+        // image_picker_<uuid>.jpg, which means nothing to the user - but the
+        // REASON now survives. An oversize file says so instead of inviting a
+        // pointless retry of a clip that will never fit.
+        msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
         timeInSecForIosWeb: 2,
@@ -1378,7 +1486,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                             });
                           }
                           Fluttertoast.showToast(
-                            msg: 'Failed to upload image. Please try again.',
+                            msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
                             toastLength: Toast.LENGTH_LONG,
                             gravity: ToastGravity.BOTTOM,
                             timeInSecForIosWeb: 2,
@@ -1621,7 +1729,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Upload your Photo here',
+                                      'Upload Photos, Videos, or Documents',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 16,
@@ -1631,13 +1739,14 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                     ),
                                     const SizedBox(height: 4),
                                     const Text(
-                                      'Maximum File Size is 20MB',
+                                      'Maximum 10 files, 250MB each',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                           fontSize: 12, color: Colors.grey),
                                     ),
                                     const Text(
-                                      'Supported File Types are .png, .jpeg, .pdf, .csv',
+                                      'Supported: .png, .jpg, .jpeg, .gif, .webp, .pdf, .doc, '
+                                      '.docx, .xls, .xlsx, .csv, .mp4, .mov, .webm, .m4v',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                           fontSize: 12, color: Colors.grey),
@@ -1746,7 +1855,87 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                                                 CrossAxisAlignment
                                                                     .start,
                                                             children: [
-                                                              isvideo[index]
+                                                              attachmentKindOf(_images[index].path) ==
+                                                                      AttachmentKind.document
+                                                                  // A document has no thumbnail, so show
+                                                                  // the file icon + name instead - the same
+                                                                  // treatment the Documents and Insurance
+                                                                  // screens give a picked PDF, and the
+                                                                  // equivalent of web's DocumentTile.
+                                                                  ? GestureDetector(
+                                                                      onTap: () {
+                                                                        // FileViewer.showReceiptDialog
+                                                                        // takes a remote fileUrl; this
+                                                                        // file is still local, so use the
+                                                                        // widget directly - it accepts a
+                                                                        // filePath.
+                                                                        showDialog(
+                                                                          context: context,
+                                                                          builder: (_) => Dialog(
+                                                                            child: SizedBox(
+                                                                              height: 500,
+                                                                              child: FileViewer(
+                                                                                fileName:
+                                                                                    attachmentDisplayName(
+                                                                                        _images[index]
+                                                                                            .path),
+                                                                                filePath:
+                                                                                    _images[index].path,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                      child: Container(
+                                                                        height: 80,
+                                                                        width: 80,
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color(0xFFF2F4F7),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
+                                                                          border: Border.all(
+                                                                              color: Colors.grey.shade300),
+                                                                        ),
+                                                                        child: Column(
+                                                                          mainAxisAlignment:
+                                                                              MainAxisAlignment.center,
+                                                                          children: [
+                                                                            Icon(
+                                                                                Icons.insert_drive_file,
+                                                                                color: blueColor,
+                                                                                size: 28),
+                                                                            const SizedBox(height: 2),
+                                                                            Text(
+                                                                              attachmentExtensionLabel(
+                                                                                  _images[index].path),
+                                                                              style: TextStyle(
+                                                                                  fontSize: 10,
+                                                                                  fontWeight:
+                                                                                      FontWeight.bold,
+                                                                                  color: blueColor),
+                                                                            ),
+                                                                            Padding(
+                                                                              padding: const EdgeInsets
+                                                                                  .symmetric(
+                                                                                  horizontal: 4),
+                                                                              child: Text(
+                                                                                attachmentDisplayName(
+                                                                                    _images[index].path),
+                                                                                maxLines: 1,
+                                                                                overflow: TextOverflow
+                                                                                    .ellipsis,
+                                                                                textAlign:
+                                                                                    TextAlign.center,
+                                                                                style: const TextStyle(
+                                                                                    fontSize: 8,
+                                                                                    color: Colors.grey),
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    )
+                                                                  : isvideo[index]
                                                                   ? GestureDetector(
                                                                       onTap:
                                                                           () {
@@ -4377,7 +4566,9 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet> {
   // phone class above for why appending only on success was not enough.
   List<String?> _uploadedFileNames = [];
   Future<String?> uploadImage(File imageFile) async {
-    final String uploadUrl = '${image_upload_url}/api/images/upload';
+    // Scoped work-order endpoint: the plain /api/images/upload rejects video
+    // (allowVideo: false). See the note in Add_workorder.dart.
+    final String uploadUrl = '${image_upload_url}/api/images/upload-workorder';
     var request = http.MultipartRequest(
         'POST',
         Uri.parse(
@@ -4400,13 +4591,32 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet> {
     var response = await apiSend(request);
     var responseData = await http.Response.fromStream(response);
 
-    var responseBody = json.decode(responseData.body);
-    if (responseBody['status'] == 'ok') {
+    // 413 = the file exceeded the endpoint's limit. Checked BEFORE decoding:
+    // the body for an oversize rejection is often not JSON, so json.decode
+    // would throw a FormatException and the real reason would be lost behind
+    // a generic failure. Web words this case specially for the same reason
+    // (Client/src/views/source/AddCharge.jsx:502).
+    if (responseData.statusCode == 413) {
+      throw Exception(kUploadTooLargeMessage);
+    }
+
+    dynamic responseBody;
+    try {
+      responseBody = json.decode(responseData.body);
+    } catch (_) {
+      throw Exception(kUploadFailedMessage);
+    }
+    if (responseBody is Map && responseBody['status'] == 'ok') {
       List file = responseBody['files'];
       return file.first["filename"];
-    } else {
-      throw Exception('Failed to upload file: ${responseBody['message']}');
     }
+    // Surface the server's own reason (e.g. an unsupported type) rather than
+    // discarding it behind a generic message.
+    final String? serverMessage =
+        responseBody is Map ? responseBody['message']?.toString() : null;
+    throw Exception(serverMessage != null && serverMessage.trim().isNotEmpty
+        ? serverMessage
+        : kUploadFailedMessage);
   }
 
   // Show image source selection dialog
@@ -4680,9 +4890,11 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet> {
         setState(() => _removeImageRowAt(row));
       }
       Fluttertoast.showToast(
-        // No filename: the picker renames files to image_picker_<uuid>.jpg,
-        // which means nothing to the user and wrapped the toast over 4 lines.
-        msg: 'Failed to upload image. Please try again.',
+        // Still no filename - the picker renames photos to
+        // image_picker_<uuid>.jpg, which means nothing to the user - but the
+        // REASON now survives. An oversize file says so instead of inviting a
+        // pointless retry of a clip that will never fit.
+        msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
         timeInSecForIosWeb: 2,
@@ -4869,7 +5081,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet> {
                             });
                           }
                           Fluttertoast.showToast(
-                            msg: 'Failed to upload image. Please try again.',
+                            msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
                             toastLength: Toast.LENGTH_LONG,
                             gravity: ToastGravity.BOTTOM,
                             timeInSecForIosWeb: 2,

@@ -433,12 +433,35 @@ class _CreateBidRoomState extends State<CreateBidRoom> {
     });
   }
 
+  /// Matches the web CRM's cap (AddBidRequest.jsx passes maxFiles={10} and
+  /// truncates to 10) and the "max 10" hint shown on this field.
+  static const int _kMaxImages = 10;
+
   Future<void> _pickImages() async {
     try {
       // Use image_picker (not file_picker) to avoid Android crash in FileUtils.compressImage
+      // Slots left against the count the user can actually see (the pills) —
+      // and against anything still uploading, so a second pick during an
+      // upload cannot overshoot.
+      final int used = _uploadedImageNames.length > _selectedImages.length
+          ? _uploadedImageNames.length
+          : _selectedImages.length;
+      final int remaining = _kMaxImages - used;
+      if (remaining <= 0) {
+        Fluttertoast.showToast(msg: 'Maximum $_kMaxImages images allowed');
+        return;
+      }
+
       final ImagePicker picker = ImagePicker();
+      // image_picker THROWS ArgumentError for a limit below 2
+      // ("cannot be lower then 2" — image_picker_platform_interface
+      // multi_image_picker_options.dart:39), so never pass 1. The hint may
+      // therefore over-permit by one; that is harmless because the truncation
+      // below is what actually enforces the cap. Passing `remaining` straight
+      // through is what produced "Failed to pick images: Something went wrong"
+      // once only a single slot was left.
       final List<XFile>? picked = await picker.pickMultiImage(
-        limit: 10 - _uploadedImageNames.length,
+        limit: remaining < 2 ? 2 : remaining,
       );
 
       if (picked == null || picked.isEmpty) return;
@@ -472,6 +495,21 @@ class _CreateBidRoomState extends State<CreateBidRoom> {
       if (newImages.isEmpty) {
         Fluttertoast.showToast(msg: 'Could not read selected images');
         return;
+      }
+
+      // `limit:` on pickMultiImage is only a hint — Android's older pickers
+      // ignore it, which is how 12 images got in past a stated max of 10. Web
+      // guarantees the cap by truncating after selection
+      // (AddBidRequest.jsx: `[...prev, ...files].slice(0, 10)`); do the same
+      // here, and say so rather than dropping images silently — on a phone the
+      // list scrolls, so a silent drop reads as a failed upload.
+      final int dropped = newImages.length - remaining;
+      if (dropped > 0) {
+        newImages = newImages.sublist(0, remaining);
+        Fluttertoast.showToast(
+          msg: 'Only $_kMaxImages images allowed — '
+              '$dropped ${dropped == 1 ? 'image was' : 'images were'} not added',
+        );
       }
 
       setState(() {

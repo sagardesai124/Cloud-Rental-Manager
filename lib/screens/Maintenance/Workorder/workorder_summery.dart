@@ -14,6 +14,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:three_zero_two_property/widgets/file_viewer.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
@@ -211,7 +214,9 @@ class _Workorder_summeryState extends State<Workorder_summery>
   List<String> _uploadedFileNames = [];
   List<bool> isvideo = [];
   Future<String?> uploadImage(File imageFile) async {
-    final String uploadUrl = '${image_upload_url}/api/images/upload';
+    // Scoped work-order endpoint: the plain /api/images/upload rejects video
+    // (allowVideo: false). See the note in Add_workorder.dart.
+    final String uploadUrl = '${image_upload_url}/api/images/upload-workorder';
     var request = http.MultipartRequest(
         'POST',
         Uri.parse(
@@ -222,6 +227,12 @@ class _Workorder_summeryState extends State<Workorder_summery>
 
     var response = await apiSend(request);
     var responseData = await http.Response.fromStream(response);
+
+    // 413 = the file exceeded the endpoint's limit; checked before decoding
+    // because an oversize rejection often has a non-JSON body.
+    if (responseData.statusCode == 413) {
+      throw Exception(kUploadTooLargeMessage);
+    }
 
     var responseBody = json.decode(responseData.body);
     if (responseBody['status'] == 'ok') {
@@ -266,10 +277,12 @@ class _Workorder_summeryState extends State<Workorder_summery>
                     const SizedBox(height: 24),
 
                     // Options Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    // Wrap, not Row: three tiles overflow a narrow phone.
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 16,
+                      runSpacing: 16,
                       children: [
-                        // Gallery Option
                         _buildSourceOption(
                           icon: Icons.photo_library,
                           label: 'Gallery',
@@ -280,16 +293,22 @@ class _Workorder_summeryState extends State<Workorder_summery>
                             });
                           },
                         ),
-
-                        const SizedBox(width: 20),
-
-                        // Camera Option
                         _buildSourceOption(
                           icon: Icons.camera_alt,
                           label: 'Camera',
                           onTap: () async {
                             Navigator.of(context).pop();
                             await _openCameraInterface(() {
+                              parentSetState(() {});
+                            });
+                          },
+                        ),
+                        _buildSourceOption(
+                          icon: Icons.insert_drive_file,
+                          label: 'Document',
+                          onTap: () async {
+                            Navigator.of(context).pop();
+                            await _pickDocument(() {
                               parentSetState(() {});
                             });
                           },
@@ -484,6 +503,46 @@ class _Workorder_summeryState extends State<Workorder_summery>
     return thumbPath;
   }
 
+  /// Document extensions the work-order endpoint accepts.
+  static const List<String> _documentExtensions = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv',
+  ];
+
+  /// Pick a document. Separate from the photo picker: on iOS a file browser
+  /// cannot show the camera roll, so each source needs its own native UI.
+  /// Takes the same parentSetState callback as _pickImageFromSource, since this
+  /// picker runs from inside a StatefulBuilder dialog.
+  Future<void> _pickDocument(VoidCallback onDone) async {
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _documentExtensions,
+    );
+    final String? pickedPath = result?.files.single.path;
+    if (pickedPath == null) return;
+    final File file = File(pickedPath);
+    // Refuse an obviously oversized file before spending minutes uploading
+    // it, the way web does (AddWorkorder.jsx:1038-1050). The in-flight 413
+    // check in uploadImage() is still the backstop, because the enforced
+    // ceiling is currently lower than this one.
+    if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+      Fluttertoast.showToast(
+        // Pre-check wording names the limit, as web's does
+        // (AddWorkorder.jsx:1044); the in-flight 413 message deliberately
+        // does not, matching web there too.
+        msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(pickedPath)),
+        toastLength: Toast.LENGTH_LONG,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+    setState(() {
+      _images.add(file);
+    });
+    await _uploadImage(file);
+    onDone();
+  }
+
   Future<void> _uploadImage(File imageFile) async {
     try {
       String? fileName = await uploadImage(imageFile);
@@ -494,6 +553,16 @@ class _Workorder_summeryState extends State<Workorder_summery>
         _imageUrls.add(fileName!);
       });
     } catch (e) {
+      // Was log-only: a failed upload on this screen told the user nothing at
+      // all, so an oversize video simply never appeared with no explanation.
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
       logError('Image upload failed: $e');
     }
   }
@@ -3204,46 +3273,96 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                       Wrap(
                                         spacing: 10,
                                         runSpacing: 10,
-                                        children: summery.workOrderImages!
-                                            .map((imageUrl) {
+                                        children: summery.workOrderImages!.map((imageUrl) {
+                                          // This row pushed every attachment through CachedNetworkImage, with an
+                                          // errorWidget that returned an empty Container - so a video or a document
+                                          // attached through the update dialog rendered as nothing at all: no tile,
+                                          // no play control, no way to open it. Uses the same doc / video / photo
+                                          // split the Images row further down already had.
+                                          final bool isVid = isVideo(imageUrl);
+                                          final bool isDoc =
+                                              attachmentKindOf(imageUrl) == AttachmentKind.document;
+                                          final double tileWidth = summery.workOrderImages!.length == 1
+                                              ? MediaQuery.of(context).size.width / 3
+                                              : (MediaQuery.of(context).size.width / 3) - 10;
                                           return GestureDetector(
-                                            onTap: () => _openImagePreview(
-                                                "$image_url$imageUrl"),
+                                            onTap: () {
+                                              if (isDoc) {
+                                                FileViewer.showReceiptDialog(
+                                                  context,
+                                                  attachmentDisplayName(imageUrl),
+                                                  fileUrl: '$image_url$imageUrl',
+                                                );
+                                              } else if (isVid) {
+                                                _showVideoDialog('$image_url$imageUrl');
+                                              } else {
+                                                _openImagePreview('$image_url$imageUrl');
+                                              }
+                                            },
                                             child: Container(
-                                            width:
-                                                summery.workOrderImages!
-                                                            .length ==
-                                                        1
-                                                    ? MediaQuery.of(context)
-                                                            .size
-                                                            .width /
-                                                        3
-                                                    : (MediaQuery.of(context)
-                                                                .size
-                                                                .width /
-                                                            3) -
-                                                        10,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              child: CachedNetworkImage(
-                                                imageUrl: "$image_url$imageUrl",
-                                                placeholder: (context, url) =>
-                                                    const Center(
-                                                        child:
-                                                            CircularProgressIndicator()),
-                                                errorWidget:
-                                                    (context, url, error) {
-                                                  return Container();
-                                                },
-                                                fit: BoxFit.cover,
+                                              width: tileWidth,
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(10),
+                                                child: isDoc
+                                                    ? AspectRatio(
+                                                        aspectRatio: 1,
+                                                        child: Container(
+                                                          color: const Color(0xFFF2F4F7),
+                                                          child: Column(
+                                                            mainAxisAlignment: MainAxisAlignment.center,
+                                                            children: [
+                                                              Icon(Icons.insert_drive_file,
+                                                                  color: blueColor, size: 40),
+                                                              const SizedBox(height: 6),
+                                                              Text(
+                                                                attachmentExtensionLabel(imageUrl),
+                                                                style: TextStyle(
+                                                                    fontSize: 12,
+                                                                    fontWeight: FontWeight.bold,
+                                                                    color: blueColor),
+                                                              ),
+                                                              Padding(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(horizontal: 8),
+                                                                child: Text(
+                                                                  attachmentDisplayName(imageUrl),
+                                                                  maxLines: 2,
+                                                                  overflow: TextOverflow.ellipsis,
+                                                                  textAlign: TextAlign.center,
+                                                                  style: const TextStyle(
+                                                                      fontSize: 10, color: Colors.grey),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      )
+                                                    : isVid
+                                                        ? AspectRatio(
+                                                            aspectRatio: 1,
+                                                            child: Stack(
+                                                              alignment: Alignment.center,
+                                                              children: [
+                                                                VideoItem(url: '$image_url$imageUrl'),
+                                                                const Icon(Icons.play_circle_fill,
+                                                                    color: Colors.white, size: 40),
+                                                              ],
+                                                            ),
+                                                          )
+                                                        : CachedNetworkImage(
+                                                            imageUrl: "$image_url$imageUrl",
+                                                            placeholder: (context, url) => const Center(
+                                                                child: CircularProgressIndicator()),
+                                                            errorWidget: (context, url, error) {
+                                                              return Container();
+                                                            },
+                                                            fit: BoxFit.cover,
+                                                          ),
                                               ),
                                             ),
-                                          ),
                                           );
                                         }).toList(),
                                       ),
@@ -3636,6 +3755,15 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                                     : 2)
                                                 .map((fileUrl) {
                                               bool isMp4 = isVideo(fileUrl);
+                                              // A document has no thumbnail, so
+                                              // it used to fall through to
+                                              // CachedNetworkImage and land on
+                                              // its errorWidget - an error icon
+                                              // for a perfectly good PDF
+                                              // attached from web.
+                                              final bool isDoc =
+                                                  attachmentKindOf(fileUrl) ==
+                                                      AttachmentKind.document;
                                               return Padding(
                                                 padding:
                                                     const EdgeInsets.all(4),
@@ -3649,7 +3777,84 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             10),
-                                                    child: isMp4
+                                                    child: isDoc
+                                                        ? GestureDetector(
+                                                            onTap: () {
+                                                              FileViewer
+                                                                  .showReceiptDialog(
+                                                                context,
+                                                                attachmentDisplayName(
+                                                                    fileUrl),
+                                                                fileUrl:
+                                                                    '$image_url$fileUrl',
+                                                              );
+                                                            },
+                                                            child: Container(
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: const Color(
+                                                                    0xFFF2F4F7),
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            10),
+                                                                border: Border.all(
+                                                                    color: Colors
+                                                                        .grey
+                                                                        .shade300),
+                                                              ),
+                                                              child: Column(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .center,
+                                                                children: [
+                                                                  Icon(
+                                                                      Icons
+                                                                          .insert_drive_file,
+                                                                      color:
+                                                                          blueColor,
+                                                                      size: 44),
+                                                                  const SizedBox(
+                                                                      height: 6),
+                                                                  Text(
+                                                                    attachmentExtensionLabel(
+                                                                        fileUrl),
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            13,
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .bold,
+                                                                        color:
+                                                                            blueColor),
+                                                                  ),
+                                                                  Padding(
+                                                                    padding: const EdgeInsets
+                                                                        .symmetric(
+                                                                        horizontal:
+                                                                            8),
+                                                                    child: Text(
+                                                                      attachmentDisplayName(
+                                                                          fileUrl),
+                                                                      maxLines: 2,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis,
+                                                                      textAlign:
+                                                                          TextAlign
+                                                                              .center,
+                                                                      style: const TextStyle(
+                                                                          fontSize:
+                                                                              10,
+                                                                          color: Colors
+                                                                              .grey),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          )
+                                                        : isMp4
                                                         ? GestureDetector(
                                                             onTap: () {
                                                               _showVideoDialog(
@@ -3825,7 +4030,12 @@ class _Workorder_summeryState extends State<Workorder_summery>
 
   String imageUrl = "";
   bool isVideo(String url) {
-    return url.toLowerCase().endsWith(".mp4");
+    // Was `.endsWith(".mp4")`, which missed .mov - the format every iPhone
+    // records - so an iPhone clip attached to a work order was pushed through
+    // an image widget and rendered as a broken tile. The shared classifier
+    // covers .mp4/.mov/.webm/.m4v, matching the server's VIDEO_EXTENSIONS and
+    // the Edit screens, which already handled .mov.
+    return isAttachmentVideo(url);
   }
 
   // void showUpdateDialog(BuildContext context) {
@@ -5095,7 +5305,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Upload your Photo here',
+                                    'Upload Photos, Videos, or Documents',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 16,
@@ -5105,13 +5315,14 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                   ),
                                   const SizedBox(height: 4),
                                   const Text(
-                                    'Maximum File Size is 20MB',
+                                    'Maximum 10 files, 250MB each',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                         fontSize: 12, color: Colors.grey),
                                   ),
                                   const Text(
-                                    'Supported File Types are .png, .jpeg, .pdf, .csv',
+                                    'Supported: .png, .jpg, .jpeg, .gif, .webp, .mp4, .mov, '
+                                      '.webm, .m4v',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                         fontSize: 12, color: Colors.grey),
@@ -5179,22 +5390,55 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                             Padding(
                                               padding:
                                                   const EdgeInsets.all(4.0),
-                                              child: Container(
-                                                width: 80,
-                                                height: 80,
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                      color:
-                                                          Colors.grey.shade300),
-                                                ),
-                                                child: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  child: Image.file(
-                                                    _images[index],
-                                                    fit: BoxFit.cover,
+                                              child: GestureDetector(
+                                                // A picked video showed its generated thumbnail as a flat
+                                                // Image.file with no play control and no tap handler, so
+                                                // there was no way to play back what had just been
+                                                // attached - the Add and Edit screens already did both.
+                                                // VideoPlayerDialog takes a local videoFile, so the player
+                                                // was there all along, just never opened from here.
+                                                onTap: () {
+                                                  if (index < isvideo.length &&
+                                                      isvideo[index] &&
+                                                      index < videofiles.length) {
+                                                    showDialog<void>(
+                                                      context: context,
+                                                      builder: (_) => VideoPlayerDialog(
+                                                        videoFile: videofiles[index],
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                child: Container(
+                                                  width: 80,
+                                                  height: 80,
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                    border: Border.all(
+                                                        color:
+                                                            Colors.grey.shade300),
+                                                  ),
+                                                  child: ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                    child: Stack(
+                                                      alignment: Alignment.center,
+                                                      fit: StackFit.expand,
+                                                      children: [
+                                                        Image.file(
+                                                          _images[index],
+                                                          fit: BoxFit.cover,
+                                                        ),
+                                                        if (index < isvideo.length &&
+                                                            isvideo[index])
+                                                          const Icon(
+                                                            Icons.play_circle_fill,
+                                                            color: Colors.white,
+                                                            size: 28,
+                                                          ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -5205,7 +5449,21 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                               child: GestureDetector(
                                                 onTap: () {
                                                   setState(() {
+                                                    // Removed from _images only, which left isvideo,
+                                                    // videofiles and _uploadedFileNames one entry longer:
+                                                    // later tiles played the wrong clip, and the removed
+                                                    // file was still sent on Save, so "remove" did not
+                                                    // actually remove anything.
                                                     _images.removeAt(index);
+                                                    if (index < isvideo.length) {
+                                                      isvideo.removeAt(index);
+                                                    }
+                                                    if (index < videofiles.length) {
+                                                      videofiles.removeAt(index);
+                                                    }
+                                                    if (index < _uploadedFileNames.length) {
+                                                      _uploadedFileNames.removeAt(index);
+                                                    }
                                                   });
                                                 },
                                                 child: Container(

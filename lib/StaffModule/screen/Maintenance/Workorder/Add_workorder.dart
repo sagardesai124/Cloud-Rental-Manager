@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:three_zero_two_property/widgets/file_viewer.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
@@ -863,7 +865,9 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
   }
 
   Future<String?> uploadImage(File imageFile) async {
-    final String uploadUrl = '${image_upload_url}/api/images/upload';
+    // Scoped work-order endpoint: the plain /api/images/upload rejects video
+    // (allowVideo: false). See the note in Add_workorder.dart.
+    final String uploadUrl = '${image_upload_url}/api/images/upload-workorder';
 
     var request = http.MultipartRequest(
         'POST',
@@ -886,6 +890,14 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
 
     var response = await apiSend(request);
     var responseData = await http.Response.fromStream(response);
+
+    // 413 = the file exceeded the endpoint's limit. Checked BEFORE decoding:
+    // an oversize rejection often has a non-JSON body, so json.decode would
+    // throw first and the real reason would be lost. Web words this case
+    // specially too (Client/src/views/source/AddCharge.jsx:502).
+    if (responseData.statusCode == 413) {
+      throw Exception(kUploadTooLargeMessage);
+    }
 
     var responseBody = json.decode(responseData.body);
     if (responseBody['status'] == 'ok') {
@@ -931,10 +943,13 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                 const SizedBox(height: 24),
 
                 // Options Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                // Wrap, not Row: three tiles overflow a narrow phone and Wrap
+                // drops to a second line instead of throwing an overflow.
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 16,
+                  runSpacing: 16,
                   children: [
-                    // Gallery Option
                     _buildSourceOption(
                       icon: Icons.photo_library,
                       label: 'Gallery',
@@ -943,16 +958,20 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                         _pickImageFromSource(ImageSource.gallery);
                       },
                     ),
-
-                    const SizedBox(width: 20),
-
-                    // Camera Option
                     _buildSourceOption(
                       icon: Icons.camera_alt,
                       label: 'Camera',
                       onTap: () {
                         Navigator.of(context).pop();
                         _openCameraInterface();
+                      },
+                    ),
+                    _buildSourceOption(
+                      icon: Icons.insert_drive_file,
+                      label: 'Document',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _pickDocument();
                       },
                     ),
                   ],
@@ -1029,6 +1048,18 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
 
     if (image != null) {
       final File file = File(image.path);
+      // Same size guard as the document picker: a video is far more likely to
+      // be oversized than a document, so checking only there missed the common
+      // case - a large clip uploaded for minutes before failing.
+      if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+        Fluttertoast.showToast(
+          msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(image.path)),
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        return;
+      }
       // Lowercased first: the iPhone camera names videos .MOV (uppercase), which
       // failed this check and made a picked video vanish from the preview list.
       bool isVideo = image.path.toLowerCase().endsWith('.mp4') ||
@@ -1070,6 +1101,49 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
       }
       if (preview != null) _uploadImage(file, preview);
     }
+  }
+
+  /// Document extensions the work-order endpoint accepts. Photos and video come
+  /// through the photo picker; only documents are listed here.
+  static const List<String> _documentExtensions = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv',
+  ];
+
+  /// Pick a document. Separate from the photo picker: on iOS a file browser
+  /// cannot show the camera roll, so each source needs its own native UI.
+  Future<void> _pickDocument() async {
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _documentExtensions,
+    );
+    final String? pickedPath = result?.files.single.path;
+    if (pickedPath == null) return;
+    final File file = File(pickedPath);
+    // Refuse an obviously oversized file before spending minutes uploading
+    // it, the way web does (AddWorkorder.jsx:1038-1050). The in-flight 413
+    // check in uploadImage() is still the backstop, because the enforced
+    // ceiling is currently lower than this one.
+    if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+      Fluttertoast.showToast(
+        // Pre-check wording names the limit, as web's does
+        // (AddWorkorder.jsx:1044); the in-flight 413 message deliberately
+        // does not, matching web there too.
+        msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(pickedPath)),
+        toastLength: Toast.LENGTH_LONG,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+    // No thumbnail for a document - the tile derives its kind from the file
+    // name via attachmentKindOf(), so no extra state is needed.
+    setState(() {
+      _images.add(file);
+      isvideo.add(false);
+      videofiles.add(file);
+      _uploadedFileNames.add(null);
+    });
+    _uploadImage(file, file);
   }
 
   // Open unified camera interface for both photos and videos
@@ -1226,9 +1300,11 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
         setState(() => _removeImageRowAt(row));
       }
       Fluttertoast.showToast(
-        // No filename: the picker renames files to image_picker_<uuid>.jpg,
-        // which means nothing to the user and wrapped the toast over 4 lines.
-        msg: 'Failed to upload image. Please try again.',
+        // Still no filename - the picker renames photos to
+        // image_picker_<uuid>.jpg, which means nothing to the user - but the
+        // REASON now survives. An oversize file says so instead of inviting a
+        // pointless retry of a clip that will never fit.
+        msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
         timeInSecForIosWeb: 2,
@@ -1446,7 +1522,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                             });
                           }
                           Fluttertoast.showToast(
-                            msg: 'Failed to upload image. Please try again.',
+                            msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
                             toastLength: Toast.LENGTH_LONG,
                             gravity: ToastGravity.BOTTOM,
                             timeInSecForIosWeb: 2,
@@ -1582,7 +1658,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Upload your Photo here',
+                                      'Upload Photos, Videos, or Documents',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 16,
@@ -1592,13 +1668,14 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                     ),
                                     const SizedBox(height: 4),
                                     const Text(
-                                      'Maximum File Size is 20MB',
+                                      'Maximum 10 files, 250MB each',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                           fontSize: 12, color: Colors.grey),
                                     ),
                                     const Text(
-                                      'Supported File Types are .png, .jpeg, .pdf, .csv',
+                                      'Supported: .png, .jpg, .jpeg, .gif, .webp, .pdf, .doc, '
+                                      '.docx, .xls, .xlsx, .csv, .mp4, .mov, .webm, .m4v',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                           fontSize: 12, color: Colors.grey),
@@ -1727,7 +1804,80 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                                                                 CrossAxisAlignment
                                                                     .start,
                                                             children: [
-                                                              (index < isvideo.length &&
+                                                              attachmentKindOf(_images[index].path) ==
+                                                                      AttachmentKind.document
+                                                                  // A document has no thumbnail - show the
+                                                                  // file icon + name, as web's DocumentTile
+                                                                  // does and as this app's Documents and
+                                                                  // Insurance screens already do.
+                                                                  ? GestureDetector(
+                                                                      onTap: () {
+                                                                        showDialog(
+                                                                          context: context,
+                                                                          builder: (_) => Dialog(
+                                                                            child: SizedBox(
+                                                                              height: 500,
+                                                                              child: FileViewer(
+                                                                                fileName:
+                                                                                    attachmentDisplayName(
+                                                                                        _images[index]
+                                                                                            .path),
+                                                                                filePath:
+                                                                                    _images[index].path,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                      child: Container(
+                                                                        height: 80,
+                                                                        width: 80,
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color(0xFFF2F4F7),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
+                                                                          border: Border.all(
+                                                                              color: Colors.grey.shade300),
+                                                                        ),
+                                                                        child: Column(
+                                                                          mainAxisAlignment:
+                                                                              MainAxisAlignment.center,
+                                                                          children: [
+                                                                            Icon(Icons.insert_drive_file,
+                                                                                color: blueColor,
+                                                                                size: 28),
+                                                                            const SizedBox(height: 2),
+                                                                            Text(
+                                                                              attachmentExtensionLabel(
+                                                                                  _images[index].path),
+                                                                              style: TextStyle(
+                                                                                  fontSize: 10,
+                                                                                  fontWeight:
+                                                                                      FontWeight.bold,
+                                                                                  color: blueColor),
+                                                                            ),
+                                                                            Padding(
+                                                                              padding: const EdgeInsets
+                                                                                  .symmetric(
+                                                                                  horizontal: 4),
+                                                                              child: Text(
+                                                                                attachmentDisplayName(
+                                                                                    _images[index].path),
+                                                                                maxLines: 1,
+                                                                                overflow:
+                                                                                    TextOverflow.ellipsis,
+                                                                                textAlign:
+                                                                                    TextAlign.center,
+                                                                                style: const TextStyle(
+                                                                                    fontSize: 8,
+                                                                                    color: Colors.grey),
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    )
+                                                                  : (index < isvideo.length &&
                                                                       isvideo[
                                                                           index])
                                                                   ? GestureDetector(
@@ -4499,7 +4649,9 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
   }
 
   Future<String?> uploadImage(File imageFile) async {
-    final String uploadUrl = '${image_upload_url}/api/images/upload';
+    // Scoped work-order endpoint: the plain /api/images/upload rejects video
+    // (allowVideo: false). See the note in Add_workorder.dart.
+    final String uploadUrl = '${image_upload_url}/api/images/upload-workorder';
 
     var request = http.MultipartRequest(
         'POST',
@@ -4522,6 +4674,14 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
 
     var response = await apiSend(request);
     var responseData = await http.Response.fromStream(response);
+
+    // 413 = the file exceeded the endpoint's limit. Checked BEFORE decoding:
+    // an oversize rejection often has a non-JSON body, so json.decode would
+    // throw first and the real reason would be lost. Web words this case
+    // specially too (Client/src/views/source/AddCharge.jsx:502).
+    if (responseData.statusCode == 413) {
+      throw Exception(kUploadTooLargeMessage);
+    }
 
     var responseBody = json.decode(responseData.body);
     if (responseBody['status'] == 'ok') {
@@ -4777,9 +4937,11 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
         setState(() => _removeImageRowAt(row));
       }
       Fluttertoast.showToast(
-        // No filename: the picker renames files to image_picker_<uuid>.jpg,
-        // which means nothing to the user and wrapped the toast over 4 lines.
-        msg: 'Failed to upload image. Please try again.',
+        // Still no filename - the picker renames photos to
+        // image_picker_<uuid>.jpg, which means nothing to the user - but the
+        // REASON now survives. An oversize file says so instead of inviting a
+        // pointless retry of a clip that will never fit.
+        msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
         timeInSecForIosWeb: 2,
@@ -7100,7 +7262,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                             });
                           }
                           Fluttertoast.showToast(
-                            msg: 'Failed to upload image. Please try again.',
+                            msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage),
                             toastLength: Toast.LENGTH_LONG,
                             gravity: ToastGravity.BOTTOM,
                             timeInSecForIosWeb: 2,

@@ -490,8 +490,8 @@
 				CURRENT_PROJECT_VERSION = 1.0.1;
 				DEVELOPMENT_TEAM = 9Q5QFGU9XG;
 				ENABLE_BITCODE = NO;
-				FLUTTER_BUILD_NAME = 1.0.434;
-				FLUTTER_BUILD_NUMBER = 16;
+				FLUTTER_BUILD_NAME = 1.0.435;
+				FLUTTER_BUILD_NUMBER = 17;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Cloud Rental Manager";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
@@ -681,8 +681,8 @@
 				CURRENT_PROJECT_VERSION = 1.0.1;
 				DEVELOPMENT_TEAM = 9Q5QFGU9XG;
 				ENABLE_BITCODE = NO;
-				FLUTTER_BUILD_NAME = 1.0.434;
-				FLUTTER_BUILD_NUMBER = 16;
+				FLUTTER_BUILD_NAME = 1.0.435;
+				FLUTTER_BUILD_NUMBER = 17;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Cloud Rental Manager";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
@@ -716,8 +716,8 @@
 				CURRENT_PROJECT_VERSION = 1.0.1;
 				DEVELOPMENT_TEAM = 9Q5QFGU9XG;
 				ENABLE_BITCODE = NO;
-				FLUTTER_BUILD_NAME = 1.0.434;
-				FLUTTER_BUILD_NUMBER = 16;
+				FLUTTER_BUILD_NAME = 1.0.435;
+				FLUTTER_BUILD_NUMBER = 17;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Cloud Rental Manager";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";

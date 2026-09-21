@@ -13,8 +13,7 @@ import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
 import 'package:zxcvbn/zxcvbn.dart';
 
-String image_url =
-    "https://staging.cloudrentalmanager.com/api/images/get-file/";
+String image_url = "https://staging.cloudrentalmanager.com/api/images/get-file/";
 //String image_url = "http://192.168.1.37:4000/api/images/get-file/";
 //String image_url = "https://saas.cloudrentalmanager.com/api/images/get-file/";
 
@@ -1238,10 +1237,18 @@ String? ValidateExpirationDate(String expirationDate) {
   return null; // Indicate the expiration date is valid
 }
 
+/// Still thumbnail for a remote video attachment.
+///
+/// Every caller wraps this in a fixed-size box and stacks its own
+/// play_circle_fill icon over it, handling the tap itself - so this widget's
+/// only job is to fill that box with the video's first frame.
 class VideoItem extends StatefulWidget {
-  String url;
+  final String url;
+
+  /// Not supplied by any caller; kept so existing call sites keep compiling.
   final void Function()? onTap;
-  VideoItem({super.key, required this.url, this.onTap});
+
+  const VideoItem({super.key, required this.url, this.onTap});
 
   @override
   State<VideoItem> createState() => _VideoItemState();
@@ -1249,35 +1256,79 @@ class VideoItem extends StatefulWidget {
 
 class _VideoItemState extends State<VideoItem> {
   VideoPlayerController? _controller;
+  bool _failed = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network("${widget.url}")
-      ..initialize().then((_) {
-        setState(() {}); //when your thumbnail will show.
-      });
+    _load();
   }
 
-  // @override
-  // void dispose() {
-  //   super.dispose();
-  //   _controller!.dispose();
-  // }
+  Future<void> _load() async {
+    // networkUrl, not the deprecated network(String).
+    final VideoPlayerController controller =
+        VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    _controller = controller;
+    try {
+      await controller.initialize();
+      if (!mounted) return;
+      setState(() {});
+    } catch (e) {
+      // initialize() used to throw straight out of initState with nothing
+      // catching it, which left the tile on a spinner that never stopped.
+      if (!mounted) return;
+      setState(() => _failed = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    // dispose() was commented out, so every thumbnail leaked its controller
+    // for as long as the screen was open.
+    _controller?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Container(
-          child: _controller!.value!.isInitialized
-              ? Container(
-                  width: 100.0,
-                  height: 56.0,
-                  child: VideoPlayer(_controller!),
-                )
-              : CircularProgressIndicator(),
+    if (_failed) {
+      return Container(
+        color: const Color(0xFFF2F4F7),
+        alignment: Alignment.center,
+        child: Icon(Icons.videocam_off_outlined,
+            color: Colors.grey.shade500, size: 28),
+      );
+    }
+
+    final VideoPlayerController? controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return Container(
+        color: const Color(0xFFF2F4F7),
+        alignment: Alignment.center,
+        child: const SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
+      );
+    }
+
+    final double w = controller.value.size.width;
+    final double h = controller.value.size.height;
+    if (w <= 0 || h <= 0) {
+      return VideoPlayer(controller);
+    }
+
+    // Was a Scaffold wrapping a fixed 100x56 box, which painted a white page
+    // behind every tile and showed the frame at the wrong size in a 150x150
+    // slot. Cover the caller's box instead, like the photo tiles beside it.
+    return FittedBox(
+      fit: BoxFit.cover,
+      clipBehavior: Clip.hardEdge,
+      child: SizedBox(
+        width: w,
+        height: h,
+        child: VideoPlayer(controller),
       ),
     );
   }
@@ -1389,6 +1440,99 @@ String workOrderFetchErrorMessage(String responseBody) {
     return kWorkOrderNotFoundMessage;
   }
   return kGenericErrorMessage;
+}
+
+/// Client-side attachment ceiling, in MB. Mirrors web exactly
+/// (Client/src/views/source/AddWorkorder.jsx:1038, `const maxSizeMB = 250`),
+/// so an obviously oversized clip is refused before spending minutes
+/// uploading it.
+const int kMaxAttachmentUploadMb = 250;
+
+/// Shown when a file is refused UP FRONT for exceeding
+/// [kMaxAttachmentUploadMb]. Mirrors web's pre-check wording, which names the
+/// limit (AddWorkorder.jsx:1044: "The following file(s) exceed the 250MB size
+/// limit: ...").
+String uploadTooLargeUpFrontMessage(String fileName) =>
+    'The following file(s) exceed the ${kMaxAttachmentUploadMb}MB size limit: '
+    '$fileName';
+
+/// Shown when the server rejects an upload IN FLIGHT with a 413.
+///
+/// Mirrors web, which words this case separately from the pre-check and
+/// deliberately quotes no figure - `Failed to upload "<name>". The file is
+/// too large.` (Client/src/views/source/AddCharge.jsx:502) - because "try
+/// again" is useless advice for a file that will never fit.
+const String kUploadTooLargeMessage = 'That file is too large to upload.';
+
+/// Shown when an attachment upload fails for any other reason.
+///
+/// Says "file", not "image": this field now takes photos, video and documents.
+const String kUploadFailedMessage =
+    'Failed to upload that file. Please try again.';
+
+/// What kind of thing an attachment is, decided from its file name.
+///
+/// Mirrors `getFileKind()` in the web client (Client/src/utils/fileAccept.js).
+/// Web stores NOTHING about an attachment's kind - `workOrder_images` is one
+/// flat list of file names for images, video and documents alike - and derives
+/// the kind at render time from the extension. Doing the same here means no
+/// parallel "is a document" array to keep in step, and it works equally on a
+/// locally picked file path and on a storage key loaded back from the server.
+enum AttachmentKind { image, video, document }
+
+const Set<String> _kVideoExtensions = {'.mp4', '.mov', '.webm', '.m4v'};
+const Set<String> _kDocumentExtensions = {
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.zip', '.xml',
+};
+
+/// Classifies [nameOrPath] - a file name, a local path, or a stored key such as
+/// `crm-uploads/1789046810037-0-invoice.pdf`. Anything unrecognised is treated
+/// as an image, matching web, where `getFileKind()` returns "unknown" and the
+/// call sites fall through to their image branch.
+AttachmentKind attachmentKindOf(String? nameOrPath) {
+  final String name = (nameOrPath ?? '').toLowerCase();
+  // Strip any query string or fragment first: a presigned URL carries one, and
+  // web's regexes allow for exactly this with their `(\?|#|$)` tail.
+  final int cut = name.indexOf(RegExp(r'[?#]'));
+  final String clean = cut == -1 ? name : name.substring(0, cut);
+  for (final String ext in _kVideoExtensions) {
+    if (clean.endsWith(ext)) return AttachmentKind.video;
+  }
+  for (final String ext in _kDocumentExtensions) {
+    if (clean.endsWith(ext)) return AttachmentKind.document;
+  }
+  return AttachmentKind.image;
+}
+
+/// True when [nameOrPath] is a video. Replaces the hand-rolled
+/// `url.toLowerCase().endsWith(".mp4")` checks, which missed `.mov` - the
+/// format every iPhone records by default - so an iPhone clip was rendered
+/// through an image widget and showed as a broken tile.
+bool isAttachmentVideo(String? nameOrPath) =>
+    attachmentKindOf(nameOrPath) == AttachmentKind.video;
+
+/// The uppercase extension shown on a document tile, e.g. `PDF`. Empty when the
+/// name carries no extension.
+String attachmentExtensionLabel(String? nameOrPath) {
+  final String name = (nameOrPath ?? '');
+  final int cut = name.indexOf(RegExp(r'[?#]'));
+  final String clean = cut == -1 ? name : name.substring(0, cut);
+  final int dot = clean.lastIndexOf('.');
+  if (dot == -1 || dot == clean.length - 1) return '';
+  return clean.substring(dot + 1).toUpperCase();
+}
+
+/// The file name to show under a document tile, with the server's upload prefix
+/// removed. Uploads are stored as `<folder>/<epoch>-<index>-<original name>`,
+/// so the raw key reads as noise; web strips the same prefix in
+/// `getOriginalFileName()`.
+String attachmentDisplayName(String? nameOrPath) {
+  String name = (nameOrPath ?? '');
+  final int cut = name.indexOf(RegExp(r'[?#]'));
+  if (cut != -1) name = name.substring(0, cut);
+  name = name.split('/').last;
+  final RegExpMatch? m = RegExp(r'^\d{10,}-\d+-(.+)$').firstMatch(name);
+  return m != null ? m.group(1)! : name;
 }
 
 /// Shapes the body of `PUT /api/work-order/work-order/{id}` the way the server

@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:three_zero_two_property/widgets/file_viewer.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
@@ -1004,7 +1006,9 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
   String? _uploadedFileName;
   List<String> _uploadedFileNames = [];
   Future<String?> uploadImage(File imageFile) async {
-    final String uploadUrl = '${image_upload_url}/api/images/upload';
+    // Scoped work-order endpoint: the plain /api/images/upload rejects video
+    // (allowVideo: false). See the note in Add_workorder.dart.
+    final String uploadUrl = '${image_upload_url}/api/images/upload-workorder';
 
     var request = http.MultipartRequest(
         'POST',
@@ -1027,6 +1031,12 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
 
     var response = await apiSend(request);
     var responseData = await http.Response.fromStream(response);
+
+    // 413 = the file exceeded the endpoint's limit; checked before decoding
+    // because an oversize rejection often has a non-JSON body.
+    if (responseData.statusCode == 413) {
+      throw Exception(kUploadTooLargeMessage);
+    }
 
     var responseBody = json.decode(responseData.body);
     if (responseBody['status'] == 'ok') {
@@ -1068,10 +1078,13 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                 const SizedBox(height: 24),
 
                 // Options Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                // Wrap, not Row: three tiles overflow a narrow phone and Wrap
+                // drops to a second line instead of throwing an overflow.
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 16,
+                  runSpacing: 16,
                   children: [
-                    // Gallery Option
                     _buildSourceOption(
                       icon: Icons.photo_library,
                       label: 'Gallery',
@@ -1080,16 +1093,20 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                         _pickImageFromSource(ImageSource.gallery);
                       },
                     ),
-
-                    const SizedBox(width: 20),
-
-                    // Camera Option
                     _buildSourceOption(
                       icon: Icons.camera_alt,
                       label: 'Camera',
                       onTap: () {
                         Navigator.of(context).pop();
                         _openCameraInterface();
+                      },
+                    ),
+                    _buildSourceOption(
+                      icon: Icons.insert_drive_file,
+                      label: 'Document',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _pickDocument();
                       },
                     ),
                   ],
@@ -1172,6 +1189,49 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
     }
   }
 
+  /// Document extensions the work-order endpoint accepts. Photos and video come
+  /// through the photo picker instead, so only documents are listed here.
+  /// Mirrors the document half of web's ATTACHMENT_ACCEPT.
+  static const List<String> _documentExtensions = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv',
+  ];
+
+  /// Pick a document. Separate from the photo picker because on iOS a file
+  /// browser cannot show the camera roll - photos and files are kept apart -
+  /// so each source needs the native UI that matches it.
+  Future<void> _pickDocument() async {
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _documentExtensions,
+    );
+    final String? pickedPath = result?.files.single.path;
+    if (pickedPath == null) return;
+    final File file = File(pickedPath);
+    // Refuse an obviously oversized file before spending minutes uploading
+    // it, the way web does (AddWorkorder.jsx:1038-1050). The in-flight 413
+    // check in uploadImage() is still the backstop, because the enforced
+    // ceiling is currently lower than this one.
+    if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+      Fluttertoast.showToast(
+        // Pre-check wording names the limit, as web's does
+        // (AddWorkorder.jsx:1044); the in-flight 413 message deliberately
+        // does not, matching web there too.
+        msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(pickedPath)),
+        toastLength: Toast.LENGTH_LONG,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+    // This screen's contract differs from Add's: _uploadedFileNames is a
+    // non-nullable List<String> and _uploadImage() appends the server name
+    // itself, so no placeholder is added here.
+    setState(() {
+      _images.add(file);
+    });
+    _uploadImage(file);
+  }
+
   // Open unified camera interface for both photos and videos
   Future<void> _openCameraInterface() async {
     try {
@@ -1247,7 +1307,7 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
     try {
       String? fileName = await uploadImage(imageFile);
       if (fileName == null) {
-        Fluttertoast.showToast(msg: 'Failed to upload image');
+        Fluttertoast.showToast(msg: kUploadFailedMessage);
         return;
       }
       setState(() {
@@ -1256,9 +1316,11 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
         _imageUrls.add(fileName);
       });
     } catch (e) {
-      // Surface the failure — this used to fail silently, leaving the upload
-      // box unchanged with no indication anything went wrong.
-      Fluttertoast.showToast(msg: 'Failed to upload image');
+      // Surface the failure AND its reason - this used to fail silently, then
+      // failed with a generic line that invited a pointless retry of a file
+      // that was simply too large.
+      Fluttertoast.showToast(
+          msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage));
       logError('Image upload failed: $e');
     }
   }
@@ -1282,7 +1344,9 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
     // already accepts both (`.mp4` || `.mov`). Checking only .mp4 here meant a
     // camera-recorded video was treated as a photo and failed to render.
     final lower = url.toLowerCase();
-    return lower.endsWith(".mp4") || lower.endsWith(".mov");
+    // Widened from .mp4/.mov to the server's full VIDEO_EXTENSIONS set via the
+    // shared classifier, so .webm and .m4v are recognised too.
+    return isAttachmentVideo(lower);
   }
 
   void _showVideoDialog(String videoFile) {
@@ -1498,7 +1562,7 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                         } catch (e) {
                           logError('Image upload failed: $e');
                           if (!mounted) return;
-                          Fluttertoast.showToast(msg: 'Failed to upload image');
+                          Fluttertoast.showToast(msg: kUploadFailedMessage);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -1532,6 +1596,18 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
 
     if (image != null) {
       final File file = File(image.path);
+      // Same size guard as the document picker: a video is far more likely to
+      // be oversized than a document, so checking only there missed the common
+      // case - a large clip uploaded for minutes before failing.
+      if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+        Fluttertoast.showToast(
+          msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(image.path)),
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        return;
+      }
       // Lowercased first: the iPhone camera names videos .MOV (uppercase), which
       // failed this check and made a picked video vanish from the preview list.
       bool isVideo = image.path.toLowerCase().endsWith('.mp4') ||
@@ -1732,7 +1808,7 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Upload your Photo here',
+                                      'Upload Photos, Videos, or Documents',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 16,
@@ -1742,13 +1818,14 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                                     ),
                                     const SizedBox(height: 4),
                                     const Text(
-                                      'Maximum File Size is 20MB',
+                                      'Maximum 10 files, 250MB each',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                           fontSize: 12, color: Colors.grey),
                                     ),
                                     const Text(
-                                      'Supported File Types are .png, .jpeg, .pdf, .csv',
+                                      'Supported: .png, .jpg, .jpeg, .gif, .webp, .pdf, .doc, '
+                                      '.docx, .xls, .xlsx, .csv, .mp4, .mov, .webm, .m4v',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                           fontSize: 12, color: Colors.grey),
@@ -1819,6 +1896,18 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                                                   (index) {
                                                     bool isMp4 = isVideo(
                                                         _imageUrls[index]);
+                                                    // Documents have no
+                                                    // thumbnail; web shows a
+                                                    // DocumentTile for these
+                                                    // and mobile rendered them
+                                                    // through Image.network,
+                                                    // i.e. a broken tile.
+                                                    final bool isDoc =
+                                                        attachmentKindOf(
+                                                                _imageUrls[
+                                                                    index]) ==
+                                                            AttachmentKind
+                                                                .document;
                                                     return Container(
                                                       // color: Colors.green,
                                                       width: 85,
@@ -1859,7 +1948,66 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                                                                 CrossAxisAlignment
                                                                     .start,
                                                             children: [
-                                                              isMp4
+                                                              isDoc
+                                                                  ? GestureDetector(
+                                                                      onTap: () {
+                                                                        FileViewer.showReceiptDialog(
+                                                                          context,
+                                                                          attachmentDisplayName(
+                                                                              _imageUrls[index]),
+                                                                          fileUrl:
+                                                                              '$image_url${_imageUrls[index]}',
+                                                                        );
+                                                                      },
+                                                                      child: Container(
+                                                                        height: 80,
+                                                                        width: 80,
+                                                                        decoration: BoxDecoration(
+                                                                          color: const Color(0xFFF2F4F7),
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(6),
+                                                                          border: Border.all(
+                                                                              color: Colors.grey.shade300),
+                                                                        ),
+                                                                        child: Column(
+                                                                          mainAxisAlignment:
+                                                                              MainAxisAlignment.center,
+                                                                          children: [
+                                                                            Icon(Icons.insert_drive_file,
+                                                                                color: blueColor,
+                                                                                size: 28),
+                                                                            const SizedBox(height: 2),
+                                                                            Text(
+                                                                              attachmentExtensionLabel(
+                                                                                  _imageUrls[index]),
+                                                                              style: TextStyle(
+                                                                                  fontSize: 10,
+                                                                                  fontWeight:
+                                                                                      FontWeight.bold,
+                                                                                  color: blueColor),
+                                                                            ),
+                                                                            Padding(
+                                                                              padding: const EdgeInsets
+                                                                                  .symmetric(
+                                                                                  horizontal: 4),
+                                                                              child: Text(
+                                                                                attachmentDisplayName(
+                                                                                    _imageUrls[index]),
+                                                                                maxLines: 1,
+                                                                                overflow:
+                                                                                    TextOverflow.ellipsis,
+                                                                                textAlign:
+                                                                                    TextAlign.center,
+                                                                                style: const TextStyle(
+                                                                                    fontSize: 8,
+                                                                                    color: Colors.grey),
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    )
+                                                                  : isMp4
                                                                   ? Container(
                                                                       height:
                                                                           80,
@@ -3744,7 +3892,14 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
           categoryId: categoryId,
           workPerformed: perform.text.trim(),
           status: _selectedStatus,
-          rentalAddress: properties[_selectedPropertyId],
+          // Fall back to the address loaded with the work order. `properties`
+          // is the dropdown's option map, and it is empty whenever that list
+          // failed to load - a stalled request is enough. Reading the address
+          // straight out of it then sent null, quietly blanking the address on
+          // a work order whose property had not changed. The ID below was
+          // always safe: it reads _selectedPropertyId, which is never cleared.
+          rentalAddress:
+              properties[_selectedPropertyId] ?? _selectedProperty,
           rentalUnit: units[_selectedUnitId],
           tenant: finalTenantId,
           rentalid: rentalId,
@@ -4638,7 +4793,9 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
   String? _uploadedFileName;
   List<String> _uploadedFileNames = [];
   Future<String?> uploadImage(File imageFile) async {
-    final String uploadUrl = '${image_upload_url}/api/images/upload';
+    // Scoped work-order endpoint: the plain /api/images/upload rejects video
+    // (allowVideo: false). See the note in Add_workorder.dart.
+    final String uploadUrl = '${image_upload_url}/api/images/upload-workorder';
 
     var request = http.MultipartRequest(
         'POST',
@@ -4661,6 +4818,12 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
 
     var response = await apiSend(request);
     var responseData = await http.Response.fromStream(response);
+
+    // 413 = the file exceeded the endpoint's limit; checked before decoding
+    // because an oversize rejection often has a non-JSON body.
+    if (responseData.statusCode == 413) {
+      throw Exception(kUploadTooLargeMessage);
+    }
 
     var responseBody = json.decode(responseData.body);
     if (responseBody['status'] == 'ok') {
@@ -4882,7 +5045,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
     try {
       String? fileName = await uploadImage(imageFile);
       if (fileName == null) {
-        Fluttertoast.showToast(msg: 'Failed to upload image');
+        Fluttertoast.showToast(msg: kUploadFailedMessage);
         return;
       }
       setState(() {
@@ -4891,9 +5054,11 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
         _imageUrls.add(fileName);
       });
     } catch (e) {
-      // Surface the failure — this used to fail silently, leaving the upload
-      // box unchanged with no indication anything went wrong.
-      Fluttertoast.showToast(msg: 'Failed to upload image');
+      // Surface the failure AND its reason - this used to fail silently, then
+      // failed with a generic line that invited a pointless retry of a file
+      // that was simply too large.
+      Fluttertoast.showToast(
+          msg: friendlyErrorMessage(e, fallbackMessage: kUploadFailedMessage));
       logError('Image upload failed: $e');
     }
   }
@@ -5096,7 +5261,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                         } catch (e) {
                           logError('Image upload failed: $e');
                           if (!mounted) return;
-                          Fluttertoast.showToast(msg: 'Failed to upload image');
+                          Fluttertoast.showToast(msg: kUploadFailedMessage);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -5321,7 +5486,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                             ),
                                             const SizedBox(height: 8),
                                             Text(
-                                              'Upload your Photo here',
+                                              'Upload Photos, Videos, or Documents',
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                 fontSize: 16,
@@ -5331,14 +5496,15 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                             ),
                                             const SizedBox(height: 4),
                                             const Text(
-                                              'Maximum File Size is 20MB',
+                                              'Maximum 10 files, 250MB each',
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey),
                                             ),
                                             const Text(
-                                              'Supported File Types are .png, .jpeg, .pdf, .csv',
+                                              'Supported: .png, .jpg, .jpeg, .gif, .webp, .pdf, .doc, '
+                                      '.docx, .xls, .xlsx, .csv, .mp4, .mov, .webm, .m4v',
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                   fontSize: 12,
@@ -5412,7 +5578,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                             ),
                                             const SizedBox(height: 8),
                                             Text(
-                                              'Upload your Photo here',
+                                              'Upload Photos, Videos, or Documents',
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                 fontSize: 16,
@@ -5422,14 +5588,15 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                             ),
                                             const SizedBox(height: 4),
                                             const Text(
-                                              'Maximum File Size is 20MB',
+                                              'Maximum 10 files, 250MB each',
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey),
                                             ),
                                             const Text(
-                                              'Supported File Types are .png, .jpeg, .pdf, .csv',
+                                              'Supported: .png, .jpg, .jpeg, .gif, .webp, .pdf, .doc, '
+                                      '.docx, .xls, .xlsx, .csv, .mp4, .mov, .webm, .m4v',
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                   fontSize: 12,
