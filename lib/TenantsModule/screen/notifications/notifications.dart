@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
@@ -208,12 +209,32 @@ class _notificationsState extends State<notifications>
 
       if (jsonData["statusCode"] == 200 || jsonData["statusCode"] == 201) {
 
+        // The server answers 200 with data:null when no notification matches
+        // (findOneAndUpdate returns null), so reading a field off this threw -
+        // and the catch below swallowed it, leaving the tap doing nothing.
         final responseData = jsonData['data'];
+        if (responseData is! Map) {
+          Fluttertoast.showToast(
+              msg: 'Could not open that notification',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
+          return;
+        }
 
         // Check if it's a work order or payment
         if (responseData['is_workorder'] == true) {
-          String workOrderId =
-          responseData['notification_type']['workorder_id'];
+          final String? workOrderId = responseData['notification_type']?['workorder_id']?.toString();
+          if (workOrderId == null || workOrderId.isEmpty) {
+            Fluttertoast.showToast(
+              msg: 'That work order is no longer available',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
+            return;
+          }
           // Awaited so the caller can refresh the list once the user pops back.
           await Navigator.push(
               context,
@@ -226,8 +247,19 @@ class _notificationsState extends State<notifications>
           // Web parity (Notificationmodal.js): for a tenant a lease
           // notification opens the property detail for that lease; only
           // everything else falls through to the Financial screen.
-          final String leaseId =
-              '${responseData['notification_type']['lease_id']}';
+          // Interpolated, so a missing id became the literal string "null" and
+          // navigated to a lease that cannot load, rather than throwing.
+          final String? leaseId =
+              responseData['notification_type']?['lease_id']?.toString();
+          if (leaseId == null || leaseId.isEmpty) {
+            Fluttertoast.showToast(
+              msg: 'That lease is no longer available',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
+            return;
+          }
           // Awaited so the caller can refresh the list once the user pops back.
           await Navigator.push(
             context,
@@ -236,7 +268,7 @@ class _notificationsState extends State<notifications>
             ),
           );
         } else {
-          // String rentalId = responseData['rental_id'];
+          // final String rentalId = responseData['rental_id'];
           // Awaited so the caller can refresh the list once the user pops back.
           await Navigator.push(
             context,
@@ -246,8 +278,22 @@ class _notificationsState extends State<notifications>
           );
         }
       } else {
+        Fluttertoast.showToast(
+              msg: 'Could not open that notification. Please try again.',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
       }
     } catch (e) {
+      // Was log-only: any failure here was indistinguishable from a
+      // dead tile, so the user just tapped again.
+      Fluttertoast.showToast(
+              msg: 'Could not open that notification. Please try again.',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
       logError("Error: $e");
     }
   }

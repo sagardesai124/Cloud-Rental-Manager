@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <!-- Sky background -->
+  <rect width="400" height="300" fill="#EEF2F7"/>
+
+  <!-- Sun -->
+  <circle cx="340" cy="55" r="28" fill="#F5C842" opacity="0.9"/>
+  <line x1="340" y1="15" x2="340" y2="5" stroke="#F5C842" stroke-width="3" stroke-linecap="round"/>
+  <line x1="340" y1="95" x2="340" y2="105" stroke="#F5C842" stroke-width="3" stroke-linecap="round"/>
+  <line x1="300" y1="55" x2="290" y2="55" stroke="#F5C842" stroke-width="3" stroke-linecap="round"/>
+  <line x1="380" y1="55" x2="390" y2="55" stroke="#F5C842" stroke-width="3" stroke-linecap="round"/>
+  <line x1="312" y1="27" x2="305" y2="20" stroke="#F5C842" stroke-width="3" stroke-linecap="round"/>
+  <line x1="368" y1="83" x2="375" y2="90" stroke="#F5C842" stroke-width="3" stroke-linecap="round"/>
+  <line x1="368" y1="27" x2="375" y2="20" stroke="#F5C842" stroke-width="3" stroke-linecap="round"/>
+  <line x1="312" y1="83" x2="305" y2="90" stroke="#F5C842" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Clouds -->
+  <ellipse cx="80" cy="60" rx="35" ry="18" fill="white" opacity="0.85"/>
+  <ellipse cx="110" cy="52" rx="28" ry="16" fill="white" opacity="0.85"/>
+  <ellipse cx="55" cy="65" rx="22" ry="13" fill="white" opacity="0.85"/>
+
+  <ellipse cx="210" cy="45" rx="28" ry="14" fill="white" opacity="0.7"/>
+  <ellipse cx="235" cy="38" rx="22" ry="13" fill="white" opacity="0.7"/>
+  <ellipse cx="188" cy="48" rx="18" ry="11" fill="white" opacity="0.7"/>
+
+  <!-- Ground -->
+  <rect x="0" y="240" width="400" height="60" fill="#C8D8A8"/>
+  <rect x="0" y="252" width="400" height="48" fill="#B8CC94"/>
+
+  <!-- Path / walkway -->
+  <polygon points="185,300 215,300 205,242 195,242" fill="#D4C5A0"/>
+
+  <!-- House body -->
+  <rect x="100" y="155" width="200" height="95" fill="#F8F4EE"/>
+  <rect x="100" y="155" width="200" height="95" stroke="#152B51" stroke-width="2"/>
+
+  <!-- Roof -->
+  <polygon points="85,158 200,75 315,158" fill="#152B51"/>
+  <polygon points="85,158 200,75 315,158" fill="none" stroke="#0F1E38" stroke-width="2"/>
+
+  <!-- Roof ridge detail -->
+  <line x1="200" y1="75" x2="200" y2="88" stroke="#F8F4EE" stroke-width="2" opacity="0.4"/>
+
+  <!-- Chimney -->
+  <rect x="245" y="88" width="22" height="45" fill="#C0392B"/>
+  <rect x="243" y="86" width="26" height="7" fill="#A93226"/>
+
+  <!-- Chimney smoke -->
+  <path d="M252 82 Q248 72 254 62 Q260 52 256 42" stroke="#ccc" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M261 80 Q257 68 263 57 Q269 46 265 36" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4"/>
+
+  <!-- Front door -->
+  <rect x="176" y="195" width="48" height="55" rx="3" fill="#152B51"/>
+  <rect x="179" y="198" width="42" height="49" rx="2" fill="#1a3560"/>
+  <!-- Door panels -->
+  <rect x="182" y="201" width="17" height="20" rx="1" fill="#152B51" opacity="0.6"/>
+  <rect x="201" y="201" width="17" height="20" rx="1" fill="#152B51" opacity="0.6"/>
+  <rect x="182" y="225" width="17" height="18" rx="1" fill="#152B51" opacity="0.6"/>
+  <rect x="201" y="225" width="17" height="18" rx="1" fill="#152B51" opacity="0.6"/>
+  <!-- Door knob -->
+  <circle cx="218" cy="222" r="3" fill="#F5C842"/>
+
+  <!-- Left window -->
+  <rect x="118" y="172" width="52" height="45" rx="3" fill="#AED6F1"/>
+  <rect x="118" y="172" width="52" height="45" rx="3" stroke="#152B51" stroke-width="2"/>
+  <line x1="144" y1="172" x2="144" y2="217" stroke="#152B51" stroke-width="1.5"/>
+  <line x1="118" y1="194" x2="170" y2="194" stroke="#152B51" stroke-width="1.5"/>
+  <!-- Window sill -->
+  <rect x="115" y="215" width="58" height="5" rx="1" fill="#D4C5A0"/>
+  <!-- Window reflection -->
+  <polygon points="122,175 135,175 122,188" fill="white" opacity="0.3"/>
+
+  <!-- Right window -->
+  <rect x="230" y="172" width="52" height="45" rx="3" fill="#AED6F1"/>
+  <rect x="230" y="172" width="52" height="45" rx="3" stroke="#152B51" stroke-width="2"/>
+  <line x1="256" y1="172" x2="256" y2="217" stroke="#152B51" stroke-width="1.5"/>
+  <line x1="230" y1="194" x2="282" y2="194" stroke="#152B51" stroke-width="1.5"/>
+  <!-- Window sill -->
+  <rect x="227" y="215" width="58" height="5" rx="1" fill="#D4C5A0"/>
+  <!-- Window reflection -->
+  <polygon points="234,175 247,175 234,188" fill="white" opacity="0.3"/>
+
+  <!-- Garage (left side) -->
+  <rect x="100" y="200" width="0" height="0"/>
+
+  <!-- Shrubs left -->
+  <ellipse cx="115" cy="248" rx="18" ry="12" fill="#5D8A3C"/>
+  <ellipse cx="130" cy="244" rx="14" ry="10" fill="#4A7030"/>
+  <ellipse cx="100" cy="250" rx="13" ry="9" fill="#6A9E46"/>
+
+  <!-- Shrubs right -->
+  <ellipse cx="285" cy="248" rx="18" ry="12" fill="#5D8A3C"/>
+  <ellipse cx="270" cy="244" rx="14" ry="10" fill="#4A7030"/>
+  <ellipse cx="300" cy="250" rx="13" ry="9" fill="#6A9E46"/>
+
+  <!-- Tree left -->
+  <rect x="48" y="195" width="8" height="55" fill="#8B6914"/>
+  <ellipse cx="52" cy="180" rx="28" ry="32" fill="#4A7030"/>
+  <ellipse cx="40" cy="190" rx="18" ry="22" fill="#5D8A3C"/>
+  <ellipse cx="65" cy="188" rx="16" ry="20" fill="#5D8A3C"/>
+
+  <!-- Tree right -->
+  <rect x="345" y="200" width="8" height="50" fill="#8B6914"/>
+  <ellipse cx="349" cy="184" rx="26" ry="30" fill="#4A7030"/>
+  <ellipse cx="338" cy="194" rx="16" ry="20" fill="#5D8A3C"/>
+  <ellipse cx="362" cy="192" rx="15" ry="18" fill="#5D8A3C"/>
+
+  <!-- Mailbox -->
+  <rect x="360" y="228" width="14" height="9" rx="2" fill="#152B51"/>
+  <rect x="359" y="232" width="3" height="18" fill="#7F8C8D"/>
+  <rect x="358" y="249" width="5" height="3" fill="#7F8C8D"/>
+
+  <!-- Ground flowers -->
+  <circle cx="165" cy="252" r="4" fill="#E74C3C"/>
+  <circle cx="175" cy="250" r="3" fill="#F39C12"/>
+  <circle cx="225" cy="251" r="4" fill="#E74C3C"/>
+  <circle cx="235" cy="253" r="3" fill="#9B59B6"/>
+</svg>

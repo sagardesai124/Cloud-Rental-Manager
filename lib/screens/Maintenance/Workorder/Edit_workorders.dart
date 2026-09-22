@@ -1067,23 +1067,46 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Title
-                Text(
-                  'Select Media From',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                // Header: the title leads and a close control trails it, so the
+                // sheet can be dismissed without reaching for the barrier.
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Select Media From',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF2F4F7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close,
+                              size: 20, color: Colors.black54),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
-                // Options Row
-                // Wrap, not Row: three tiles overflow a narrow phone and Wrap
-                // drops to a second line instead of throwing an overflow.
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 16,
-                  runSpacing: 16,
+                // One row, always. The tiles were a fixed 100px each, which
+                // overflowed a narrow phone - hence the Wrap that dropped the
+                // third option onto its own line. _buildSourceOption now returns
+                // an Expanded tile, so the three share the width instead.
+                Row(
                   children: [
                     _buildSourceOption(
                       icon: Icons.photo_library,
@@ -1112,7 +1135,29 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: Colors.grey[300]!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1127,11 +1172,17 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 100,
-        height: 100,
+    // Expanded, not a fixed 100x100: three fixed tiles overflowed a
+    // narrow phone, which is why the dialog used to Wrap. Sharing the
+    // row's width keeps all three visible at any size, and the padding
+    // replaces the spacing the Wrap provided.
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 104,
         decoration: BoxDecoration(
           color: Colors.grey[50],
           borderRadius: BorderRadius.circular(16),
@@ -1149,8 +1200,8 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: blueColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -1158,20 +1209,32 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
               child: Icon(
                 icon,
                 color: blueColor,
-                size: 28,
+                size: 24,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
+            // Scale down rather than clip. Each tile gets roughly a third of the
+            // dialog's inner width - about 52px on a 320pt phone - and 'Document'
+            // does not fit that at 13px. Ellipsis alone rendered it as 'Docum...',
+            // so FittedBox shrinks the word to fit and leaves it readable, while
+            // wider screens still show it at full size.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
               ),
             ),
           ],
         ),
+      ),
+      ),
       ),
     );
   }
@@ -1182,10 +1245,49 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
     final XFile? image = await _picker.pickMedia();
 
     if (image != null) {
-      setState(() {
-        _images.add(File(image.path));
-      });
-      _uploadImage(File(image.path));
+      final File file = File(image.path);
+      // Same size guard as _updateImageAtIndex and the document picker: a video
+      // is far more likely to be oversized than a document, so checking only
+      // there missed the common case - a large clip uploaded for minutes before
+      // failing.
+      if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+        Fluttertoast.showToast(
+          msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(image.path)),
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        return;
+      }
+      // Lowercased first: the iPhone camera names videos .MOV (uppercase), which
+      // failed this check and made a picked video vanish from the preview list.
+      final bool isVideo = image.path.toLowerCase().endsWith('.mp4') ||
+          image.path.toLowerCase().endsWith('.mov');
+      if (isVideo) {
+        // The preview list renders through Image.file, so a raw video put
+        // straight into _images showed as a broken tile. The thumbnail is what
+        // the list can display; the original file is still what gets uploaded.
+        // Same split _updateImageAtIndex already uses on this screen.
+        final String? thumbnailPath = await _generateVideoThumbnail(image.path);
+        if (thumbnailPath == null) {
+          Fluttertoast.showToast(
+            msg: 'Could not read that video. Please try again.',
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+          );
+          return;
+        }
+        setState(() {
+          _images.add(File(thumbnailPath));
+        });
+      } else {
+        setState(() {
+          _images.add(file);
+        });
+      }
+      _uploadImage(file);
     }
   }
 
@@ -1259,9 +1361,24 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
               _uploadImage(imageFile);
             },
             onVideoCaptured: (File videoFile) async {
-              // Handle captured video
+              // A recorded video went straight into _images, which renders
+              // through Image.file - so a clip recorded here showed as a broken
+              // tile. Preview the thumbnail, upload the original, matching
+              // _updateImageAtIndex and the Staff copy of this screen.
+              final String? thumbnailPath =
+                  await _generateVideoThumbnail(videoFile.path);
+              if (thumbnailPath == null) {
+                Fluttertoast.showToast(
+                  msg: 'Could not read that video. Please try again.',
+                  toastLength: Toast.LENGTH_LONG,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                );
+                return;
+              }
               setState(() {
-                _images.add(videoFile);
+                _images.add(File(thumbnailPath));
               });
               _uploadImage(videoFile);
             },
@@ -4854,19 +4971,44 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Title
-                Text(
-                  'Select Media From',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                // Header: the title leads and a close control trails it, matching the
+                // phone layout. The title also said "Select Image From" here, which
+                // predates video and document support.
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Select Media From',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF2F4F7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close,
+                              size: 20, color: Colors.black54),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
                 // Options Row
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     // Gallery Option
                     _buildSourceOption(
@@ -4878,8 +5020,6 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                       },
                     ),
 
-                    const SizedBox(width: 20),
-
                     // Camera Option
                     _buildSourceOption(
                       icon: Icons.camera_alt,
@@ -4889,10 +5029,42 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                         _openCameraInterface();
                       },
                     ),
+                    // Document Option - absent from this layout entirely, so a PDF or
+                    // spreadsheet could not be attached here at all.
+                    _buildSourceOption(
+                      icon: Icons.insert_drive_file,
+                      label: 'Document',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _pickDocument();
+                      },
+                    ),
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: Colors.grey[300]!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -4907,11 +5079,17 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 100,
-        height: 100,
+    // Expanded, not a fixed 100x100: three fixed tiles overflowed a
+    // narrow phone, which is why the dialog used to Wrap. Sharing the
+    // row's width keeps all three visible at any size, and the padding
+    // replaces the spacing the Wrap provided.
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 104,
         decoration: BoxDecoration(
           color: Colors.grey[50],
           borderRadius: BorderRadius.circular(16),
@@ -4929,8 +5107,8 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: blueColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -4938,20 +5116,32 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
               child: Icon(
                 icon,
                 color: blueColor,
-                size: 28,
+                size: 24,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
+            // Scale down rather than clip. Each tile gets roughly a third of the
+            // dialog's inner width - about 52px on a 320pt phone - and 'Document'
+            // does not fit that at 13px. Ellipsis alone rendered it as 'Docum...',
+            // so FittedBox shrinks the word to fit and leaves it readable, while
+            // wider screens still show it at full size.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
               ),
             ),
           ],
         ),
+      ),
+      ),
       ),
     );
   }
@@ -4997,9 +5187,24 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
               _uploadImage(imageFile);
             },
             onVideoCaptured: (File videoFile) async {
-              // Handle captured video
+              // A recorded video went straight into _images, which renders
+              // through Image.file - so a clip recorded here showed as a broken
+              // tile. Preview the thumbnail, upload the original, matching
+              // _updateImageAtIndex and the Staff copy of this screen.
+              final String? thumbnailPath =
+                  await _generateVideoThumbnail(videoFile.path);
+              if (thumbnailPath == null) {
+                Fluttertoast.showToast(
+                  msg: 'Could not read that video. Please try again.',
+                  toastLength: Toast.LENGTH_LONG,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                );
+                return;
+              }
               setState(() {
-                _images.add(videoFile);
+                _images.add(File(thumbnailPath));
               });
               _uploadImage(videoFile);
             },
@@ -5039,6 +5244,44 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
       });
       _uploadImage(File(image.path));
     }
+  }
+
+  /// Document extensions the work-order endpoint accepts. Photos and video come
+  /// through the photo picker instead, so only documents are listed here.
+  static const List<String> _documentExtensions = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv',
+  ];
+
+  /// Pick a document. Separate from the photo picker because on iOS a file
+  /// browser cannot show the camera roll, so each source needs its own native
+  /// UI. This layout had no document option at all, so a document could not be
+  /// attached here even though the endpoint accepts one.
+  Future<void> _pickDocument() async {
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _documentExtensions,
+    );
+    final String? pickedPath = result?.files.single.path;
+    if (pickedPath == null) return;
+
+    final File file = File(pickedPath);
+    // Refuse an obviously oversized file before spending minutes uploading it;
+    // the in-flight 413 check in uploadImage() is still the backstop.
+    if (await file.length() > kMaxAttachmentUploadMb * 1024 * 1024) {
+      Fluttertoast.showToast(
+        msg: uploadTooLargeUpFrontMessage(attachmentDisplayName(pickedPath)),
+        toastLength: Toast.LENGTH_LONG,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+    // No thumbnail for a document - the tile works out what it is from the file
+    // name via attachmentKindOf(), so no extra state is needed.
+    setState(() {
+      _images.add(file);
+    });
+    _uploadImage(file);
   }
 
   Future<void> _uploadImage(File imageFile) async {

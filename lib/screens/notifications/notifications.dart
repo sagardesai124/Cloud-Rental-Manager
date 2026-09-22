@@ -2,6 +2,7 @@ import 'package:three_zero_two_property/services/app_log.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -233,7 +234,19 @@ class _notificationsState extends State<notifications>
 
       if (jsonData["statusCode"] == 200 || jsonData["statusCode"] == 201) {
 
+        // The server answers 200 with data:null when no notification matches
+        // (findOneAndUpdate returns null), so reading a field off this threw -
+        // and the catch below swallowed it, leaving the tap doing nothing.
         final responseData = jsonData['data'];
+        if (responseData is! Map) {
+          Fluttertoast.showToast(
+              msg: 'Could not open that notification',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
+          return;
+        }
 
         // Check if it's a work order or payment
         if (responseData['is_workorder'] == true) {
@@ -241,7 +254,16 @@ class _notificationsState extends State<notifications>
           // (web routes to /workorderdetails/{id}). Tapping a passive
           // notification should never drop the user into an editable form.
           // Staff/Tenant/Vendor already open Workorder_summery here.
-          String workOrderId = responseData['notification_type']['workorder_id'];
+          final String? workOrderId = responseData['notification_type']?['workorder_id']?.toString();
+          if (workOrderId == null || workOrderId.isEmpty) {
+            Fluttertoast.showToast(
+              msg: 'That work order is no longer available',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
+            return;
+          }
           // Awaited so the caller can refresh the list once the user pops back.
           await Navigator.push(
             context,
@@ -250,7 +272,16 @@ class _notificationsState extends State<notifications>
             ),
           );
         } else {
-          String leaseId = responseData['notification_type']['lease_id'];
+          final String? leaseId = responseData['notification_type']?['lease_id']?.toString();
+          if (leaseId == null || leaseId.isEmpty) {
+            Fluttertoast.showToast(
+              msg: 'That lease is no longer available',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
+            return;
+          }
           // Web parity (AdminNavbar.js): lease-document notifications open the
           // Lease tab; every other lease notification opens Financial.
           final String notificationType =
@@ -276,8 +307,22 @@ class _notificationsState extends State<notifications>
 
         }
       } else {
+        Fluttertoast.showToast(
+              msg: 'Could not open that notification. Please try again.',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
       }
     } catch (e) {
+      // Was log-only: any failure here was indistinguishable from a
+      // dead tile, so the user just tapped again.
+      Fluttertoast.showToast(
+              msg: 'Could not open that notification. Please try again.',
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
       logError("Error: $e");
     }
   }

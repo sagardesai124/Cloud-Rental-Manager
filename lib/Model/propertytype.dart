@@ -5,6 +5,7 @@ class propertytype {
   String? propertyType;
   String? propertysubType;
   bool? isMultiunit;
+  String? propertyTypeImage;
   String? createdAt;
   String? updatedAt;
   bool? isDelete;
@@ -17,6 +18,7 @@ class propertytype {
         this.propertyType,
         this.propertysubType,
         this.isMultiunit,
+        this.propertyTypeImage,
         this.createdAt,
         this.updatedAt,
         this.isDelete,
@@ -29,6 +31,7 @@ class propertytype {
     propertyType = json['property_type'];
     propertysubType = json['propertysub_type'];
     isMultiunit = json['is_multiunit'];
+    propertyTypeImage = json['property_type_image'];
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
     isDelete = json['is_delete'];
@@ -43,6 +46,7 @@ class propertytype {
     data['property_type'] = this.propertyType;
     data['propertysub_type'] = this.propertysubType;
     data['is_multiunit'] = this.isMultiunit;
+    data['property_type_image'] = this.propertyTypeImage;
     data['createdAt'] = this.createdAt;
     data['updatedAt'] = this.updatedAt;
     data['is_delete'] = this.isDelete;

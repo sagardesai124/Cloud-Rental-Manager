@@ -3,6 +3,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:three_zero_two_property/widgets/property_type_image_field.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -117,6 +118,7 @@ class _PropertyTableState extends State<PropertyTable>
                 color: Colors.transparent,
               ),
             ),
+            const SizedBox(width: 58),
             Expanded(
               child: InkWell(
                 onTap: () {
@@ -1178,6 +1180,19 @@ class _PropertyTableState extends State<PropertyTable>
                                               size: 20,
                                               color: blueColor,
                                             ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 10),
+                                          child: PropertyTypeImageField.preview(
+                                            value: Propertytype.propertyTypeImage,
+                                            propertyType:
+                                                Propertytype.propertyType,
+                                            isMultiUnit:
+                                                Propertytype.isMultiunit ?? false,
+                                            size: 48,
+                                            radius: 6,
                                           ),
                                         ),
                                         Expanded(

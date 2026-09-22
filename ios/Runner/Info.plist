@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Cloud Rental Manager needs access to your camera to take photos for property documentation, work orders, and profile pictures.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Cloud Rental Manager needs access to your microphone to record sound with videos you capture for work orders.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Cloud Rental Manager needs your location to show nearby rental properties within 5km, find the nearest property, and display location-based work orders on your dashboard.</string>
 	<key>NSLocationAlwaysUsageDescription</key>

@@ -1,0 +1,254 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <!-- Sky gradient -->
+  <rect width="400" height="300" fill="#E8EEF4"/>
+
+  <!-- Sun -->
+  <circle cx="355" cy="48" r="26" fill="#F5C842" opacity="0.85"/>
+
+  <!-- Clouds -->
+  <ellipse cx="70" cy="52" rx="30" ry="15" fill="white" opacity="0.8"/>
+  <ellipse cx="95" cy="44" rx="24" ry="13" fill="white" opacity="0.8"/>
+  <ellipse cx="48" cy="57" rx="18" ry="11" fill="white" opacity="0.8"/>
+  <ellipse cx="205" cy="38" rx="24" ry="12" fill="white" opacity="0.65"/>
+  <ellipse cx="226" cy="31" rx="18" ry="11" fill="white" opacity="0.65"/>
+
+  <!-- Ground -->
+  <rect x="0" y="242" width="400" height="58" fill="#C8C8C8"/>
+  <rect x="0" y="258" width="400" height="42" fill="#B8B8B8"/>
+
+  <!-- Road markings -->
+  <rect x="0" y="270" width="400" height="3" fill="#E8E800" opacity="0.4"/>
+  <rect x="0" y="278" width="400" height="3" fill="#E8E800" opacity="0.4"/>
+
+  <!-- Pavement in front -->
+  <rect x="85" y="242" width="230" height="20" fill="#D0CECE"/>
+  <line x1="85" y1="252" x2="315" y2="252" stroke="#B8B6B6" stroke-width="1"/>
+  <line x1="120" y1="242" x2="120" y2="262" stroke="#B8B6B6" stroke-width="1"/>
+  <line x1="160" y1="242" x2="160" y2="262" stroke="#B8B6B6" stroke-width="1"/>
+  <line x1="200" y1="242" x2="200" y2="262" stroke="#B8B6B6" stroke-width="1"/>
+  <line x1="240" y1="242" x2="240" y2="262" stroke="#B8B6B6" stroke-width="1"/>
+  <line x1="280" y1="242" x2="280" y2="262" stroke="#B8B6B6" stroke-width="1"/>
+
+  <!-- Main tower building -->
+  <rect x="135" y="62" width="130" height="182" fill="#F5F5F0"/>
+  <rect x="135" y="62" width="130" height="182" stroke="#152B51" stroke-width="2.5"/>
+
+  <!-- Tower top decorative cornice -->
+  <rect x="128" y="54" width="144" height="14" rx="1" fill="#152B51"/>
+  <rect x="131" y="57" width="138" height="7" fill="#1a3560"/>
+
+  <!-- Flag pole -->
+  <rect x="198" y="30" width="3" height="28" fill="#7F8C8D"/>
+  <polygon points="201,30 220,37 201,44" fill="#C0392B"/>
+
+  <!-- Building name above entrance -->
+  <rect x="152" y="68" width="96" height="12" rx="1" fill="#152B51"/>
+  <rect x="155" y="70" width="90" height="8" rx="1" fill="#1E3A6E"/>
+
+  <!-- Left wing building (lower) -->
+  <rect x="65" y="112" width="75" height="132" fill="#ECEAE5"/>
+  <rect x="65" y="112" width="75" height="132" stroke="#152B51" stroke-width="2"/>
+  <!-- Left wing roof -->
+  <rect x="60" y="104" width="85" height="12" rx="1" fill="#152B51"/>
+
+  <!-- Right wing building (lower) -->
+  <rect x="260" y="112" width="75" height="132" fill="#ECEAE5"/>
+  <rect x="260" y="112" width="75" height="132" stroke="#152B51" stroke-width="2"/>
+  <!-- Right wing roof -->
+  <rect x="255" y="104" width="85" height="12" rx="1" fill="#152B51"/>
+
+  <!-- MAIN TOWER WINDOWS — curtain wall style -->
+  <!-- Floor 1 (top) -->
+  <rect x="146" y="82" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="146" y="82" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="146" y1="91" x2="168" y2="91" stroke="#152B51" stroke-width="0.8"/>
+  <polygon points="148,84 158,84 148,92" fill="white" opacity="0.2"/>
+
+  <rect x="175" y="82" width="22" height="18" rx="1" fill="#FFF9C4"/>
+  <rect x="175" y="82" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="175" y1="91" x2="197" y2="91" stroke="#152B51" stroke-width="0.8"/>
+
+  <rect x="204" y="82" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="204" y="82" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="204" y1="91" x2="226" y2="91" stroke="#152B51" stroke-width="0.8"/>
+  <polygon points="206,84 216,84 206,92" fill="white" opacity="0.2"/>
+
+  <rect x="233" y="82" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="233" y="82" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="233" y1="91" x2="255" y2="91" stroke="#152B51" stroke-width="0.8"/>
+
+  <!-- Floor 2 -->
+  <rect x="146" y="107" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="146" y="107" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="146" y1="116" x2="168" y2="116" stroke="#152B51" stroke-width="0.8"/>
+
+  <rect x="175" y="107" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="175" y="107" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <polygon points="177,109 187,109 177,117" fill="white" opacity="0.2"/>
+
+  <rect x="204" y="107" width="22" height="18" rx="1" fill="#FFF9C4"/>
+  <rect x="204" y="107" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+
+  <rect x="233" y="107" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="233" y="107" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="233" y1="116" x2="255" y2="116" stroke="#152B51" stroke-width="0.8"/>
+
+  <!-- Floor 3 -->
+  <rect x="146" y="132" width="22" height="18" rx="1" fill="#FFF9C4"/>
+  <rect x="146" y="132" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+
+  <rect x="175" y="132" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="175" y="132" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="175" y1="141" x2="197" y2="141" stroke="#152B51" stroke-width="0.8"/>
+  <polygon points="177,134 187,134 177,142" fill="white" opacity="0.2"/>
+
+  <rect x="204" y="132" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="204" y="132" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="204" y1="141" x2="226" y2="141" stroke="#152B51" stroke-width="0.8"/>
+
+  <rect x="233" y="132" width="22" height="18" rx="1" fill="#FFF9C4"/>
+  <rect x="233" y="132" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+
+  <!-- Floor 4 -->
+  <rect x="146" y="157" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="146" y="157" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="146" y1="166" x2="168" y2="166" stroke="#152B51" stroke-width="0.8"/>
+  <polygon points="148,159 158,159 148,167" fill="white" opacity="0.2"/>
+
+  <rect x="175" y="157" width="22" height="18" rx="1" fill="#FFF9C4"/>
+  <rect x="175" y="157" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+
+  <rect x="204" y="157" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="204" y="157" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+
+  <rect x="233" y="157" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="233" y="157" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="233" y1="166" x2="255" y2="166" stroke="#152B51" stroke-width="0.8"/>
+
+  <!-- Floor 5 -->
+  <rect x="146" y="182" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="146" y="182" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+
+  <rect x="175" y="182" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="175" y="182" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <polygon points="177,184 187,184 177,192" fill="white" opacity="0.2"/>
+
+  <rect x="204" y="182" width="22" height="18" rx="1" fill="#FFF9C4"/>
+  <rect x="204" y="182" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+
+  <rect x="233" y="182" width="22" height="18" rx="1" fill="#AED6F1"/>
+  <rect x="233" y="182" width="22" height="18" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="233" y1="191" x2="255" y2="191" stroke="#152B51" stroke-width="0.8"/>
+
+  <!-- Main entrance (ground floor) -->
+  <rect x="160" y="207" width="80" height="35" rx="2" fill="#AED6F1" opacity="0.5"/>
+  <rect x="160" y="207" width="80" height="35" rx="2" stroke="#152B51" stroke-width="1.5"/>
+  <!-- Glass doors -->
+  <rect x="165" y="212" width="32" height="28" rx="1" fill="#AED6F1" opacity="0.8"/>
+  <rect x="165" y="212" width="32" height="28" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="181" y1="212" x2="181" y2="240" stroke="#152B51" stroke-width="1"/>
+  <rect x="203" y="212" width="32" height="28" rx="1" fill="#AED6F1" opacity="0.8"/>
+  <rect x="203" y="212" width="32" height="28" rx="1" stroke="#152B51" stroke-width="1"/>
+  <line x1="219" y1="212" x2="219" y2="240" stroke="#152B51" stroke-width="1"/>
+  <!-- Door handles -->
+  <rect x="179" y="224" width="4" height="8" rx="1" fill="#F5C842"/>
+  <rect x="217" y="224" width="4" height="8" rx="1" fill="#F5C842"/>
+
+  <!-- LEFT WING WINDOWS -->
+  <rect x="76" y="122" width="24" height="20" rx="1" fill="#AED6F1"/>
+  <rect x="76" y="122" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+  <line x1="76" y1="132" x2="100" y2="132" stroke="#152B51" stroke-width="0.8"/>
+  <polygon points="78,124 86,124 78,130" fill="white" opacity="0.2"/>
+
+  <rect x="108" y="122" width="24" height="20" rx="1" fill="#FFF9C4"/>
+  <rect x="108" y="122" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+
+  <rect x="76" y="152" width="24" height="20" rx="1" fill="#AED6F1"/>
+  <rect x="76" y="152" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+
+  <rect x="108" y="152" width="24" height="20" rx="1" fill="#AED6F1"/>
+  <rect x="108" y="152" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+  <line x1="108" y1="162" x2="132" y2="162" stroke="#152B51" stroke-width="0.8"/>
+
+  <rect x="76" y="182" width="24" height="20" rx="1" fill="#FFF9C4"/>
+  <rect x="76" y="182" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+
+  <rect x="108" y="182" width="24" height="20" rx="1" fill="#AED6F1"/>
+  <rect x="108" y="182" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+
+  <!-- LEFT WING ENTRANCE -->
+  <rect x="82" y="212" width="50" height="30" rx="1" fill="#AED6F1" opacity="0.5"/>
+  <rect x="82" y="212" width="50" height="30" rx="1" stroke="#152B51" stroke-width="1"/>
+  <rect x="86" y="216" width="20" height="24" rx="1" fill="#AED6F1" opacity="0.8"/>
+  <rect x="108" y="216" width="20" height="24" rx="1" fill="#AED6F1" opacity="0.8"/>
+  <line x1="86" y1="216" x2="86" y2="240" stroke="#152B51" stroke-width="0.8"/>
+  <line x1="108" y1="216" x2="108" y2="240" stroke="#152B51" stroke-width="0.8"/>
+  <line x1="128" y1="216" x2="128" y2="240" stroke="#152B51" stroke-width="0.8"/>
+
+  <!-- RIGHT WING WINDOWS -->
+  <rect x="268" y="122" width="24" height="20" rx="1" fill="#FFF9C4"/>
+  <rect x="268" y="122" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+
+  <rect x="300" y="122" width="24" height="20" rx="1" fill="#AED6F1"/>
+  <rect x="300" y="122" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+  <polygon points="302,124 310,124 302,130" fill="white" opacity="0.2"/>
+
+  <rect x="268" y="152" width="24" height="20" rx="1" fill="#AED6F1"/>
+  <rect x="268" y="152" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+  <line x1="268" y1="162" x2="292" y2="162" stroke="#152B51" stroke-width="0.8"/>
+
+  <rect x="300" y="152" width="24" height="20" rx="1" fill="#FFF9C4"/>
+  <rect x="300" y="152" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+
+  <rect x="268" y="182" width="24" height="20" rx="1" fill="#AED6F1"/>
+  <rect x="268" y="182" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+
+  <rect x="300" y="182" width="24" height="20" rx="1" fill="#AED6F1"/>
+  <rect x="300" y="182" width="24" height="20" rx="1" stroke="#152B51" stroke-width="1.2"/>
+  <line x1="300" y1="192" x2="324" y2="192" stroke="#152B51" stroke-width="0.8"/>
+
+  <!-- RIGHT WING ENTRANCE -->
+  <rect x="268" y="212" width="50" height="30" rx="1" fill="#AED6F1" opacity="0.5"/>
+  <rect x="268" y="212" width="50" height="30" rx="1" stroke="#152B51" stroke-width="1"/>
+  <rect x="272" y="216" width="20" height="24" rx="1" fill="#AED6F1" opacity="0.8"/>
+  <rect x="294" y="216" width="20" height="24" rx="1" fill="#AED6F1" opacity="0.8"/>
+  <line x1="272" y1="216" x2="272" y2="240" stroke="#152B51" stroke-width="0.8"/>
+  <line x1="294" y1="216" x2="294" y2="240" stroke="#152B51" stroke-width="0.8"/>
+  <line x1="314" y1="216" x2="314" y2="240" stroke="#152B51" stroke-width="0.8"/>
+
+  <!-- Street lamps -->
+  <rect x="43" y="210" width="5" height="35" fill="#7F8C8D"/>
+  <rect x="40" y="246" width="11" height="4" rx="1" fill="#7F8C8D"/>
+  <path d="M45 210 Q45 200 55 200" stroke="#7F8C8D" stroke-width="3" fill="none"/>
+  <ellipse cx="56" cy="198" rx="7" ry="5" fill="#FFF9C4" opacity="0.9"/>
+  <ellipse cx="56" cy="198" rx="4" ry="3" fill="#F5C842"/>
+
+  <rect x="352" y="210" width="5" height="35" fill="#7F8C8D"/>
+  <rect x="349" y="246" width="11" height="4" rx="1" fill="#7F8C8D"/>
+  <path d="M355 210 Q355 200 345 200" stroke="#7F8C8D" stroke-width="3" fill="none"/>
+  <ellipse cx="344" cy="198" rx="7" ry="5" fill="#FFF9C4" opacity="0.9"/>
+  <ellipse cx="344" cy="198" rx="4" ry="3" fill="#F5C842"/>
+
+  <!-- Small trees/planters flanking main entrance -->
+  <rect x="25" y="215" width="6" height="30" fill="#8B6914"/>
+  <ellipse cx="28" cy="200" rx="18" ry="22" fill="#4A7030"/>
+  <ellipse cx="18" cy="210" rx="12" ry="16" fill="#5D8A3C"/>
+  <ellipse cx="38" cy="208" rx="11" ry="15" fill="#5D8A3C"/>
+
+  <rect x="369" y="215" width="6" height="30" fill="#8B6914"/>
+  <ellipse cx="372" cy="200" rx="18" ry="22" fill="#4A7030"/>
+  <ellipse cx="362" cy="210" rx="12" ry="16" fill="#5D8A3C"/>
+  <ellipse cx="382" cy="208" rx="11" ry="15" fill="#5D8A3C"/>
+
+  <!-- Decorative planters at main entrance -->
+  <rect x="152" y="236" width="14" height="8" rx="2" fill="#C0B090"/>
+  <ellipse cx="159" cy="234" rx="9" ry="7" fill="#5D8A3C"/>
+  <rect x="234" y="236" width="14" height="8" rx="2" fill="#C0B090"/>
+  <ellipse cx="241" cy="234" rx="9" ry="7" fill="#5D8A3C"/>
+
+  <!-- HVAC units on roof -->
+  <rect x="142" y="52" width="20" height="8" rx="1" fill="#A0A0A0"/>
+  <rect x="170" y="50" width="16" height="10" rx="1" fill="#A0A0A0"/>
+  <rect x="214" y="52" width="20" height="8" rx="1" fill="#A0A0A0"/>
+  <rect x="242" y="50" width="16" height="10" rx="1" fill="#A0A0A0"/>
+</svg>

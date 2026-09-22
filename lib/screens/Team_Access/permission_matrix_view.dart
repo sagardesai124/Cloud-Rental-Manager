@@ -553,140 +553,36 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
     );
   }
 
-  // ---- Tenant (grouped, not a full matrix) ----
+  // ---- Tenant ----
   Widget _tenantSection(TenantPermission t) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          decoration: const BoxDecoration(
-            color: _navy,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-          ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tenant Permissions',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700),
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Applies to every tenant in this company.',
-                style: TextStyle(
-                    color: Color(0xFFB9C2D4),
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius:
-                const BorderRadius.vertical(bottom: Radius.circular(12)),
-            border: Border.all(color: _cardBorder),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _tenantGroup('Properties', [
-                _checkItem('View', t.propertyView ?? false,
-                    (b) => setState(() => t.propertyView = b)),
-              ]),
-              const Divider(height: 1, thickness: 1, color: _cardBorder),
-              _tenantGroup('Financial', [
-                _checkItem('View Ledger', t.financialView ?? false, (b) {
-                  setState(() {
-                    t.financialView = b;
-                    if (!b) t.financialAdd = false; // cascade
-                  });
-                }),
-                _checkItem(
-                  'Make Payment',
-                  t.financialAdd ?? false,
-                  (t.financialView ?? false)
-                      ? (b) => setState(() => t.financialAdd = b)
-                      : null,
-                ),
-              ]),
-              const Divider(height: 1, thickness: 1, color: _cardBorder),
-              _tenantGroup('Work Order', [
-                _checkItem('View', t.workorderView ?? false, (b) {
-                  setState(() {
-                    t.workorderView = b;
-                    if (!b) {
-                      t.workorderAdd = false;
-                      t.workorderEdit = false;
-                    }
-                  });
-                }),
-                _checkItem(
-                  'Add',
-                  t.workorderAdd ?? false,
-                  (t.workorderView ?? false)
-                      ? (b) => setState(() => t.workorderAdd = b)
-                      : null,
-                ),
-                _checkItem(
-                  'Edit',
-                  t.workorderEdit ?? false,
-                  (t.workorderView ?? false)
-                      ? (b) => setState(() => t.workorderEdit = b)
-                      : null,
-                ),
-              ]),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _saveButton(),
-      ],
-    );
-  }
-
-  Widget _tenantGroup(String title, List<Widget> items) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-                fontSize: 15.5, fontWeight: FontWeight.w700, color: _navy),
-          ),
-          const SizedBox(height: 6),
-          Wrap(spacing: 26, runSpacing: 2, children: items),
+    return _permCard(
+      title: 'Tenant Permissions',
+      subtitle: 'Applies to every tenant in this company.',
+      table: _matrixTable(
+        columns: const ['VIEW', 'ADD', 'EDIT'],
+        rows: [
+          _matrixRow('Properties', [
+            _Cell(t.propertyView ?? false, (b) => t.propertyView = b),
+            null,
+            null,
+          ]),
+          _matrixRow('Financials', [
+            _Cell(t.financialView ?? false, (b) => t.financialView = b),
+            _Cell(t.financialAdd ?? false, (b) => t.financialAdd = b),
+            _Cell(t.financialEdit ?? false, (b) => t.financialEdit = b),
+          ]),
+          _matrixRow('Work Orders', [
+            _Cell(t.workorderView ?? false, (b) => t.workorderView = b),
+            _Cell(t.workorderAdd ?? false, (b) => t.workorderAdd = b),
+            _Cell(t.workorderEdit ?? false, (b) => t.workorderEdit = b),
+          ]),
+          _matrixRow('Documents', [
+            _Cell(t.documentsView ?? false, (b) => t.documentsView = b),
+            _Cell(t.documentsAdd ?? false, (b) => t.documentsAdd = b),
+            _Cell(t.documentsEdit ?? false, (b) => t.documentsEdit = b),
+          ]),
         ],
       ),
-    );
-  }
-
-  Widget _checkItem(String label, bool value, ValueChanged<bool>? onChanged) {
-    final bool enabled = onChanged != null;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _checkbox(
-            value: value,
-            enabled: enabled,
-            onChanged: (b) => onChanged?.call(b)),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14.5,
-            color: enabled ? _navy : _muted,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 

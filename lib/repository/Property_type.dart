@@ -15,12 +15,14 @@ class PropertyTypeRepository {
     required String? propertyType,
     required String? propertySubType,
     required bool isMultiUnit,
+    String? propertyTypeImage,
   }) async {
     final Map<String, dynamic> data = {
       'admin_id': adminId,
       'property_type': propertyType,
       'propertysub_type': propertySubType,
       'is_multiunit': isMultiUnit,
+      'property_type_image': propertyTypeImage ?? '',
     };
     SharedPreferences prefs = await SharedPreferences.getInstance();
      String? token = prefs.getString('token');
@@ -71,13 +73,15 @@ class PropertyTypeRepository {
     required String? propertyType,
     required String? propertySubType,
     required bool isMultiUnit,
-    required String? id
+    required String? id,
+    String? propertyTypeImage,
   }) async {
     final Map<String, dynamic> data = {
       'admin_id': adminId,
       'property_type': propertyType,
       'propertysub_type': propertySubType,
       'is_multiunit': isMultiUnit,
+      'property_type_image': propertyTypeImage ?? '',
     };
 
    // print('$apiUrl/$id');

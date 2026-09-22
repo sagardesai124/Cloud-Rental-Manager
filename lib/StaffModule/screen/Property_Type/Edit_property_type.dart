@@ -1,6 +1,7 @@
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:three_zero_two_property/widgets/property_type_image_field.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -32,6 +33,7 @@ class _Edit_property_typeState extends State<Edit_property_type> {
   String? initialPropertyType;
   String? initialPropertySubType;
   bool? initialIsMultiUnit;
+  String? initialPropertyTypeImage;
   @override
   void initState() {
     // TODO: implement initState
@@ -43,11 +45,14 @@ class _Edit_property_typeState extends State<Edit_property_type> {
     initialPropertyType = widget.property.propertyType;
     initialPropertySubType = widget.property.propertysubType!;
     initialIsMultiUnit = widget.property.isMultiunit!;
+    propertyTypeImage = widget.property.propertyTypeImage ?? '';
+    initialPropertyTypeImage = propertyTypeImage;
   }
 
   bool isLoading = false;
   String? selectedValue;
   bool isChecked = false;
+  String propertyTypeImage = '';
   String selectedMonth = 'Residential';
   TextEditingController subtype = TextEditingController();
 
@@ -328,6 +333,30 @@ class _Edit_property_typeState extends State<Edit_property_type> {
                               width: MediaQuery.of(context).size.width * 0.05),
                         ],
                       ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          if (MediaQuery.of(context).size.width < 500)
+                            SizedBox(
+                                width:
+                                    MediaQuery.of(context).size.width * 0.05),
+                          if (MediaQuery.of(context).size.width > 500)
+                            SizedBox(
+                                width:
+                                    MediaQuery.of(context).size.width * 0.02),
+                          Expanded(
+                            child: PropertyTypeImageField(
+                              value: propertyTypeImage,
+                              propertyType: selectedValue,
+                              isMultiUnit: isChecked,
+                              onChanged: (v) =>
+                                  setState(() => propertyTypeImage = v),
+                            ),
+                          ),
+                          SizedBox(
+                              width: MediaQuery.of(context).size.width * 0.05),
+                        ],
+                      ),
                       SizedBox(
                         height: 20,
                       ),
@@ -346,7 +375,9 @@ class _Edit_property_typeState extends State<Edit_property_type> {
                               bool hasChanges =
                                   selectedValue != initialPropertyType ||
                                       subtype.text != initialPropertySubType ||
-                                      isChecked != initialIsMultiUnit;
+                                      isChecked != initialIsMultiUnit ||
+                                      propertyTypeImage !=
+                                          initialPropertyTypeImage;
 
                               if (selectedValue == null ||
                                   subtype.text.trim().isEmpty) {
@@ -367,7 +398,9 @@ class _Edit_property_typeState extends State<Edit_property_type> {
                                         propertyType: selectedValue,
                                         propertySubType: subtype.text.trim(),
                                         isMultiUnit: isChecked,
-                                        id: widget.property.propertyId)
+                                        id: widget.property.propertyId,
+                                        propertyTypeImage:
+                                            propertyTypeImage)
                                     .then((value) {
                                   setState(() {
                                     widget.property.propertyType =
@@ -376,6 +409,8 @@ class _Edit_property_typeState extends State<Edit_property_type> {
                                         subtype.text;
                                     widget.property.adminId = id;
                                     widget.property.isMultiunit = isChecked;
+                                    widget.property.propertyTypeImage =
+                                        propertyTypeImage;
                                     widget.property.propertyId =
                                         widget.property.propertyId;
                                     isLoading = false;
@@ -426,7 +461,7 @@ class _Edit_property_typeState extends State<Edit_property_type> {
                                           size: 25.0,
                                         )
                                       : Text(
-                                          "Edit Property Type",
+                                          "Update",
                                           style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
