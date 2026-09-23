@@ -113,21 +113,14 @@ class _PropertyTypeImageFieldState extends State<PropertyTypeImageField> {
 
   @override
   Widget build(BuildContext context) {
-    final bool narrow = MediaQuery.of(context).size.width < 500;
     final bool hasImage = (widget.value ?? '').isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Property Type Image',
-          style: TextStyle(
-            color: Colors.grey,
-            fontWeight: FontWeight.bold,
-            fontSize: narrow ? 15 : 18,
-          ),
-        ),
-        const SizedBox(height: 8),
+        // No label here any more: each Property Type form supplies its own
+        // through the shared _fieldLabel helper, so the label matches the other
+        // fields on the screen instead of carrying this widget's own styling.
         Wrap(
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 16,

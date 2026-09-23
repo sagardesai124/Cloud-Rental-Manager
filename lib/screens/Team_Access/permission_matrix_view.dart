@@ -36,7 +36,10 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
   UserPermissionData? _perm;
   bool _loading = true;
   bool _error = false;
-  bool _saving = false;
+  // Which section's Save is in flight ('Staff' | 'Vendor' | 'Tenant'), or
+  // null when idle. Per-section so pressing one Save doesn't spin all three
+  // buttons — matches web's savingSection.
+  String? _savingSection;
   int _jump = 0; // active "Jump to" pill: 0 = Staff, 1 = Vendor, 2 = Tenant
   final GlobalKey _staffKey = GlobalKey();
   final GlobalKey _vendorKey = GlobalKey();
@@ -148,23 +151,26 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
     t.documentsDelete ??= false;
   }
 
-  Future<void> _save() async {
-    if (_perm == null || _saving) return;
-    setState(() => _saving = true);
+  /// Saves every section in one request — web posts the whole payload from each
+  /// section's Save too, so only the spinner and the toast are per-section.
+  Future<void> _save(String section) async {
+    if (_perm == null || _savingSection != null) return;
+    setState(() => _savingSection = section);
     try {
       // Stamp admin_id from prefs before posting (matches the existing screen).
       final prefs = await SharedPreferences.getInstance();
       _perm!.adminId = prefs.getString('adminId');
       final code = await _permService.postUserPermissionData(_perm!);
       if (!mounted) return;
-      setState(() => _saving = false);
+      setState(() => _savingSection = null);
       Fluttertoast.showToast(
-          msg:
-              code == 200 ? 'Permissions saved' : 'Failed to save permissions');
+          msg: code == 200
+              ? '$section permissions saved.'
+              : 'Failed to save permissions.');
     } catch (_) {
       if (!mounted) return;
-      setState(() => _saving = false);
-      Fluttertoast.showToast(msg: 'Failed to save permissions');
+      setState(() => _savingSection = null);
+      Fluttertoast.showToast(msg: 'Failed to save permissions.');
     }
   }
 
@@ -306,6 +312,7 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
   Widget _permCard({
     required String title,
     required String subtitle,
+    required String section,
     required Widget table,
   }) {
     return Column(
@@ -340,7 +347,7 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
         ),
         table,
         const SizedBox(height: 14),
-        _saveButton(),
+        _saveButton(section),
       ],
     );
   }
@@ -472,6 +479,7 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
   Widget _staffSection(StaffPermission s) {
     return _permCard(
       title: 'Staff Permissions',
+      section: 'Staff',
       subtitle: 'Applies to every staff member in this company.',
       table: _matrixTable(
         columns: const ['VIEW', 'ADD', 'EDIT', 'DELETE'],
@@ -540,6 +548,7 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
   Widget _vendorSection(VendorPermission v) {
     return _permCard(
       title: 'Vendor Permissions',
+      section: 'Vendor',
       subtitle: 'Applies to every vendor invited to this company.',
       table: _matrixTable(
         columns: const ['VIEW', 'EDIT'],
@@ -557,6 +566,7 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
   Widget _tenantSection(TenantPermission t) {
     return _permCard(
       title: 'Tenant Permissions',
+      section: 'Tenant',
       subtitle: 'Applies to every tenant in this company.',
       table: _matrixTable(
         columns: const ['VIEW', 'ADD', 'EDIT'],
@@ -586,17 +596,18 @@ class _PermissionMatrixViewState extends State<PermissionMatrixView>
     );
   }
 
-  Widget _saveButton() {
+  Widget _saveButton(String section) {
+    final bool busy = _savingSection == section;
     return Material(
       color: _navy,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: _saving ? null : _save,
+        onTap: _savingSection != null ? null : () => _save(section),
         child: Container(
           height: 52,
           alignment: Alignment.center,
-          child: _saving
+          child: busy
               ? const SpinKitFadingCircle(color: Colors.white, size: 24)
               : const Text(
                   'Save',

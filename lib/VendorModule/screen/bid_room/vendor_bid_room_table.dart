@@ -880,9 +880,23 @@ class _VendorBidRoomTableState extends State<VendorBidRoomTable>
 
   Widget _buildActionButton(BidRequest request, int index) {
     final bool hasSubmitted = request.hasSubmitted == true;
+    // Same lowercase comparison the server uses when it rejects a submission
+    // (BidRequest.js: `(bidRequest.status || "").toLowerCase() === "closed"`),
+    // so casing can never let the two disagree.
+    final bool isClosed = (request.status ?? '').toLowerCase() == 'closed';
+    final bool canBid = !hasSubmitted && !isClosed;
     return GestureDetector(
       onTap: () {
-        if (hasSubmitted) return;
+        // A disabled button says why instead of doing nothing: the vendor was
+        // previously let into the whole form and only told at submit time.
+        if (hasSubmitted) {
+          Fluttertoast.showToast(msg: 'Bid Submitted');
+          return;
+        }
+        if (isClosed) {
+          Fluttertoast.showToast(msg: 'Bid Room Closed');
+          return;
+        }
         Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (context) => VendorSubmitBidScreen(bidRequest: request),
@@ -895,33 +909,27 @@ class _VendorBidRoomTableState extends State<VendorBidRoomTable>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18),
         child: hasSubmitted
-            ? Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade400,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(child: FaIcon(
-                  FontAwesomeIcons.check,
-                  size: 15,
-                  color: Colors.white,
-                ),),
-              )
-            : Container(
-                width: 35,
-                height: 35,
-                decoration: BoxDecoration(
-                  color: blueColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Center(child: FaIcon(
-                  Icons.send_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),),
-              ),
+            ? _actionBox(const Color(0xFFD1FADF), Icons.check_circle,
+                const Color(0xFF039855))
+            : !canBid
+                ? _actionBox(const Color(0xFFF2F4F7), Icons.send_rounded,
+                    const Color(0xFF98A2B3))
+                : _actionBox(blueColor, Icons.send_rounded, Colors.white),
       ),
+    );
+  }
+
+  /// One action button square, matching web's bid-row IconButton
+  /// (borderRadius 7px, small icon).
+  Widget _actionBox(Color background, IconData icon, Color foreground) {
+    return Container(
+      width: 35,
+      height: 35,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Center(child: Icon(icon, size: 18, color: foreground)),
     );
   }
 }

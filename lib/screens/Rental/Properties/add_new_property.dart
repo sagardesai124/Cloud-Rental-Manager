@@ -1019,344 +1019,346 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                                               StateSetter
                                                                   setState) {
                                                             return Dialog(
-                                                              backgroundColor:
-                                                                  Colors.white,
-                                                              surfaceTintColor:
-                                                                  Colors.white,
-                                                              child:
-                                                                  SingleChildScrollView(
-                                                                child: Column(
-                                                                  children: [
-                                                                    Container(
-                                                                      // height: MediaQuery.of(context).size.height * .43,
-                                                                      // width: MediaQuery.of(context)
-                                                                      //         .size
-                                                                      //         .width *
-                                                                      //     .99,
-                                                                      // decoration: BoxDecoration(
-                                                                      //     color: Colors.white,
-                                                                      //     borderRadius: BorderRadius.circular(10),
-                                                                      //     border: Border.all(
-                                                                      //       color: Color.fromRGBO(
-                                                                      //           21,
-                                                                      //           43,
-                                                                      //           81,
-                                                                      //           1),
-                                                                      //     )),
-                                                                      child:
-                                                                          Column(
-                                                                        children: [
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                20,
-                                                                          ),
-                                                                          Row(
-                                                                            children: [
-                                                                              const SizedBox(
-                                                                                width: 15,
-                                                                              ),
-                                                                              Text(
-                                                                                "New Property Type",
-                                                                                style: TextStyle(fontWeight: FontWeight.bold, color: blueColor, fontSize: MediaQuery.of(context).size.width < 500 ? 17 : 22),
-                                                                              ),
-                                                                              const Spacer(),
-                                                                              InkWell(
-                                                                                onTap: () {
-                                                                                  Navigator.pop(context);
-                                                                                },
-                                                                                child: Material(
-                                                                                  child: Container(
-                                                                                      // height: 30,
-                                                                                      // width: 30,
-                                                                                      // decoration: BoxDecoration(
-                                                                                      //   border: Border.all(color: blueColor),
-                                                                                      //   borderRadius: BorderRadius.circular(20)
-                                                                                      // ),
-                                                                                      child: const Center(child: Icon(Icons.close))),
+                                                              // Inline "add a property type" from the property form. Restyled to the
+                                                              // house card system used by the Property Type screens; fields and the
+                                                              // save call are exactly as before. No image field on purpose: web's
+                                                              // inline AddpropertyModal has none either (only Settings' dialog does),
+                                                              // so the type falls back to the default image, matching web.
+                                                              backgroundColor: Colors.transparent,
+                                                              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                              child: ConstrainedBox(
+                                                                constraints: const BoxConstraints(maxWidth: 480),
+                                                                child: Container(
+                                                                  decoration: BoxDecoration(
+                                                                    color: Colors.white,
+                                                                    borderRadius: BorderRadius.circular(16),
+                                                                    border: Border.all(color: borderClr),
+                                                                    boxShadow: [
+                                                                      BoxShadow(
+                                                                        color: Colors.black.withOpacity(0.06),
+                                                                        blurRadius: 16,
+                                                                        offset: const Offset(0, 6),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  padding: const EdgeInsets.all(20),
+                                                                  child: SingleChildScrollView(
+                                                                    child: Column(
+                                                                      mainAxisSize: MainAxisSize.min,
+                                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                                      children: [
+                                                                        // Header: title leads, close control trails.
+                                                                        Row(
+                                                                          children: [
+                                                                            Expanded(
+                                                                              child: Text(
+                                                                                'New Property Type',
+                                                                                style: TextStyle(
+                                                                                  fontSize: 18,
+                                                                                  fontWeight: FontWeight.bold,
+                                                                                  color: navyClr,
                                                                                 ),
                                                                               ),
-                                                                              const SizedBox(
-                                                                                width: 8,
+                                                                            ),
+                                                                            Material(
+                                                                              color: Colors.transparent,
+                                                                              child: InkWell(
+                                                                                borderRadius: BorderRadius.circular(18),
+                                                                                onTap: () => Navigator.pop(context),
+                                                                                child: Container(
+                                                                                  width: 36,
+                                                                                  height: 36,
+                                                                                  decoration: const BoxDecoration(
+                                                                                    color: Color(0xFFF2F4F7),
+                                                                                    shape: BoxShape.circle,
+                                                                                  ),
+                                                                                  child: const Icon(Icons.close,
+                                                                                      size: 20, color: Colors.black54),
+                                                                                ),
                                                                               ),
-                                                                            ],
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                        const SizedBox(height: 18),
+
+                                                                        // Property Type *
+                                                                        Padding(
+                                                                          padding: const EdgeInsets.only(bottom: 8),
+                                                                          child: RichText(
+                                                                            text: TextSpan(
+                                                                              text: 'Property Type',
+                                                                              style: TextStyle(
+                                                                                  fontSize: 14, fontWeight: FontWeight.bold, color: navyClr),
+                                                                              children: [
+                                                                                TextSpan(
+                                                                                    text: ' *',
+                                                                                    style: TextStyle(
+                                                                                        color: redClr, fontWeight: FontWeight.bold)),
+                                                                              ],
+                                                                            ),
                                                                           ),
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                10,
-                                                                          ),
-                                                                          Row(
-                                                                            children: [
-                                                                              const SizedBox(
-                                                                                width: 15,
-                                                                              ),
-                                                                              Text(
-                                                                                "Property Type*",
-                                                                                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: MediaQuery.of(context).size.width < 500 ? 15 : 18),
-                                                                              ),
-                                                                            ],
-                                                                          ),
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                10,
-                                                                          ),
-                                                                          Row(
-                                                                            children: [
-                                                                              const SizedBox(
-                                                                                width: 15,
-                                                                              ),
-                                                                              DropdownButtonHideUnderline(
-                                                                                child: DropdownButton2<String>(
-                                                                                  isExpanded: true,
-                                                                                  hint: const Row(
-                                                                                    children: [
-                                                                                      SizedBox(
-                                                                                        width: 4,
-                                                                                      ),
-                                                                                      Expanded(
+                                                                        ),
+                                                                        DropdownButtonHideUnderline(
+                                                                          child: DropdownButton2<String>(
+                                                                            isExpanded: true,
+                                                                            hint: Text(
+                                                                              'Select type',
+                                                                              style: TextStyle(
+                                                                                  fontSize: 15,
+                                                                                  fontWeight: FontWeight.w600,
+                                                                                  color: mutedClr),
+                                                                              overflow: TextOverflow.ellipsis,
+                                                                            ),
+                                                                            items: items
+                                                                                .map((String item) => DropdownMenuItem<String>(
+                                                                                      value: item,
+                                                                                      // Item padding lives here, not on menuItemStyleData: the package
+                                                                                      // derives the closed button's inner inset from half that value.
+                                                                                      child: Padding(
+                                                                                        padding: const EdgeInsets.symmetric(horizontal: 14),
                                                                                         child: Text(
-                                                                                          'Type',
+                                                                                          item,
                                                                                           style: TextStyle(
-                                                                                            fontSize: 14,
-                                                                                            fontWeight: FontWeight.bold,
-                                                                                            color: Colors.black,
-                                                                                          ),
+                                                                                              fontSize: 15,
+                                                                                              fontWeight: FontWeight.w600,
+                                                                                              color: navyClr),
                                                                                           overflow: TextOverflow.ellipsis,
                                                                                         ),
                                                                                       ),
-                                                                                    ],
-                                                                                  ),
-                                                                                  items: items
-                                                                                      .map((String item) => DropdownMenuItem<String>(
-                                                                                            value: item,
-                                                                                            child: Text(
-                                                                                              item,
-                                                                                              style: const TextStyle(
-                                                                                                fontSize: 14,
-                                                                                                fontWeight: FontWeight.bold,
-                                                                                                color: Colors.black,
-                                                                                              ),
-                                                                                              overflow: TextOverflow.ellipsis,
-                                                                                            ),
-                                                                                          ))
-                                                                                      .toList(),
-                                                                                  value: selectedValue,
-                                                                                  onChanged: (value) {
-                                                                                    setState(() {
-                                                                                      selectedValue = value;
-                                                                                    });
-                                                                                  },
-                                                                                  buttonStyleData: ButtonStyleData(
-                                                                                    height: 50,
-                                                                                    width: 160,
-                                                                                    padding: const EdgeInsets.only(left: 14, right: 14),
-                                                                                    decoration: BoxDecoration(
-                                                                                      borderRadius: BorderRadius.circular(10),
-                                                                                      border: Border.all(
-                                                                                        color: Colors.black26,
-                                                                                      ),
-                                                                                      color: Colors.white,
-                                                                                    ),
-                                                                                    elevation: 3,
-                                                                                  ),
-                                                                                  dropdownStyleData: DropdownStyleData(
-                                                                                    maxHeight: 200,
-                                                                                    width: 200,
-                                                                                    decoration: BoxDecoration(
-                                                                                      borderRadius: BorderRadius.circular(14),
-                                                                                      //color: Colors.redAccent,
-                                                                                    ),
-                                                                                    offset: const Offset(-20, 0),
-                                                                                    scrollbarTheme: ScrollbarThemeData(
-                                                                                      radius: const Radius.circular(40),
-                                                                                      thickness: MaterialStateProperty.all(6),
-                                                                                      thumbVisibility: MaterialStateProperty.all(true),
-                                                                                    ),
-                                                                                  ),
-                                                                                  menuItemStyleData: const MenuItemStyleData(
-                                                                                    height: 40,
-                                                                                    padding: EdgeInsets.only(left: 14, right: 14),
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                            ],
-                                                                          ),
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                20,
-                                                                          ),
-                                                                          Row(
-                                                                            children: [
-                                                                              const SizedBox(
-                                                                                width: 15,
-                                                                              ),
-                                                                              Text(
-                                                                                "Property SubType*",
-                                                                                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: MediaQuery.of(context).size.width < 500 ? 15 : 18),
-                                                                              ),
-                                                                            ],
-                                                                          ),
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                10,
-                                                                          ),
-                                                                          Row(
-                                                                            children: [
-                                                                              const SizedBox(
-                                                                                width: 15,
-                                                                              ),
-                                                                              Material(
-                                                                                elevation: 2,
-                                                                                borderRadius: BorderRadius.circular(10),
-                                                                                child: Container(
-                                                                                  width: MediaQuery.of(context).size.width < 500 ? 160 : 160,
-                                                                                  padding: const EdgeInsets.only(left: 10),
-                                                                                  decoration: BoxDecoration(
-                                                                                    color: Colors.white,
-                                                                                    borderRadius: BorderRadius.circular(10),
-                                                                                  ),
-                                                                                  child: TextFormField(
-                                                                                    controller: subtype,
-                                                                                    decoration: const InputDecoration(border: InputBorder.none, hintText: "Townhome"),
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                            ],
-                                                                          ),
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                20,
-                                                                          ),
-                                                                          Row(
-                                                                            children: [
-                                                                              if (MediaQuery.of(context).size.width < 500)
-                                                                                SizedBox(width: MediaQuery.of(context).size.width * 0.05),
-                                                                              if (MediaQuery.of(context).size.width > 500)
-                                                                                SizedBox(width: MediaQuery.of(context).size.width * 0.02),
-                                                                              Container(
-                                                                                height: MediaQuery.of(context).size.height * 0.02,
-                                                                                width: MediaQuery.of(context).size.height * 0.02,
-                                                                                decoration: BoxDecoration(
-                                                                                  color: Colors.white,
-                                                                                  borderRadius: BorderRadius.circular(5),
-                                                                                ),
-                                                                                child: Checkbox(
-                                                                                  activeColor: isChecked ? blueColor : Colors.white,
-                                                                                  checkColor: Colors.white,
-                                                                                  value: isChecked, // assuming _isChecked is a boolean variable indicating whether the checkbox is checked or not
-                                                                                  onChanged: (value) {
-                                                                                    setState(() {
-                                                                                      isChecked = value ?? false; // ensure value is not null
-                                                                                    });
-                                                                                  },
-                                                                                ),
-                                                                              ),
-                                                                              SizedBox(width: MediaQuery.of(context).size.width * 0.02),
-                                                                              Text(
-                                                                                "Multi unit",
-                                                                                style: TextStyle(
-                                                                                  fontSize: MediaQuery.of(context).size.width < 500 ? 15 : 18,
-                                                                                  color: Colors.grey,
-                                                                                ),
-                                                                              ),
-                                                                              SizedBox(width: MediaQuery.of(context).size.width * 0.05),
-                                                                            ],
-                                                                          ),
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                20,
-                                                                          ),
-                                                                          Row(
-                                                                            children: [
-                                                                              if (MediaQuery.of(context).size.width < 500)
-                                                                                SizedBox(width: MediaQuery.of(context).size.width * 0.03),
-                                                                              if (MediaQuery.of(context).size.width > 500)
-                                                                                SizedBox(width: MediaQuery.of(context).size.width * 0.02),
-                                                                              GestureDetector(
-                                                                                onTap: () async {
-                                                                                  if (selectedValue == null || subtype.text.isEmpty) {
-                                                                                    setState(() {
-                                                                                      iserror = true;
-                                                                                    });
-                                                                                  } else {
-                                                                                    setState(() {
-                                                                                      isLoading = true;
-                                                                                      iserror = false;
-                                                                                    });
-                                                                                    SharedPreferences prefs = await SharedPreferences.getInstance();
-                                                                                    String? id = prefs.getString("adminId");
-                                                                                    PropertyTypeRepository()
-                                                                                        .addPropertyType(
-                                                                                      adminId: id!,
-                                                                                      propertyType: selectedValue,
-                                                                                      propertySubType: subtype.text,
-                                                                                      isMultiUnit: isChecked,
-                                                                                    )
-                                                                                        .then((value) {
-                                                                                      setState(() {
-                                                                                        isLoading = false;
-                                                                                      });
-                                                                                      reload_Screen();
-                                                                                      Navigator.pop(context, true);
-                                                                                    }).catchError((e) {
-                                                                                      setState(() {
-                                                                                        isLoading = false;
-                                                                                      });
-                                                                                    });
-                                                                                  }
-                                                                                  // print(selectedValue);
-                                                                                },
-                                                                                child: ClipRRect(
-                                                                                  borderRadius: BorderRadius.circular(5.0),
-                                                                                  child: Container(
-                                                                                    height: MediaQuery.of(context).size.width < 500 ? 40 : 45,
-                                                                                    width: MediaQuery.of(context).size.width < 500 ? 150 : 165,
-                                                                                    decoration: BoxDecoration(
-                                                                                      borderRadius: BorderRadius.circular(5.0),
-                                                                                      color: blueColor,
-                                                                                      boxShadow: [
-                                                                                        const BoxShadow(
-                                                                                          color: Colors.grey,
-                                                                                          offset: Offset(0.0, 1.0), //(x,y)
-                                                                                          blurRadius: 6.0,
+                                                                                    ))
+                                                                                .toList(),
+                                                                            // The closed button renders the item with menuItemStyleData's own
+                                                                            // padding on top of the button's, so the selected value sat further
+                                                                            // in than the text field below it. This draws the closed state
+                                                                            // itself, with no padding, leaving only the button's 14.
+                                                                            selectedItemBuilder: (context) => items
+                                                                                .map((String item) => Align(
+                                                                                      alignment: Alignment.centerLeft,
+                                                                                      child: Text(
+                                                                                        item,
+                                                                                        style: TextStyle(
+                                                                                          fontSize: 15,
+                                                                                          fontWeight: FontWeight.w600,
+                                                                                          color: navyClr,
                                                                                         ),
-                                                                                      ],
-                                                                                    ),
-                                                                                    child: Center(
-                                                                                      child: isLoading
-                                                                                          ? const SpinKitFadingCircle(
-                                                                                              color: Colors.white,
-                                                                                              size: 25.0,
-                                                                                            )
-                                                                                          : Padding(
-                                                                                              padding: const EdgeInsets.all(2.0),
-                                                                                              child: Text(
-                                                                                                "Add Property Type",
-                                                                                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: MediaQuery.of(context).size.width < 500 ? 13 : 15.5),
-                                                                                              ),
-                                                                                            ),
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
+                                                                                        overflow: TextOverflow.ellipsis,
+                                                                                      ),
+                                                                                    ))
+                                                                                .toList(),
+                                                                            value: selectedValue,
+                                                                            onChanged: (value) {
+                                                                              setState(() {
+                                                                                selectedValue = value;
+                                                                              });
+                                                                            },
+                                                                            buttonStyleData: ButtonStyleData(
+                                                                              height: 52,
+                                                                              padding: const EdgeInsets.only(left: 14, right: 12),
+                                                                              decoration: BoxDecoration(
+                                                                                color: Colors.white,
+                                                                                borderRadius: BorderRadius.circular(10),
+                                                                                border: Border.all(color: outlineClr),
                                                                               ),
-                                                                            ],
-                                                                          ),
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                10,
-                                                                          ),
-                                                                          if (iserror)
-                                                                            const Text(
-                                                                              "Please fill in all fields correctly.",
-                                                                              style: TextStyle(color: Colors.redAccent),
                                                                             ),
-                                                                          const SizedBox(
-                                                                            height:
-                                                                                10,
+                                                                            iconStyleData: IconStyleData(
+                                                                              icon: Icon(Icons.keyboard_arrow_down_rounded, color: mutedClr),
+                                                                              iconSize: 24,
+                                                                            ),
+                                                                            dropdownStyleData: DropdownStyleData(
+                                                                              maxHeight: 220,
+                                                                              decoration: BoxDecoration(
+                                                                                color: Colors.white,
+                                                                                borderRadius: BorderRadius.circular(12),
+                                                                              ),
+                                                                            ),
+                                                                            // Zero here on purpose: the package derives the CLOSED button's
+                                                                            // inner padding from half of this value, which pushed the selected
+                                                                            // value further in than the text field below it. Each item carries
+                                                                            // its own padding instead, so the open menu is unchanged.
+                                                                            menuItemStyleData: const MenuItemStyleData(
+                                                                              height: 44,
+                                                                              padding: EdgeInsets.zero,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(height: 18),
+
+                                                                        // Property Sub Type *
+                                                                        Padding(
+                                                                          padding: const EdgeInsets.only(bottom: 8),
+                                                                          child: RichText(
+                                                                            text: TextSpan(
+                                                                              text: 'Property Sub Type',
+                                                                              style: TextStyle(
+                                                                                  fontSize: 14, fontWeight: FontWeight.bold, color: navyClr),
+                                                                              children: [
+                                                                                TextSpan(
+                                                                                    text: ' *',
+                                                                                    style: TextStyle(
+                                                                                        color: redClr, fontWeight: FontWeight.bold)),
+                                                                              ],
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        Container(
+                                                                          decoration: BoxDecoration(
+                                                                            color: Colors.white,
+                                                                            borderRadius: BorderRadius.circular(10),
+                                                                            border: Border.all(color: outlineClr),
+                                                                          ),
+                                                                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                                                                          child: TextFormField(
+                                                                            controller: subtype,
+                                                                            style: TextStyle(
+                                                                                fontSize: 15, fontWeight: FontWeight.w600, color: navyClr),
+                                                                            decoration: InputDecoration(
+                                                                              border: InputBorder.none,
+                                                                              isDense: true,
+                                                                              contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                                                                              hintText: 'e.g. Townhome',
+                                                                              hintStyle: TextStyle(
+                                                                                  color: mutedClr,
+                                                                                  fontWeight: FontWeight.w500,
+                                                                                  fontSize: 15),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(height: 18),
+
+                                                                        // Multi Unit
+                                                                        Row(
+                                                                          children: [
+                                                                            SizedBox(
+                                                                              width: 24,
+                                                                              height: 24,
+                                                                              child: Checkbox(
+                                                                                value: isChecked,
+                                                                                onChanged: (value) {
+                                                                                  setState(() {
+                                                                                    isChecked = value ?? false;
+                                                                                  });
+                                                                                },
+                                                                                activeColor: navyClr,
+                                                                                checkColor: Colors.white,
+                                                                                side: BorderSide(color: checkOffClr, width: 1.5),
+                                                                                shape: RoundedRectangleBorder(
+                                                                                    borderRadius: BorderRadius.circular(6)),
+                                                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                                visualDensity: VisualDensity.compact,
+                                                                              ),
+                                                                            ),
+                                                                            const SizedBox(width: 12),
+                                                                            Expanded(
+                                                                              child: Text(
+                                                                                'Multi Unit',
+                                                                                style: TextStyle(
+                                                                                    fontSize: 15,
+                                                                                    fontWeight: FontWeight.w600,
+                                                                                    color: navyClr),
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+
+                                                                        if (iserror) ...[
+                                                                          const SizedBox(height: 14),
+                                                                          Text(
+                                                                            'Please fill in all fields correctly.',
+                                                                            style: TextStyle(
+                                                                                color: redClr, fontWeight: FontWeight.w600, fontSize: 13),
                                                                           ),
                                                                         ],
-                                                                      ),
+                                                                        const SizedBox(height: 22),
+
+                                                                        // Actions
+                                                                        Row(
+                                                                          children: [
+                                                                            Expanded(
+                                                                              child: OutlinedButton(
+                                                                                onPressed: isLoading ? null : () => Navigator.pop(context),
+                                                                                style: OutlinedButton.styleFrom(
+                                                                                  backgroundColor: Colors.white,
+                                                                                  side: BorderSide(color: outlineClr),
+                                                                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                                                                  shape: RoundedRectangleBorder(
+                                                                                      borderRadius: BorderRadius.circular(10)),
+                                                                                ),
+                                                                                child: Text(
+                                                                                  'Cancel',
+                                                                                  style: TextStyle(
+                                                                                      color: mutedClr,
+                                                                                      fontWeight: FontWeight.bold,
+                                                                                      fontSize: 15),
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                            const SizedBox(width: 12),
+                                                                            Expanded(
+                                                                              child: ElevatedButton(
+                                                                                // Save logic unchanged from the previous dialog, including
+                                                                                // the un-trimmed subtype check it always had.
+                                                                                onPressed: isLoading
+                                                                                    ? null
+                                                                                    : () async {
+                                                                                        if (selectedValue == null ||
+                                                                                            subtype.text.isEmpty) {
+                                                                                          setState(() {
+                                                                                            iserror = true;
+                                                                                          });
+                                                                                        } else {
+                                                                                          setState(() {
+                                                                                            isLoading = true;
+                                                                                            iserror = false;
+                                                                                          });
+                                                                                          SharedPreferences prefs =
+                                                                                              await SharedPreferences.getInstance();
+                                                                                          String? id = prefs.getString("adminId");
+                                                                                          PropertyTypeRepository()
+                                                                                              .addPropertyType(
+                                                                                            adminId: id!,
+                                                                                            propertyType: selectedValue,
+                                                                                            propertySubType: subtype.text,
+                                                                                            isMultiUnit: isChecked,
+                                                                                          )
+                                                                                              .then((value) {
+                                                                                            setState(() {
+                                                                                              isLoading = false;
+                                                                                            });
+                                                                                            reload_Screen();
+                                                                            Navigator.pop(context, true);
+                                                                                          }).catchError((e) {
+                                                                                            setState(() {
+                                                                                              isLoading = false;
+                                                                                            });
+                                                                                          });
+                                                                                        }
+                                                                                      },
+                                                                                style: ElevatedButton.styleFrom(
+                                                                                  backgroundColor: navyClr,
+                                                                                  disabledBackgroundColor: navyClr.withOpacity(0.6),
+                                                                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                                                                  elevation: 0,
+                                                                                  shape: RoundedRectangleBorder(
+                                                                                      borderRadius: BorderRadius.circular(10)),
+                                                                                ),
+                                                                                child: isLoading
+                                                                                    ? const SpinKitFadingCircle(
+                                                                                        color: Colors.white, size: 22.0)
+                                                                                    : const Text(
+                                                                                        'Add',
+                                                                                        style: TextStyle(
+                                                                                            color: Colors.white,
+                                                                                            fontWeight: FontWeight.bold,
+                                                                                            fontSize: 15),
+                                                                                      ),
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ],
                                                                     ),
-                                                                  ],
+                                                                  ),
                                                                 ),
                                                               ),
                                                             );

@@ -112,13 +112,21 @@ class _PropertyTableState extends State<PropertyTable>
         title: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
-            Container(
-              child: const Icon(
-                Icons.expand_less,
-                color: Colors.transparent,
-              ),
+            // Leading block mirrors the row exactly: 30 for the chevron column
+            // (was a transparent icon standing in at a different width), then 70
+            // for the thumbnail the "Image" heading sits over. Matching these is
+            // what keeps every heading directly above its own values.
+            // 32 = the row's 30pt chevron column plus the 2pt padding wrapped
+            // around the row's Row, which this header does not have.
+            const SizedBox(width: 32),
+            SizedBox(
+              width: 82,
+              child: Text("Image",
+                  style: TextStyle(
+                      color: blueColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15)),
             ),
-            const SizedBox(width: 58),
             Expanded(
               child: InkWell(
                 onTap: () {
@@ -201,64 +209,13 @@ class _PropertyTableState extends State<PropertyTable>
                 },
                 child: Row(
                   children: [
-                    Text("  Sub Type",
+                    Text("Sub Type",
                         style: TextStyle(
                             color: blueColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 15)),
                     const SizedBox(width: 5),
                     ascending2
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 7, left: 2),
-                            child: FaIcon(
-                              FontAwesomeIcons.sortUp,
-                              size: 20,
-                              color: blueColor,
-                            ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.only(bottom: 7, left: 2),
-                            child: FaIcon(
-                              FontAwesomeIcons.sortDown,
-                              size: 20,
-                              color: blueColor,
-                            ),
-                          ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    if (sorting3) {
-                      sorting1 = false;
-                      sorting2 = false;
-                      sorting3 = sorting3;
-                      ascending3 = sorting3 ? !ascending3 : true;
-                      ascending2 = false;
-                      ascending1 = false;
-                    } else {
-                      sorting1 = false;
-                      sorting2 = false;
-                      sorting3 = !sorting3;
-                      ascending3 = sorting3 ? !ascending3 : true;
-                      ascending2 = false;
-                      ascending1 = false;
-                    }
-
-                    // Sorting logic here
-                  });
-                },
-                child: Row(
-                  children: [
-                    Text("Created On",
-                        style: TextStyle(
-                            color: blueColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15)),
-                    ascending3
                         ? Padding(
                             padding: const EdgeInsets.only(top: 7, left: 2),
                             child: FaIcon(
@@ -1178,8 +1135,13 @@ class _PropertyTableState extends State<PropertyTable>
                                             });
                                           },
                                           child: Container(
-                                            margin: const EdgeInsets.only(
-                                                left: 5, right: 5),
+                                            // Fixed 30 wide: FaIcon lays out at its
+                                            // glyph's advance width, not the `size`
+                                            // given, so this column came out narrower
+                                            // than the header assumed and pushed every
+                                            // heading right of its values.
+                                            width: 30,
+                                            alignment: Alignment.center,
                                             padding: !isExpanded
                                                 ? const EdgeInsets.only(
                                                     bottom: 10)
@@ -1196,7 +1158,10 @@ class _PropertyTableState extends State<PropertyTable>
                                         ),
                                         Padding(
                                           padding:
-                                              const EdgeInsets.only(right: 10),
+                                              // 22, not 10: the header gained a 12pt gap between the Image label
+                                              // and Main Type, so the row matches it or the headings sit right
+                                              // of the values they label.
+                                              const EdgeInsets.only(right: 34),
                                           child: PropertyTypeImageField.preview(
                                             value: Propertytype.propertyTypeImage,
                                             propertyType:
@@ -1228,11 +1193,6 @@ class _PropertyTableState extends State<PropertyTable>
                                             ),
                                           ),
                                         ),
-                                        SizedBox(
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                .08),
                                         Expanded(
                                           child: Text(
                                             '${Propertytype.propertysubType}',
@@ -1243,35 +1203,6 @@ class _PropertyTableState extends State<PropertyTable>
                                             ),
                                           ),
                                         ),
-                                        SizedBox(
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                .08),
-                                        Expanded(
-                                          child: Text(
-                                            // '${widget.data.createdAt}',
-                                            // formatDate(
-                                            //     '${Propertytype.createdAt}'),
-                                            Propertytype.createdAt
-                                                        ?.isNotEmpty ==
-                                                    true
-                                                ? dateProvider.formatCurrentDate(
-                                                    '${Propertytype.createdAt}')
-                                                : 'N/A',
-
-                                            style: TextStyle(
-                                              color: blueColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                .02),
                                       ],
                                     ),
                                   ),
@@ -1284,6 +1215,7 @@ class _PropertyTableState extends State<PropertyTable>
                                     child: SingleChildScrollView(
                                       child: Column(
                                         children: [
+                                          const SizedBox(height: 12),
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.start,
@@ -1300,6 +1232,43 @@ class _PropertyTableState extends State<PropertyTable>
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
                                                   children: <Widget>[
+                                                    // Created On used to be a column in the collapsed row; it moved
+                                                    // here so the row shows only Image, Main Type and Sub Type.
+                                                    Text.rich(
+                                                      TextSpan(
+                                                        children: [
+                                                          TextSpan(
+                                                            text:
+                                                                'Created On : ',
+                                                            style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color:
+                                                                    blueColor), // Bold and black
+                                                          ),
+                                                          TextSpan(
+                                                            // text: formatDate(
+                                                            //     '${Propertytype.createdAt}'),
+                                                            text: Propertytype
+                                                                        .createdAt
+                                                                        ?.isNotEmpty ==
+                                                                    true
+                                                                ? dateProvider
+                                                                    .formatCurrentDate(
+                                                                        '${Propertytype.createdAt}')
+                                                                : 'N/A',
+                                                            style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color:
+                                                                    grey), // Light and grey
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
                                                     Text.rich(
                                                       TextSpan(
                                                         children: [
@@ -1339,6 +1308,7 @@ class _PropertyTableState extends State<PropertyTable>
                                               ),
                                             ],
                                           ),
+                                          const SizedBox(height: 12),
                                           Row(
                                             //mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
