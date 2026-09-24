@@ -163,7 +163,7 @@ class _PropertyTableState extends State<PropertyTable>
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15)),
                     // Text("Property", style: TextStyle(color: Colors.white)),
-                    const SizedBox(width: 3),
+                    const SizedBox(width: 6),
                     ascending1
                         ? Padding(
                             padding: const EdgeInsets.only(top: 7, left: 2),
@@ -214,7 +214,7 @@ class _PropertyTableState extends State<PropertyTable>
                             color: blueColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 15)),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 6),
                     ascending2
                         ? Padding(
                             padding: const EdgeInsets.only(top: 7, left: 2),
@@ -1016,20 +1016,16 @@ class _PropertyTableState extends State<PropertyTable>
                 // Apply search filter on top of type filter (if search is not empty)
                 if (searchvalue!.isNotEmpty) {
                   data = data
+                      // Search only the visible columns. createdAt/updatedAt are raw
+                      // ISO strings ("2026-09-24T10:15:30.000Z") and were matched too,
+                      // so any char in a timestamp (t, z, -, :, ., 20) matched every
+                      // row; those dates are not even shown as columns. propertysubType
+                      // is guarded so a null subtype no longer matches the text "null".
                       .where((property) =>
                           (property.propertyType ?? '')
                               .toLowerCase()
                               .contains(searchvalue!.toLowerCase()) ||
-                          property.propertysubType
-                              .toString()
-                              .toLowerCase()
-                              .contains(searchvalue!.toLowerCase()) ||
-                          property.createdAt
-                              .toString()
-                              .toLowerCase()
-                              .contains(searchvalue!.toLowerCase()) ||
-                          property.updatedAt
-                              .toString()
+                          (property.propertysubType ?? '')
                               .toLowerCase()
                               .contains(searchvalue!.toLowerCase()))
                       .toList();
@@ -1047,30 +1043,10 @@ class _PropertyTableState extends State<PropertyTable>
                     const SizedBox(height: 10),
                     _buildHeaders(),
                     const SizedBox(height: 10),
-                    if (data.isEmpty)
-                      Container(
-                        height: MediaQuery.of(context).size.height * .35,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                "assets/images/no_data.jpg",
-                                height: 200,
-                                width: 200,
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                "No Data Available",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: blueColor,
-                                    fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    // The filtered-empty state is shown once, by kNoSearchResults below
+                    // (currentPageData.isEmpty). A second "No Data Available" block here
+                    // stacked a redundant empty state under it (CRM-4864 pattern). The
+                    // genuinely-empty list is handled earlier by snapshot.isEmpty.
                     Container(
                       // decoration: BoxDecoration(
                       //     border: Border.all(
@@ -1185,6 +1161,11 @@ class _PropertyTableState extends State<PropertyTable>
                                             },
                                             child: Text(
                                               '${Propertytype.propertyType}',
+                                              // One line, ellipsis: a value wider than
+                                              // its column used to break mid-word
+                                              // ("Residenti / al") rather than wrap.
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
                                                 color: blueColor,
                                                 fontWeight: FontWeight.bold,
@@ -1196,6 +1177,11 @@ class _PropertyTableState extends State<PropertyTable>
                                         Expanded(
                                           child: Text(
                                             '${Propertytype.propertysubType}',
+                                            // One line, ellipsis: a value wider than its
+                                            // column used to break mid-word rather than
+                                            // wrap.
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               color: blueColor,
                                               fontWeight: FontWeight.bold,

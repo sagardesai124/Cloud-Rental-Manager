@@ -40,6 +40,12 @@ class Rentals {
   List<Map<String, dynamic>>? units;
   List<InsuredValue>? insuredValues; // Insured values list
   List<PropertyValueItem>? propertyValues;
+  // Building/community amenities (Rentals.js property_amenities).
+  List<String>? propertyAmenities;
+  // Web's "Advertise this property on Zillow" setting (Rentals.js
+  // zillow_advertise). Read-only on mobile: it only decides whether the
+  // Property Amenities card is shown, exactly as web does.
+  bool? zillowAdvertise;
 
   Rentals(
       {this.id,
@@ -73,7 +79,9 @@ class Rentals {
       this.subdivision,
       this.units,
       this.insuredValues,
-      this.propertyValues});
+      this.propertyValues,
+      this.propertyAmenities,
+      this.zillowAdvertise});
 
   // Define the fromJson method within the Rental class
   factory Rentals.fromJson(Map<String, dynamic> json) {
@@ -121,6 +129,12 @@ class Rentals {
           .toList(),
       propertyValues: (json['propertyValues'] as List<dynamic>?)
           ?.map((e) => PropertyValueItem.fromJson(e))
+          .toList(),
+      zillowAdvertise: json['zillow_advertise'] == true ||
+          json['zillow_advertise']?.toString() == 'true',
+      propertyAmenities: (json['property_amenities'] as List<dynamic>?)
+          ?.map((e) => e is String ? e : (e?['amenity_name'] ?? '').toString())
+          .where((e) => e.isNotEmpty)
           .toList(),
     );
   }

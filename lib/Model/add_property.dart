@@ -6,6 +6,12 @@ class RentalOwners {
   String? companyName;
   String? primaryEmail;
   String? phoneNumber;
+  // Collected by the Add Rental Owner screen but previously never sent.
+  // Server keys match web's submit helper (Functions/Rentals.js:108-112).
+  String? alternateEmail;
+  String? homeNumber;
+  String? businessNumber;
+  String? streetAddress;
   String? city;
   String? state;
   String? country;
@@ -20,6 +26,10 @@ class RentalOwners {
     this.companyName,
     this.primaryEmail,
     this.phoneNumber,
+    this.alternateEmail,
+    this.homeNumber,
+    this.businessNumber,
+    this.streetAddress,
     this.processorList,
     this.city,
     this.state,
@@ -35,6 +45,10 @@ class RentalOwners {
         'rentalOwner_companyName': companyName,
         'rentalOwner_primaryEmail': primaryEmail,
         'rentalOwner_phoneNumber': phoneNumber,
+        'rentalOwner_alternateEmail': alternateEmail ?? '',
+        'rentalOwner_homeNumber': homeNumber ?? '',
+        'rentalOwner_businessNumber': businessNumber ?? '',
+        'street_address': streetAddress ?? '',
         'city': city,
         'state': state,
         'country': country,
@@ -69,6 +83,9 @@ class Rental {
   String? processor_id;
   String? placedInService;
   List<InsuredValue>? insuredValues;
+  // Building/community level amenities (Rentals.js property_amenities, plain
+  // name strings). Web always sends it, [] when empty.
+  List<String>? propertyAmenities;
 
   Rental(
       {this.adminId,
@@ -82,7 +99,8 @@ class Rental {
       this.staffMemberId,
       this.processor_id,
       this.placedInService,
-      this.insuredValues});
+      this.insuredValues,
+      this.propertyAmenities});
 
   Map<String, dynamic> toJson() => {
         // rentalId: json['rental_id'] ?? "",
@@ -99,6 +117,7 @@ class Rental {
           'placed_in_service': placedInService,
         if (insuredValues != null && insuredValues!.isNotEmpty)
           'insured_values': insuredValues!.map((iv) => iv.toJson()).toList(),
+        if (propertyAmenities != null) 'property_amenities': propertyAmenities,
         // 'processor_id':processor_id
       };
 }
@@ -111,16 +130,89 @@ class Unit {
   String? bed;
   String? Image;
 
-  Unit({this.unit, this.address, this.sqft, this.bath, this.bed, this.Image});
+  // Required on web for every residential unit (Rentals.jsx residentialSchema:
+  // rental_unit_price / half_baths / availability_date). The server already
+  // stores all three (Server/modals/superadmin/Unit.js), so these only needed
+  // adding on the client. availabilityDate is sent as yyyy-MM-dd, like
+  // placed_in_service. Commercial units leave them null and they are omitted.
+  String? rentPrice;
+  String? halfBaths;
+  String? availabilityDate;
+  // Optional on web, but all server-backed (Server/modals/superadmin/Unit.js).
+  // Values are the server's enum strings, not the display labels.
+  String? parkingType;
+  String? leaseTerm;
+  String? securityDeposit;
+  String? securityDepositType;
+  String? securityDepositMax;
+  String? securityDepositRefundable;
+  String? petPolicy;
+  // Server stores these two as real Booleans (Unit.js is_furnished /
+  // smoking_allowed), so send bools, not the 'true'/'false' text the
+  // checkbox controllers hold.
+  bool? isFurnished;
+  bool? smokingAllowed;
+  String? description;
+  // Unit.js amenities: plain amenity names. Residential only, like web;
+  // commercial units leave it null so their payload is unchanged.
+  List<String>? amenities;
 
-  Map<String, dynamic> toJson() => {
-        'rental_unit': unit,
-        'rental_unit_adress': address,
-        'rental_sqft': sqft,
-        'rental_bath': bath,
-        'rental_bed': bed,
-        'rental_images': Image,
-      };
+  Unit({
+    this.unit,
+    this.address,
+    this.sqft,
+    this.bath,
+    this.bed,
+    this.Image,
+    this.rentPrice,
+    this.halfBaths,
+    this.availabilityDate,
+    this.parkingType,
+    this.leaseTerm,
+    this.securityDeposit,
+    this.securityDepositType,
+    this.securityDepositMax,
+    this.securityDepositRefundable,
+    this.petPolicy,
+    this.isFurnished,
+    this.smokingAllowed,
+    this.description,
+    this.amenities,
+  });
+
+  Map<String, dynamic> toJson() {
+    final data = <String, dynamic>{
+      'rental_unit': unit,
+      'rental_unit_adress': address,
+      'rental_sqft': sqft,
+      'rental_bath': bath,
+      'rental_bed': bed,
+      'rental_images': Image,
+    };
+    // Only send the residential-only keys when the form supplied them, so a
+    // commercial unit's payload is unchanged.
+    if (rentPrice != null) data['rental_unit_price'] = rentPrice;
+    if (halfBaths != null) data['half_baths'] = halfBaths;
+    if (availabilityDate != null) data['availability_date'] = availabilityDate;
+    if (parkingType != null) data['parking_type'] = parkingType;
+    if (leaseTerm != null) data['lease_term'] = leaseTerm;
+    if (securityDeposit != null) data['security_deposit'] = securityDeposit;
+    if (securityDepositType != null) {
+      data['security_deposit_type'] = securityDepositType;
+    }
+    if (securityDepositMax != null) {
+      data['security_deposit_max'] = securityDepositMax;
+    }
+    if (securityDepositRefundable != null) {
+      data['security_deposit_refundable'] = securityDepositRefundable;
+    }
+    if (petPolicy != null) data['pet_policy'] = petPolicy;
+    if (isFurnished != null) data['is_furnished'] = isFurnished;
+    if (smokingAllowed != null) data['smoking_allowed'] = smokingAllowed;
+    if (description != null) data['description'] = description;
+    if (amenities != null) data['amenities'] = amenities;
+    return data;
+  }
 }
 
 class RentalRequest {

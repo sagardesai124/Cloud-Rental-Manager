@@ -51,6 +51,21 @@ import 'package:three_zero_two_property/provider/network_retry_state.dart';
 import 'package:three_zero_two_property/StaffModule/screen/Leasing/RentalRoll/SummeryPageLease.dart'
     as staff_lease;
 
+/// All tenant names on a lease, comma-separated, matching web's Rent Due
+/// Report (Report.jsx). The row previously showed only the first tenant even
+/// though the API returns every tenant in `tenant_data`; the model already
+/// parses them all into `tenantDataList`. Returns [empty] when there are none
+/// ('-' for display like web, '' for search matching).
+String tenantNamesJoined(List<TenantData>? tenants, {String empty = '-'}) {
+  if (tenants == null || tenants.isEmpty) return empty;
+  final names = tenants
+      .map((t) =>
+          '${t.tenantFirstName ?? ''} ${t.tenantLastName ?? ''}'.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
+  return names.isEmpty ? empty : names.join(', ');
+}
+
 class RentPastDueReports extends StatefulWidget {
   bool? isRentdue;
   String? title;
@@ -815,9 +830,7 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
             owner.rentalData != null ? owner.rentalData!.address! : "N/A" ?? "",
             style: pw.TextStyle(fontSize: 12)),
         pw.Text(
-          (owner.tenantData != null
-              ? '${owner.tenantData!.tenantFirstName ?? ""} ${owner.tenantData!.tenantLastName ?? ""}'
-              : "N/A"),
+          tenantNamesJoined(owner.tenantDataList),
           style: pw.TextStyle(fontSize: 12),
         ),
         pw.Align(
@@ -877,9 +890,9 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
       sheet.getRangeByIndex(rowIndex, 1).setText(tenant.rentalData != null
           ? tenant.rentalData!.address!
           : "N/A" ?? 'N/A');
-      sheet.getRangeByIndex(rowIndex, 2).setText(tenant.tenantData != null
-          ? '${tenant.tenantData!.tenantFirstName!} ${tenant.tenantData!.tenantLastName!}'
-          : "N/A" ?? "");
+      sheet
+          .getRangeByIndex(rowIndex, 2)
+          .setText(tenantNamesJoined(tenant.tenantDataList));
 
       sheet
           .getRangeByIndex(rowIndex, 3)
@@ -1072,7 +1085,7 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
     for (var tenant in delinquentTenantsData) {
       csvData.add([
         tenant.rentalData?.address ?? 'N/A',
-        '${tenant.tenantData?.tenantFirstName ?? 'N / A'} ${tenant.tenantData?.tenantLastName ?? 'N / A'}',
+        tenantNamesJoined(tenant.tenantDataList),
         formatMoney(tenant.total) ?? '0.00',
       ]);
 
@@ -1224,9 +1237,9 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                       ?.where((charge) {
                                     var address =
                                         charge.rentalData?.address ?? '';
-                                    var tenantName =
-                                        charge.tenantData?.tenantFirstName ??
-                                            '';
+                                    var tenantName = tenantNamesJoined(
+                                        charge.tenantDataList,
+                                        empty: '');
                                     return address.toLowerCase().contains(
                                             searchvalue.toLowerCase()) ||
                                         tenantName.toLowerCase().contains(
@@ -1239,9 +1252,9 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                       ?.where((charge) {
                                     var address =
                                         charge.rentalData?.address ?? '';
-                                    var tenantName =
-                                        charge.tenantData?.tenantFirstName ??
-                                            '';
+                                    var tenantName = tenantNamesJoined(
+                                        charge.tenantDataList,
+                                        empty: '');
                                     return address.toLowerCase().contains(
                                             searchvalue.toLowerCase()) ||
                                         tenantName.toLowerCase().contains(
@@ -1254,9 +1267,9 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                       ?.where((charge) {
                                     var address =
                                         charge.rentalData?.address ?? '';
-                                    var tenantName =
-                                        charge.tenantData?.tenantFirstName ??
-                                            '';
+                                    var tenantName = tenantNamesJoined(
+                                        charge.tenantDataList,
+                                        empty: '');
                                     return address.toLowerCase().contains(
                                             searchvalue.toLowerCase()) ||
                                         tenantName.toLowerCase().contains(
@@ -1271,9 +1284,9 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                       ?.where((payment) {
                                     var address =
                                         payment.rentalData?.address ?? '';
-                                    var tenantName =
-                                        payment.tenantData?.tenantFirstName ??
-                                            '';
+                                    var tenantName = tenantNamesJoined(
+                                        payment.tenantDataList,
+                                        empty: '');
                                     return address.toLowerCase().contains(
                                             searchvalue.toLowerCase()) ||
                                         tenantName.toLowerCase().contains(
@@ -1286,9 +1299,9 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                       ?.where((payment) {
                                     var address =
                                         payment.rentalData?.address ?? '';
-                                    var tenantName =
-                                        payment.tenantData?.tenantFirstName ??
-                                            '';
+                                    var tenantName = tenantNamesJoined(
+                                        payment.tenantDataList,
+                                        empty: '');
                                     return address.toLowerCase().contains(
                                             searchvalue.toLowerCase()) ||
                                         tenantName.toLowerCase().contains(
@@ -1541,7 +1554,7 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                                   SizedBox(width: MediaQuery.of(context).size.width * .06),
                                   Expanded(
                                     flex: 2,
-                                    child: Text('${item.tenantData != null ? item.tenantData!.tenantFirstName : "N/A" ?? '-'} ${item.tenantData != null ? item.tenantData!.tenantLastName : "N/A" ?? '-'}',
+                                    child: Text(tenantNamesJoined(item.tenantDataList),
                                       style: TextStyle(
                                         color: blueColor,
                                         fontWeight: FontWeight.bold,

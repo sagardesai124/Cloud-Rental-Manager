@@ -8,6 +8,22 @@ class unit_properties {
   String? rentalsqft;
   String? rentalbath;
   String? rentalbed;
+  // Residential-only, added for Add/Edit Property web parity. Server keys:
+  // rental_unit_price / half_baths / availability_date (Unit.js).
+  String? rentalUnitPrice;
+  String? halfBaths;
+  String? availabilityDate;
+  String? parkingType;
+  String? leaseTerm;
+  String? securityDeposit;
+  String? securityDepositType;
+  String? securityDepositMax;
+  String? securityDepositRefundable;
+  String? petPolicy;
+  bool? isFurnished;
+  bool? smokingAllowed;
+  String? description;
+  List<String>? amenities;
   List<String>? rentalImages;
   int? tenantCount;
   String? createdAt;
@@ -27,6 +43,20 @@ class unit_properties {
         this.tenantCount,
         this.rentalbath,
         this.rentalbed,
+        this.rentalUnitPrice,
+        this.halfBaths,
+        this.availabilityDate,
+        this.parkingType,
+        this.leaseTerm,
+        this.securityDeposit,
+        this.securityDepositType,
+        this.securityDepositMax,
+        this.securityDepositRefundable,
+        this.petPolicy,
+        this.isFurnished,
+        this.smokingAllowed,
+        this.description,
+        this.amenities,
         });
 
   unit_properties.fromJson(Map<String, dynamic> json) {
@@ -43,6 +73,33 @@ class unit_properties {
         ?.map((e) => e as String)
         .toList();
     rentalbed = json['rental_bed']??"";
+    // Server stores price as a Number; keep it as text for the form field.
+    rentalUnitPrice = json['rental_unit_price']?.toString() ?? "";
+    halfBaths = json['half_baths']?.toString() ?? "";
+    availabilityDate = json['availability_date']?.toString() ?? "";
+    parkingType = json['parking_type']?.toString() ?? "";
+    leaseTerm = json['lease_term']?.toString() ?? "";
+    securityDeposit = json['security_deposit']?.toString() ?? "";
+    securityDepositType = json['security_deposit_type']?.toString() ?? "";
+    securityDepositMax = json['security_deposit_max']?.toString() ?? "";
+    securityDepositRefundable =
+        json['security_deposit_refundable']?.toString() ?? "";
+    petPolicy = json['pet_policy']?.toString() ?? "";
+    // Tolerate bool or the string form, since older rows may hold either.
+    isFurnished = json['is_furnished'] is bool
+        ? json['is_furnished'] as bool
+        : json['is_furnished']?.toString().toLowerCase() == 'true';
+    smokingAllowed = json['smoking_allowed'] is bool
+        ? json['smoking_allowed'] as bool
+        : json['smoking_allowed']?.toString().toLowerCase() == 'true';
+    description = json['description']?.toString() ?? "";
+    // Unit.js amenities: plain names; tolerate {amenity_name} objects too.
+    amenities = (json['amenities'] as List<dynamic>?)
+            ?.map((e) =>
+                e is String ? e : (e?['amenity_name'] ?? '').toString())
+            .where((e) => e.isNotEmpty)
+            .toList() ??
+        <String>[];
     createdAt = json['createdAt']??"";
     updatedAt = json['updatedAt']??"";
     isDelete = json['is_delete'] is bool ? json['is_delete'] as bool : null;

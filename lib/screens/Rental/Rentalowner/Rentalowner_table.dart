@@ -729,30 +729,9 @@ class _Rentalowner_tableState extends State<Rentalowner_table>
                     const SizedBox(height: 10),
                     _buildHeaders(),
                     const SizedBox(height: 10),
-                    if (data.isEmpty)
-                      Container(
-                        height: MediaQuery.of(context).size.height * .35,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                "assets/images/no_data.jpg",
-                                height: 200,
-                                width: 200,
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                "No Data Available",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: blueColor,
-                                    fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    // Filtered-empty shows once via kNoSearchResults below; the second
+                    // "No Data Available" block here stacked a redundant empty state
+                    // (CRM-4864 pattern). Genuinely-empty is handled by snapshot.isEmpty.
                     Container(
                       // decoration: BoxDecoration(
                       //     borderRadius: BorderRadius.circular(10),

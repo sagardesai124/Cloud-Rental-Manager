@@ -20,6 +20,7 @@ import 'package:three_zero_two_property/repository/Staffmember.dart';
 import 'package:three_zero_two_property/repository/rental_properties.dart';
 import 'package:three_zero_two_property/screens/Rental/Properties/add_rentalowners.dart';
 import 'package:three_zero_two_property/widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/amenities_picker.dart';
 import '../../../Model/propertytype.dart';
 import '../../../constant/constant.dart';
 import '../../../model/add_property.dart';
@@ -245,6 +246,10 @@ class _Add_new_propertyState extends State<Add_new_property> {
       item.yearController.dispose();
       item.valueController.dispose();
     }
+    for (final n in propertyGroupAmenities) {
+      n.dispose();
+    }
+    propertyAmenities.dispose();
     super.dispose();
   }
 
@@ -345,6 +350,17 @@ class _Add_new_propertyState extends State<Add_new_property> {
   //  List<List<TextEditingController>> propertyGroupControllers = [];
   List<File?> propertyGroupImages = [];
   List<String?> propertyGroupImagenames = [];
+  // Per-unit amenities (residential only, like web). Index-aligned with
+  // propertyGroupImagenames. Notifiers because the unit widgets are built once
+  // and stored, so a plain setState would not re-render them.
+  List<ValueNotifier<List<String>>> propertyGroupAmenities = [];
+  // Web shows Property Amenities only when "Advertise on Zillow" is ticked,
+  // and a new property starts with it off. Mobile has no Zillow switch, so
+  // on Add the card stays hidden, matching web's default.
+  bool _zillowAdvertise = false;
+  // Building/community level amenities (web property_amenities).
+  final ValueNotifier<List<String>> propertyAmenities =
+      ValueNotifier(<String>[]);
   File? _image;
   Future<String?> uploadImage(File imageFile) async {
     // print(imageFile.path!);
@@ -431,36 +447,567 @@ class _Add_new_propertyState extends State<Add_new_property> {
     "5 Bath",
     "5+ Bath",
   ];
-  Widget customDropdownField(
-    String hint,
-    List<String> items,
-    TextEditingController controller,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 8),
-      child: DropdownButtonFormField<String>(
-        value: controller.text.isNotEmpty ? controller.text : null,
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        ),
-        hint: Text(hint),
-        items: items.map((String value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Text(value),
-          );
-        }).toList(),
-        onChanged: (String? newValue) {
-          controller.text = newValue ?? '';
-        },
-        validator: (value) =>
-            value == null || value.isEmpty ? 'Required' : null,
+
+  // Exactly web's Half Baths options (Rentals.jsx: ["0","0.5",..,"4"]).
+  // Stored as-is; the server keeps half_baths as a String.
+  static const List<String> halfBathArray = [
+    "0",
+    "0.5",
+    "1",
+    "1.5",
+    "2",
+    "2.5",
+    "3",
+    "3.5",
+    "4",
+  ];
+  // ---- Redesign helpers (web-aligned Add Property form) ------------------
+  // Same house style as the Add Tenant redesign (add_tenants.dart
+  // _sectionCard/_fieldLabel/_bottomActionBar). Presentation only: these own
+  // no state, and every callback they take is passed in from the call site.
+
+  static const Color _pfHintClr = Color(0xFF94A1B4);
+  static const TextStyle _pfInputText = TextStyle(fontSize: 14, color: navyClr);
+  static const TextStyle _pfTableHead =
+      TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: navyClr);
+  static const TextStyle _pfTableCell = TextStyle(fontSize: 13, color: navyClr);
+  static const Widget _pfGap = SizedBox(height: 16);
+
+  Widget _pfSectionCard({
+    String? title,
+    String? subtitle,
+    Widget? trailing,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderClr),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null) ...[
+            // Wrap rather than Row: on a narrow phone the trailing action
+            // drops under the title instead of squeezing it.
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 10,
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: navyClr,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: navyClr,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (trailing != null) trailing,
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          ...children,
+        ],
       ),
     );
   }
 
-  Widget customTextField(String label, TextEditingController Controller) {
+  Widget _pfFieldLabel(String text, {bool required = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      // scaleDown keeps a long label on one line inside a half-width column,
+      // so the two boxes of a row stay level. Text.rich (not RichText) so the
+      // app-wide Poppins still applies.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text.rich(
+          TextSpan(
+            text: text,
+            children: required
+                ? const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: redClr,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ]
+                : const [],
+          ),
+          maxLines: 1,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: navyClr,
+          ),
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _pfInputDecoration({
+    String? hint,
+    bool error = false,
+    Widget? suffixIcon,
+    EdgeInsetsGeometry contentPadding =
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  }) {
+    OutlineInputBorder side(Color color, double width) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: color, width: width),
+        );
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: _pfHintClr, fontSize: 14),
+      filled: true,
+      fillColor: Colors.white,
+      isDense: true,
+      contentPadding: contentPadding,
+      suffixIcon: suffixIcon,
+      border: side(outlineClr, 1),
+      enabledBorder: side(error ? Colors.red : outlineClr, 1),
+      focusedBorder: side(error ? Colors.red : navyClr, 1.5),
+      errorBorder: side(Colors.red, 1),
+      focusedErrorBorder: side(Colors.red, 1.5),
+    );
+  }
+
+  Widget _pfErrorText(String message) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Text(
+        message,
+        style: const TextStyle(color: Colors.red, fontSize: 13),
+      ),
+    );
+  }
+
+  Widget _pfHelperText(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 13, color: mutedClr),
+      ),
+    );
+  }
+
+  Widget _pfTwoCol(Widget left, Widget right) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: 12),
+        Expanded(child: right),
+      ],
+    );
+  }
+
+  // Two checkbox tiles side by side; stacked only when the unit card is too
+  // narrow for "Furnished" to fit on one line.
+  Widget _pfTileRow(Widget left, Widget right) {
+    // Side by side only when each tile has room for "Furnished" on one line
+    // (row >= 300); on narrower phones stack them so no word breaks mid-way.
+    return LayoutBuilder(
+      builder: (context, box) => box.maxWidth >= 300
+          ? IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: left),
+                  const SizedBox(width: 12),
+                  Expanded(child: right),
+                ],
+              ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [left, const SizedBox(height: 12), right],
+            ),
+    );
+  }
+
+  Widget _pfAddLink(String text, {required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: navyClr,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(Icons.add, color: Colors.white, size: 16),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: navyClr,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pfIconAction({
+    required IconData icon,
+    required Color color,
+    required Color background,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Icon(icon, color: color, size: 18),
+        ),
+      ),
+    );
+  }
+
+  Widget _pfUnitCard({required List<Widget> children}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderClr),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+  /// Per-unit date field (Availability Date). Read-only like Date Placed in
+  /// Service: tapping opens the picker and the controller holds the value in
+  /// the user's display format; [_toApiDate] converts it at submit.
+  Widget customUnitDateField(String label, TextEditingController controller,
+      {String placeholder = 'MM/DD/YYYY'}) {
+    return FormField<String>(
+      validator: (_) => controller.text.trim().isEmpty ? 'required' : null,
+      builder: (FormFieldState<String> state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _pfFieldLabel(label, required: true),
+            TextFormField(
+              controller: controller,
+              readOnly: true,
+              style: _pfInputText,
+              cursorColor: navyClr,
+              onTap: () async {
+                final DateTime? picked = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(DateTime.now().year + 10),
+                  builder: (context, child) {
+                    return Theme(
+                      data: ThemeData.light().copyWith(
+                        colorScheme: ColorScheme.light(
+                          primary: blueColor,
+                          onSurface: Colors.black,
+                        ),
+                      ),
+                      child: child!,
+                    );
+                  },
+                );
+                if (picked != null) {
+                  final dateProvider =
+                      Provider.of<DateProvider>(context, listen: false);
+                  setState(() {
+                    controller.text = dateProvider.formatCurrentDate(
+                        DateFormat('yyyy-MM-dd').format(picked));
+                  });
+                  state.didChange(controller.text);
+                }
+              },
+              decoration: _pfInputDecoration(
+                hint: placeholder,
+                error: state.hasError,
+                suffixIcon: const Icon(
+                  Icons.calendar_today_outlined,
+                  color: navyClr,
+                  size: 18,
+                ),
+              ),
+            ),
+            if (state.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  state.errorText!,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Displayed date -> yyyy-MM-dd for the payload. Same parse order the form
+  /// already uses for placed_in_service; returns null if nothing parses, so a
+  /// blank field is omitted rather than sent as garbage.
+  String? _toApiDate(String text) {
+    if (text.trim().isEmpty) return null;
+    for (final format in const [
+      'yyyy-MM-dd',
+      'yyyy-M-d',
+      'yyyy-MMM-dd',
+      'dd-MM-yyyy',
+      'd-M-yyyy',
+      'M/d/yyyy',
+      'MM/dd/yyyy',
+    ]) {
+      try {
+        return DateFormat('yyyy-MM-dd').format(DateFormat(format).parse(text));
+      } catch (_) {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  // Web's exact option VALUES and labels (Rentals.jsx getOptionLabel blocks).
+  // The value is what the server stores; the label is only what we display.
+  static const Map<String, String> parkingTypeOptions = {
+    '': 'Select type',
+    'surfaceLot': 'Surface Lot',
+    'garageLot': 'Garage Lot',
+    'coveredLot': 'Covered Lot',
+    'street': 'Street',
+    'other': 'Other',
+    'none': 'None',
+  };
+  static const Map<String, String> leaseTermOptions = {
+    'ContactForDetails': 'Contact for Details',
+    'Monthly': 'Monthly',
+    'SixMonths': '6 Months',
+    'OneYear': '1 Year',
+  };
+  static const Map<String, String> depositTypeOptions = {
+    'flatFee': 'Flat Fee',
+    'range': 'Range',
+    'percentage': '% of Rent',
+    'multiplier': 'Multiplier of Rent',
+  };
+  static const Map<String, String> depositRefundableOptions = {
+    'refundable': 'Refundable',
+    'nonRefundable': 'Non-Refundable',
+    'partiallyRefundable': 'Partially Refundable',
+  };
+
+  /// Dropdown over a value->label map: the controller always holds the server
+  /// VALUE while the user sees the label, so nothing has to be translated at
+  /// save time. Optional, so unlike customDropdownField it does not validate.
+  /// Checkbox backed by a TextEditingController holding 'true'/'false', so it
+  /// slots into the same positional controller list as every other unit field.
+  Widget customCheckboxField(String label, TextEditingController controller) {
+    // Unit widgets are pre-built into a stored list, so setState never repaints
+    // this box. Listen to the controller itself so the tick follows the value
+    // and a second tap can untick it.
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, current, _) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: outlineClr),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: current.text == 'true',
+                activeColor: navyClr,
+                checkColor: Colors.white,
+                side: const BorderSide(color: checkOffClr, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+                onChanged: (checked) =>
+                    controller.text = (checked ?? false).toString(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: navyClr,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget customValueDropdown(
+    String label,
+    Map<String, String> options,
+    TextEditingController controller, {
+    String placeholder = 'Select',
+    bool showRequired = false,
+  }) {
+    final current = options.containsKey(controller.text) ? controller.text : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _pfFieldLabel(label, required: showRequired),
+        DropdownButtonFormField<String>(
+          value: current,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, color: navyClr),
+          style: _pfInputText,
+          dropdownColor: Colors.white,
+          decoration: _pfInputDecoration(
+              contentPadding: const EdgeInsets.fromLTRB(16, 12, 12, 12)),
+          hint: Text(
+            placeholder,
+            style: const TextStyle(color: _pfHintClr, fontSize: 14),
+          ),
+          items: options.entries
+              .map((e) => DropdownMenuItem<String>(
+                    value: e.key,
+                    child: Text(e.value),
+                  ))
+              .toList(),
+          onChanged: (v) => setState(() => controller.text = v ?? ''),
+        ),
+      ],
+    );
+  }
+
+  /// Free-text unit field that is optional (customTextField always requires).
+  Widget customOptionalField(String label, TextEditingController controller,
+      {int maxLines = 1, bool money = false, String? placeholder}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _pfFieldLabel(label),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          keyboardType: money
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : null,
+          inputFormatters: money
+              ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+              : null,
+          style: _pfInputText,
+          cursorColor: navyClr,
+          decoration: _pfInputDecoration(hint: placeholder),
+        ),
+      ],
+    );
+  }
+
+  Widget customDropdownField(
+    String label,
+    List<String> items,
+    TextEditingController controller, {
+    String placeholder = 'Select',
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _pfFieldLabel(label, required: true),
+        DropdownButtonFormField<String>(
+          value: controller.text.isNotEmpty ? controller.text : null,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, color: navyClr),
+          style: _pfInputText,
+          dropdownColor: Colors.white,
+          decoration: _pfInputDecoration(
+              contentPadding: const EdgeInsets.fromLTRB(16, 12, 12, 12)),
+          hint: Text(
+            placeholder,
+            style: const TextStyle(color: _pfHintClr, fontSize: 14),
+          ),
+          items: items.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            controller.text = newValue ?? '';
+          },
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Required' : null,
+        ),
+      ],
+    );
+  }
+
+  Widget customTextField(String label, TextEditingController Controller,
+      {bool money = false, String? placeholder}) {
     return FormField<String>(
       validator: (value) {
         if (Controller.text.isEmpty) {
@@ -472,38 +1019,29 @@ class _Add_new_propertyState extends State<Add_new_property> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: TextFormField(
-                controller: Controller,
-                cursorColor: Colors.black,
-                decoration: InputDecoration(
-                  hintText: label,
-                  // labelText: label,
-                  // labelStyle: TextStyle(color: Colors.grey[700]),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF8A95A8)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide:
-                        const BorderSide(color: Color(0xFF8A95A8), width: 2),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      vertical: 10.0, horizontal: 10.0),
-                ),
+            _pfFieldLabel(label, required: true),
+            TextFormField(
+              controller: Controller,
+              // Rent/deposit are Numbers on the server; web strips everything but
+              // digits and '.', so '1,850' or '$1850' must not be typeable.
+              keyboardType: money
+                  ? const TextInputType.numberWithOptions(decimal: true)
+                  : null,
+              inputFormatters: money
+                  ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+                  : null,
+              style: _pfInputText,
+              cursorColor: navyClr,
+              decoration: _pfInputDecoration(
+                // labelText: label,
+                // labelStyle: TextStyle(color: Colors.grey[700]),
+                hint: placeholder,
+                error: state.hasError,
               ),
             ),
             if (state.hasError)
               Padding(
-                padding: const EdgeInsets.only(left: 5, top: 4),
+                padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   state.errorText!,
                   style: const TextStyle(
@@ -518,83 +1056,110 @@ class _Add_new_propertyState extends State<Add_new_property> {
     );
   }
 
+  // Unit Amenities (residential only, like web). Builder defers the list
+  // lookup to build time: the notifier is appended after the fields are built.
+  Widget unitAmenitiesField(int index) {
+    return Builder(
+      builder: (_) => ValueListenableBuilder<List<String>>(
+        valueListenable: propertyGroupAmenities[index],
+        builder: (_, value, __) => AmenitiesField(
+          label: 'Unit Amenities',
+          value: value,
+          isStaff: false,
+          onChanged: (v) => propertyGroupAmenities[index].value = v,
+        ),
+      ),
+    );
+  }
+
   Widget photo(int index) {
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setState) {
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const SizedBox(
-                  width: 5,
-                ),
-                Text(
-                  'Photo',
-                  style: TextStyle(
-                      color: blueColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8.0),
+            _pfFieldLabel('Photo'),
             if (propertyGroupImages[index] == null)
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      getImage(index).then((_) {
-                        setState(
-                            () {}); // Rebuild the widget after selecting the image
-                      });
-                    },
-                    child: Image.asset(
-                      'assets/images/addimage.png',
-                      height: 40,
-                      width: 40,
-                    ),
+              GestureDetector(
+                onTap: () {
+                  getImage(index).then((_) {
+                    setState(
+                        () {}); // Rebuild the widget after selecting the image
+                  });
+                },
+                child: CustomPaint(
+                  foregroundPainter: const _PfDashedBorderPainter(),
+                  child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                  child: const Column(
+                    children: [
+                      Icon(Icons.file_upload_outlined,
+                          color: navyClr, size: 26),
+                      SizedBox(height: 8),
+                      Text(
+                        'Add Unit Photo',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: navyClr,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        '.png, .jpg, .jpeg',
+                        style: TextStyle(fontSize: 12, color: mutedClr),
+                      ),
+                    ],
+                  ),
+                ),
+                ),
               ),
-            const SizedBox(height: 10),
             if (propertyGroupImages[index] != null)
-              Column(
+              Stack(
                 children: [
                   // Text(
                   //   '+ Add',
                   //   style: TextStyle(color: Colors.green,fontWeight: FontWeight.bold,fontSize: 18),
                   // ),
-                  Row(
-                    children: [
-                      const SizedBox(
-                        width: 80,
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            propertyGroupImages[index] =
-                                null; // Clear the selected image
-                          });
-                        },
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.file(
+                      propertyGroupImages[index]!,
+                      height: 100,
+                      width: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          propertyGroupImages[index] =
+                              null; // Clear the selected image
+                        });
+                      },
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: borderClr),
+                        ),
                         child: const Icon(
                           Icons.close,
-                          color: Colors.grey,
+                          color: mutedClr,
+                          size: 16,
                         ),
                       ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8, bottom: 8),
-                        child: Image.file(
-                          propertyGroupImages[index]!,
-                          height: 100,
-                          width: 100,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -615,19 +1180,32 @@ class _Add_new_propertyState extends State<Add_new_property> {
       var unitController = TextEditingController();
       var unitAddressController = TextEditingController();
       var sqftController = TextEditingController();
+      var unitDescriptionController = TextEditingController();
 
       fields = [
-        customTextField('Unit', unitController),
-        customTextField('Unit Address', unitAddressController),
-        customTextField('SQft', sqftController),
-
-        const SizedBox(
-          height: 10,
-        ),
+        customTextField('Unit Number', unitController,
+            placeholder: 'Enter unit number'),
+        _pfGap,
+        customTextField('Unit Address', unitAddressController,
+            placeholder: 'Enter unit address'),
+        _pfGap,
+        customTextField('SQFT', sqftController, placeholder: 'Enter Sqft'),
+        _pfGap,
+        customOptionalField('Unit Description', unitDescriptionController,
+            maxLines: 3, placeholder: 'Enter unit-level description...'),
+        _pfHelperText(
+            'Describe unit features, layout, appliances, and unique qualities'),
+        _pfGap,
         photo(propertyGroups.length), // Pass the index
       ];
 
-      controllers = [unitController, unitAddressController, sqftController];
+      // Unit Description is appended LAST (index 3) so indices 0-2 never shift.
+      controllers = [
+        unitController,
+        unitAddressController,
+        sqftController,
+        unitDescriptionController,
+      ];
     } else if (selectedpropertytype == 'Residential' &&
         selectedIsMultiUnit == true) {
       var unitController = TextEditingController();
@@ -635,16 +1213,93 @@ class _Add_new_propertyState extends State<Add_new_property> {
       var sqftController = TextEditingController();
       var bathController = TextEditingController();
       var bedController = TextEditingController();
+      var rentPriceController = TextEditingController();
+      var halfBathsController = TextEditingController();
+      var availabilityDateController = TextEditingController();
+      var parkingTypeController = TextEditingController();
+      var leaseTermController = TextEditingController(text: 'ContactForDetails');
+      var securityDepositController = TextEditingController();
+      var depositTypeController = TextEditingController(text: 'flatFee');
+      var depositMaxController = TextEditingController();
+      var depositRefundableController =
+          TextEditingController(text: 'refundable');
+      var petPolicyController = TextEditingController();
+      var furnishedController = TextEditingController(text: 'false');
+      var smokingController = TextEditingController(text: 'false');
+      var unitDescriptionController = TextEditingController();
 
       fields = [
-        customTextField('Unit', unitController),
-        customTextField('Unit Address', unitAddressController),
-        customTextField('SQft', sqftController),
-        customDropdownField('Bath', bathArray, bathController),
-        customDropdownField('Bed', roomsArray, bedController),
-        const SizedBox(
-          height: 10,
+        customTextField('Unit', unitController, placeholder: 'Enter unit'),
+        _pfGap,
+        customTextField('Unit Address', unitAddressController,
+            placeholder: 'Enter unit address'),
+        _pfGap,
+        _pfTwoCol(
+          customTextField('SQFT', sqftController, placeholder: 'Enter Sqft'),
+          customTextField('Rent Price (\$)', rentPriceController,
+              money: true, placeholder: 'Enter rent price'),
         ),
+        _pfGap,
+        _pfTwoCol(
+          customDropdownField('Bed', roomsArray, bedController),
+          customDropdownField('Baths', bathArray, bathController),
+        ),
+        _pfGap,
+        _pfTwoCol(
+          customDropdownField('Half Baths', halfBathArray, halfBathsController),
+          customValueDropdown(
+              'Parking Type', parkingTypeOptions, parkingTypeController,
+              placeholder: 'Select type'),
+        ),
+        _pfGap,
+        customUnitDateField('Availability Date', availabilityDateController),
+        _pfGap,
+        customValueDropdown(
+            'Lease Term', leaseTermOptions, leaseTermController,
+            showRequired: true),
+        _pfGap,
+        _pfTwoCol(
+          customOptionalField('Security Deposit (\$)', securityDepositController,
+              money: true, placeholder: '0'),
+          customValueDropdown(
+              'Deposit Type', depositTypeOptions, depositTypeController),
+        ),
+        // Web only shows Deposit Max when the type is a range.
+        // The unit's widgets are built once and stored, so a plain `if` here
+        // would be frozen at build time. Listen to the type controller so the
+        // field appears/disappears live, like web.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: depositTypeController,
+          builder: (_, v, __) => v.text == 'range'
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: customOptionalField(
+                      'Deposit Max (\$)', depositMaxController,
+                      money: true, placeholder: '0'),
+                )
+              : const SizedBox.shrink(),
+        ),
+        _pfGap,
+        customValueDropdown('Deposit Refundable?', depositRefundableOptions,
+            depositRefundableController),
+        _pfGap,
+        customOptionalField('Pet Policy', petPolicyController,
+            maxLines: 3,
+            placeholder:
+                'Additional pet policy notes (e.g., Max 2 pets, \$500 deposit)'),
+        _pfGap,
+        unitAmenitiesField(propertyGroups.length),
+        _pfGap,
+        _pfTileRow(
+          customCheckboxField('Furnished', furnishedController),
+          customCheckboxField('Smoking Allowed', smokingController),
+        ),
+        _pfGap,
+        customOptionalField('Unit Description', unitDescriptionController,
+            maxLines: 3, placeholder: 'Enter unit-level description...'),
+        _pfHelperText(
+            'Describe unit features, layout, appliances, and unique qualities'),
+        _pfGap,
         photo(propertyGroups.length), // Pass the index
       ];
 
@@ -653,37 +1308,145 @@ class _Add_new_propertyState extends State<Add_new_property> {
         unitAddressController,
         sqftController,
         bathController,
-        bedController
+        bedController,
+        rentPriceController,
+        halfBathsController,
+        availabilityDateController,
+        parkingTypeController,
+        leaseTermController,
+        securityDepositController,
+        depositTypeController,
+        depositMaxController,
+        depositRefundableController,
+        petPolicyController,
+        furnishedController,
+        smokingController,
+        unitDescriptionController,
       ];
     } else if (selectedpropertytype == 'Residential') {
       var sqftController = TextEditingController();
       var bathController = TextEditingController();
       var bedController = TextEditingController();
+      var rentPriceController = TextEditingController();
+      var halfBathsController = TextEditingController();
+      var availabilityDateController = TextEditingController();
+      var parkingTypeController = TextEditingController();
+      var leaseTermController = TextEditingController(text: 'ContactForDetails');
+      var securityDepositController = TextEditingController();
+      var depositTypeController = TextEditingController(text: 'flatFee');
+      var depositMaxController = TextEditingController();
+      var depositRefundableController =
+          TextEditingController(text: 'refundable');
+      var petPolicyController = TextEditingController();
+      var furnishedController = TextEditingController(text: 'false');
+      var smokingController = TextEditingController(text: 'false');
+      var unitDescriptionController = TextEditingController();
 
       fields = [
-        customTextField('SQft', sqftController),
-        customDropdownField('Bath', bathArray, bathController),
-        customDropdownField('Bed', roomsArray, bedController),
-        const SizedBox(
-          height: 10,
+        _pfTwoCol(
+          customTextField('SQFT', sqftController, placeholder: 'Enter Sqft'),
+          customTextField('Rent Price (\$)', rentPriceController,
+              money: true, placeholder: 'Enter rent price'),
         ),
+        _pfGap,
+        _pfTwoCol(
+          customDropdownField('Bed', roomsArray, bedController),
+          customDropdownField('Baths', bathArray, bathController),
+        ),
+        _pfGap,
+        _pfTwoCol(
+          customDropdownField('Half Baths', halfBathArray, halfBathsController),
+          customValueDropdown(
+              'Parking Type', parkingTypeOptions, parkingTypeController,
+              placeholder: 'Select type'),
+        ),
+        _pfGap,
+        customUnitDateField('Availability Date', availabilityDateController),
+        _pfGap,
+        customValueDropdown(
+            'Lease Term', leaseTermOptions, leaseTermController,
+            showRequired: true),
+        _pfGap,
+        _pfTwoCol(
+          customOptionalField('Security Deposit (\$)', securityDepositController,
+              money: true, placeholder: '0'),
+          customValueDropdown(
+              'Deposit Type', depositTypeOptions, depositTypeController),
+        ),
+        // Web only shows Deposit Max when the type is a range.
+        // The unit's widgets are built once and stored, so a plain `if` here
+        // would be frozen at build time. Listen to the type controller so the
+        // field appears/disappears live, like web.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: depositTypeController,
+          builder: (_, v, __) => v.text == 'range'
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: customOptionalField(
+                      'Deposit Max (\$)', depositMaxController,
+                      money: true, placeholder: '0'),
+                )
+              : const SizedBox.shrink(),
+        ),
+        _pfGap,
+        customValueDropdown('Deposit Refundable?', depositRefundableOptions,
+            depositRefundableController),
+        _pfGap,
+        customOptionalField('Pet Policy', petPolicyController,
+            maxLines: 3,
+            placeholder:
+                'Additional pet policy notes (e.g., Max 2 pets, \$500 deposit)'),
+        _pfGap,
+        unitAmenitiesField(propertyGroups.length),
+        _pfGap,
+        _pfTileRow(
+          customCheckboxField('Furnished', furnishedController),
+          customCheckboxField('Smoking Allowed', smokingController),
+        ),
+        _pfGap,
+        customOptionalField('Unit Description', unitDescriptionController,
+            maxLines: 3, placeholder: 'Enter unit-level description...'),
+        _pfHelperText(
+            'Describe unit features, layout, appliances, and unique qualities'),
+        _pfGap,
         photo(propertyGroups.length), // Pass the index
       ];
 
-      controllers = [sqftController, bathController, bedController];
+      controllers = [
+        sqftController,
+        bathController,
+        bedController,
+        rentPriceController,
+        halfBathsController,
+        availabilityDateController,
+        parkingTypeController,
+        leaseTermController,
+        securityDepositController,
+        depositTypeController,
+        depositMaxController,
+        depositRefundableController,
+        petPolicyController,
+        furnishedController,
+        smokingController,
+        unitDescriptionController,
+      ];
     } else if (selectedpropertytype == 'Commercial') {
       var sqftController = TextEditingController();
+      var unitDescriptionController = TextEditingController();
 
       fields = [
-        customTextField('SQft', sqftController),
-
-        const SizedBox(
-          height: 10,
-        ),
+        customTextField('SQFT', sqftController, placeholder: 'Enter Sqft'),
+        _pfGap,
+        customOptionalField('Unit Description', unitDescriptionController,
+            maxLines: 3, placeholder: 'Enter unit-level description...'),
+        _pfHelperText(
+            'Describe unit features, layout, appliances, and unique qualities'),
+        _pfGap,
         photo(propertyGroups.length), // Pass the index
       ];
 
-      controllers = [sqftController];
+      // Unit Description is appended LAST (index 1) so index 0 never shifts.
+      controllers = [sqftController, unitDescriptionController];
     }
 
     setState(() {
@@ -691,6 +1454,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
       propertyGroupControllers.add(controllers);
       propertyGroupImages.add(null);
       propertyGroupImagenames.add(null);
+      propertyGroupAmenities.add(ValueNotifier<List<String>>(<String>[]));
       // Initialize with null for the new group
     });
   }
@@ -820,34 +1584,29 @@ class _Add_new_propertyState extends State<Add_new_property> {
         TextEditingController(text: ownerDetails?.postalCode);
     return Scaffold(
       appBar: widget_302.App_Bar(context: context),
-      backgroundColor: Colors.white,
+      backgroundColor: pageBg,
       drawer: CustomDrawer(
         currentpage: "Properties",
         dropdown: true,
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(25.0),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Header bar (house style: navy, radius 14).
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(5.0),
+                  borderRadius: BorderRadius.circular(14.0),
                   child: Container(
                     height: 50.0,
-                    padding: const EdgeInsets.only(top: 10, left: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    alignment: Alignment.centerLeft,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(5.0),
-                      color: blueColor,
-                      boxShadow: [
-                        const BoxShadow(
-                          color: Colors.grey,
-                          offset: Offset(0.0, 1.0),
-                          blurRadius: 6.0,
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(14.0),
+                      color: navyClr,
                     ),
                     child: const Text(
                       "Add Property",
@@ -859,22 +1618,11 @@ class _Add_new_propertyState extends State<Add_new_property> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 20),
                 //dropdown
-                Material(
-                  elevation: 6,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: blueColor),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 10, right: 10, top: 10, bottom: 10),
-                      child: Column(
-                        children: [
+                _pfSectionCard(
+                  title: 'Property Information',
+                  children: [
                           // Row(
                           //   children: [
                           //     SizedBox(
@@ -895,48 +1643,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
                           // SizedBox(
                           //   height: 10,
                           // ),
-                          Row(
-                            children: [
-                              const SizedBox(
-                                width: 15,
-                              ),
-                              Text(
-                                "Property Information",
-                                style: TextStyle(
-                                    color: const Color(0xFF8A95A8),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize:
-                                        MediaQuery.of(context).size.width < 500
-                                            ? 16
-                                            : 18),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          Row(
-                            children: [
-                              const SizedBox(
-                                width: 15,
-                              ),
-                              Text(
-                                "What is the property type?",
-                                style: TextStyle(
-                                    color: blueColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize:
-                                        MediaQuery.of(context).size.width < 500
-                                            ? 15
-                                            : 18),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          Row(
-                            children: [
+                          _pfFieldLabel('Property Type', required: true),
                               FutureBuilder<List<propertytype>>(
                                 future: futureProperties,
                                 builder: (context, snapshot) {
@@ -957,44 +1664,23 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                         groupedProperties =
                                         groupPropertiesByType(snapshot.data!);
                                     return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(left: 15),
-                                          child: Container(
-                                            // height: MediaQuery.of(context)
-                                            //         .size
-                                            //         .height *
-                                            //     .05,
-                                            height: 50,
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                .6,
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color: const Color(0xFF8A95A8),
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: DropdownButtonHideUnderline(
+                                        SizedBox(
+                                          // height: MediaQuery.of(context)
+                                          //         .size
+                                          //         .height *
+                                          //     .05,
+                                          width: double.infinity,
+                                          child: DropdownButtonHideUnderline(
                                               child: DropdownButton2<String>(
                                                 value: selectedProperty,
-                                                hint: Text(
+                                                hint: const Text(
                                                   'Add Property Type',
                                                   style: TextStyle(
-                                                    fontSize:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 15
-                                                            : 18,
-                                                    color:
-                                                        const Color(0xFF8A95A8),
+                                                    fontSize: 14,
+                                                    color: _pfHintClr,
                                                   ),
                                                 ),
                                                 onChanged: (String? newValue) {
@@ -1470,20 +2156,49 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                                     ),
                                                   ),
                                                 ],
+                                                // Closed-button text only, one entry per item above (group header,
+                                                // sub types, then the add row), so the chosen sub type sits flush
+                                                // left like the other fields instead of carrying the menu indent.
+                                                selectedItemBuilder: (context) => [
+                                                  ...groupedProperties.entries.expand((entry) => [
+                                                        const SizedBox.shrink(),
+                                                        ...entry.value.map(
+                                                          (item) => Align(
+                                                            alignment: Alignment.centerLeft,
+                                                            child: Text(
+                                                              item.propertysubType ?? '',
+                                                              style: _pfInputText,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ]),
+                                                  const SizedBox.shrink(),
+                                                ],
                                                 isExpanded: true,
                                                 buttonStyleData:
                                                     ButtonStyleData(
-                                                  height: 50,
+                                                  height: 48,
                                                   padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4),
+                                                      .only(right: 12),
                                                   decoration: BoxDecoration(
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                            10),
-                                                    color: Colors.transparent,
+                                                            12),
+                                                    color: Colors.white,
+                                                    border: Border.all(
+                                                        color: showError
+                                                            ? Colors.red
+                                                            : outlineClr),
                                                   ),
+                                                ),
+                                                iconStyleData:
+                                                    const IconStyleData(
+                                                  icon: Icon(
+                                                      Icons
+                                                          .keyboard_arrow_down,
+                                                      color: navyClr),
+                                                  iconSize: 22,
                                                 ),
                                                 dropdownStyleData:
                                                     DropdownStyleData(
@@ -1516,740 +2231,240 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                                 ),
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                        const SizedBox(
-                                          height: 8,
                                         ),
                                         if (showError)
-                                          const Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Please select a property type.',
-                                                style: TextStyle(
-                                                    color: Colors.red),
-                                              ),
-                                            ],
+                                          const Padding(
+                                            padding: EdgeInsets.only(top: 6),
+                                            child: Text(
+                                              'Please select a property type.',
+                                              style: TextStyle(
+                                                  color: Colors.red,
+                                                  fontSize: 13),
+                                            ),
                                           ),
                                       ],
                                     );
                                   }
                                 },
                               ),
-                            ],
-                          ),
                           propertyTypeError
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(
-                                      width: 15,
-                                    ),
-                                    Text(
-                                      propertyTypeErrorMessage,
-                                      style: TextStyle(
-                                          color: Colors.red,
-                                          fontSize: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              .03),
-                                    ),
-                                  ],
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Text(
+                                    propertyTypeErrorMessage,
+                                    style: const TextStyle(
+                                        color: Colors.red, fontSize: 13),
+                                  ),
                                 )
                               : Container(),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          Row(
-                            children: [
-                              const SizedBox(
-                                width: 15,
-                              ),
-                              Text(
-                                "What is the street  address?",
-                                style: TextStyle(
-                                    color: blueColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize:
-                                        MediaQuery.of(context).size.width < 500
-                                            ? 15
-                                            : 18),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(
-                            height: 5,
-                          ),
-                          Row(
-                            children: [
-                              const SizedBox(
-                                width: 15,
-                              ),
-                              Text(
-                                "Address",
-                                style: TextStyle(
-                                    color: const Color(0xFF8A95A8),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize:
-                                        MediaQuery.of(context).size.width < 500
-                                            ? 14
-                                            : 18),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(
-                            height: 8,
-                          ),
-                          Row(
-                            children: [
-                              const SizedBox(
-                                width: 15,
-                              ),
-                              Expanded(
-                                child: Container(
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10),
-                                      color: Colors.white,
-                                      border: Border.all(color: greyColor)
-                                      // color: Color.fromRGBO(196, 196, 196, .3),
-                                      ),
-                                  child: Stack(
-                                    children: [
-                                      Positioned.fill(
-                                        child: TextField(
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: MediaQuery.of(context)
-                                                        .size
-                                                        .width <
-                                                    500
-                                                ? 14
-                                                : 15,
-                                          ),
-                                          keyboardType: TextInputType
-                                              .text, // Adjust as needed
-                                          onChanged: (value) {
-                                            setState(() {
-                                              addresserror = false;
-                                            });
-                                          },
-                                          controller: address,
-                                          cursorColor: blueColor,
-                                          decoration: InputDecoration(
-                                            enabledBorder: addresserror
-                                                ? OutlineInputBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            10),
-                                                    borderSide: const BorderSide(
-                                                        color: Colors
-                                                            .red), // Set border color here
-                                                  )
-                                                : InputBorder.none,
-                                            border: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.all(14),
-                                            hintText: "Enter address",
-                                            hintStyle: TextStyle(
-                                              color: Colors.grey[600],
-                                              fontSize: MediaQuery.of(context)
-                                                          .size
-                                                          .width <
-                                                      500
-                                                  ? 14
-                                                  : 18,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(
-                                width: 15,
-                              ),
-                            ],
+                          const SizedBox(height: 16),
+                          _pfFieldLabel('Address', required: true),
+                          // color: Color.fromRGBO(196, 196, 196, .3),
+                          TextField(
+                            style: _pfInputText,
+                            keyboardType: TextInputType
+                                .text, // Adjust as needed
+                            onChanged: (value) {
+                              setState(() {
+                                addresserror = false;
+                              });
+                            },
+                            controller: address,
+                            cursorColor: navyClr,
+                            decoration: _pfInputDecoration(
+                              hint: "Enter street address",
+                              error: addresserror,
+                            ),
                           ),
                           addresserror
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(
-                                      width: 15,
-                                    ),
-                                    Text(
-                                      addressmessage,
-                                      style: const TextStyle(color: Colors.red),
-                                    ),
-                                  ],
-                                )
+                              ? _pfErrorText(addressmessage)
                               : Container(),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 15.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          const SizedBox(height: 16),
+                          _pfTwoCol(
+                            // First Column
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // First Column
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "City",
-                                        style: TextStyle(
-                                          color: const Color(0xFF8A95A8),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? 14.5
-                                              : 18,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Container(
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                              color: const Color(0xFF8A95A8)),
-                                        ),
-                                        child: Stack(
-                                          children: [
-                                            Positioned.fill(
-                                              child: TextField(
-                                                keyboardType:
-                                                    TextInputType.text,
-                                                controller: city,
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 14
-                                                          : 15,
-                                                ),
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    cityerror = false;
-                                                  });
-                                                },
-                                                cursorColor: blueColor,
-                                                decoration: InputDecoration(
-                                                  enabledBorder: cityerror
-                                                      ? OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(10),
-                                                          borderSide:
-                                                              const BorderSide(
-                                                                  color: Colors
-                                                                      .red), // Error border color
-                                                        )
-                                                      : InputBorder.none,
-                                                  border: InputBorder.none,
-                                                  contentPadding:
-                                                      const EdgeInsets.all(14),
-                                                  hintText: "Enter city",
-                                                  hintStyle: TextStyle(
-                                                    color:
-                                                        const Color(0xFF8A95A8),
-                                                    fontSize:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 14
-                                                            : 18,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      cityerror
-                                          ? Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              children: [
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 5),
-                                                  child: Text(
-                                                    citymessage,
-                                                    style: const TextStyle(color: Colors.red),
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                          : Container(),
-                                    ],
+                                _pfFieldLabel('City', required: true),
+                                TextField(
+                                  keyboardType: TextInputType.text,
+                                  controller: city,
+                                  style: _pfInputText,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      cityerror = false;
+                                    });
+                                  },
+                                  cursorColor: navyClr,
+                                  decoration: _pfInputDecoration(
+                                    hint: "Enter city",
+                                    error: cityerror,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
-                                // Second Column
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "State",
-                                        style: TextStyle(
-                                          color: const Color(0xFF8A95A8),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? 14.5
-                                              : 18,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Container(
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                              color: const Color(0xFF8A95A8)),
-                                        ),
-                                        child: Stack(
-                                          children: [
-                                            Positioned.fill(
-                                              child: TextField(
-                                                keyboardType:
-                                                    TextInputType.text,
-                                                controller: state,
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 14
-                                                          : 15,
-                                                ),
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    stateerror = false;
-                                                  });
-                                                },
-                                                cursorColor: blueColor,
-                                                decoration: InputDecoration(
-                                                  enabledBorder: stateerror
-                                                      ? OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(10),
-                                                          borderSide:
-                                                              const BorderSide(
-                                                                  color: Colors
-                                                                      .red), // Error border color
-                                                        )
-                                                      : InputBorder.none,
-                                                  border: InputBorder.none,
-                                                  contentPadding:
-                                                      const EdgeInsets.all(14),
-                                                  hintText: "Enter state",
-                                                  hintStyle: TextStyle(
-                                                    color:
-                                                        const Color(0xFF8A95A8),
-                                                    fontSize:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 14
-                                                            : 18,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      stateerror
-                                          ? Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              children: [
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 5),
-                                                  child: Text(
-                                                    statemessage,
-                                                    style: const TextStyle(color: Colors.red),
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                          : Container(),
-                                    ],
+                                cityerror
+                                    ? _pfErrorText(citymessage)
+                                    : Container(),
+                              ],
+                            ),
+                            // Second Column
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _pfFieldLabel('State', required: true),
+                                TextField(
+                                  keyboardType: TextInputType.text,
+                                  controller: state,
+                                  style: _pfInputText,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      stateerror = false;
+                                    });
+                                  },
+                                  cursorColor: navyClr,
+                                  decoration: _pfInputDecoration(
+                                    hint: "Enter state",
+                                    error: stateerror,
                                   ),
                                 ),
+                                stateerror
+                                    ? _pfErrorText(statemessage)
+                                    : Container(),
                               ],
                             ),
                           ),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 15.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          const SizedBox(height: 16),
+                          _pfTwoCol(
+                            // First Column
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // First Column
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Country",
-                                        style: TextStyle(
-                                          color: const Color(0xFF8A95A8),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? 14.5
-                                              : 18,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Container(
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                              color: const Color(0xFF8A95A8)),
-                                        ),
-                                        child: Stack(
-                                          children: [
-                                            Positioned.fill(
-                                              child: TextField(
-                                                keyboardType:
-                                                    TextInputType.text,
-                                                controller: country,
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 14
-                                                          : 15,
-                                                ),
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    countryerror = false;
-                                                  });
-                                                },
-                                                cursorColor: blueColor,
-                                                decoration: InputDecoration(
-                                                  enabledBorder: countryerror
-                                                      ? OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(10),
-                                                          borderSide:
-                                                              const BorderSide(
-                                                                  color: Colors
-                                                                      .red), // Error border color
-                                                        )
-                                                      : InputBorder.none,
-                                                  border: InputBorder.none,
-                                                  contentPadding:
-                                                      const EdgeInsets.all(14),
-                                                  hintText: "Enter country",
-                                                  hintStyle: TextStyle(
-                                                    color:
-                                                        const Color(0xFF8A95A8),
-                                                    fontSize:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 14
-                                                            : 18,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      countryerror
-                                          ? Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              children: [
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 5),
-                                                  child: Text(
-                                                    countrymessage,
-                                                    style: const TextStyle(color: Colors.red),
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                          : Container(),
-                                    ],
+                                _pfFieldLabel('Zip Code', required: true),
+                                TextField(
+                                  focusNode: _nodeText1,
+                                  controller: postalcode,
+                                  style: _pfInputText,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      postalcodeerror = false;
+                                    });
+                                  },
+                                  // keyboardType: TextInputType
+                                  //     .numberWithOptions(
+                                  //         signed: true,
+                                  //         decimal: true),
+                                  keyboardType:
+                                      TextInputType.number,
+                                  //  inputFormatters: [
+                                  //   FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                                  //   TextInputFormatter.withFunction((oldValue, newValue) {
+                                  //     return TextEditingValue(
+                                  //       text: newValue.text.toUpperCase(),
+                                  //       selection: newValue.selection,
+                                  //     );
+                                  //   }),
+                                  // ],
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter
+                                        .digitsOnly,
+                                  ],
+                                  cursorColor: navyClr,
+                                  decoration: _pfInputDecoration(
+                                    hint: "Enter zip code",
+                                    error: postalcodeerror,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
-                                // Second Column
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Zip Code",
-                                        style: TextStyle(
-                                          color: const Color(0xFF8A95A8),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? 14.5
-                                              : 18,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Container(
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                              color: const Color(0xFF8A95A8)),
-                                        ),
-                                        child: Stack(
-                                          children: [
-                                            Positioned.fill(
-                                              child: TextField(
-                                                focusNode: _nodeText1,
-                                                controller: postalcode,
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 14
-                                                          : 15,
-                                                ),
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    postalcodeerror = false;
-                                                  });
-                                                },
-                                                // keyboardType: TextInputType
-                                                //     .numberWithOptions(
-                                                //         signed: true,
-                                                //         decimal: true),
-                                                keyboardType:
-                                                    TextInputType.number,
-                                                //  inputFormatters: [
-                                                //   FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
-                                                //   TextInputFormatter.withFunction((oldValue, newValue) {
-                                                //     return TextEditingValue(
-                                                //       text: newValue.text.toUpperCase(),
-                                                //       selection: newValue.selection,
-                                                //     );
-                                                //   }),
-                                                // ],
-                                                inputFormatters: [
-                                                  FilteringTextInputFormatter
-                                                      .digitsOnly,
-                                                ],
-                                                cursorColor: blueColor,
-                                                decoration: InputDecoration(
-                                                  enabledBorder: postalcodeerror
-                                                      ? OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(10),
-                                                          borderSide:
-                                                              const BorderSide(
-                                                                  color: Colors
-                                                                      .red), // Error border color
-                                                        )
-                                                      : InputBorder.none,
-                                                  border: InputBorder.none,
-                                                  contentPadding:
-                                                      const EdgeInsets.all(14),
-                                                  hintText: "Enter zip code",
-                                                  hintStyle: TextStyle(
-                                                    color:
-                                                        const Color(0xFF8A95A8),
-                                                    fontSize:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 14
-                                                            : 18,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      postalcodeerror
-                                          ? Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              children: [
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 5),
-                                                  child: Text(
-                                                    postalcodemessage,
-                                                    style: const TextStyle(color: Colors.red),
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                          : Container(),
-                                    ],
+                                postalcodeerror
+                                    ? _pfErrorText(postalcodemessage)
+                                    : Container(),
+                              ],
+                            ),
+                            // Second Column
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _pfFieldLabel('Country', required: true),
+                                TextField(
+                                  keyboardType: TextInputType.text,
+                                  controller: country,
+                                  style: _pfInputText,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      countryerror = false;
+                                    });
+                                  },
+                                  cursorColor: navyClr,
+                                  decoration: _pfInputDecoration(
+                                    hint: "Enter country",
+                                    error: countryerror,
                                   ),
                                 ),
+                                countryerror
+                                    ? _pfErrorText(countrymessage)
+                                    : Container(),
                               ],
                             ),
                           ),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 16),
+                // Property Amenities (residential only, like web).
+                if (selectedpropertytypedata != null &&
+                    selectedpropertytypedata!.propertyType ==
+                        "Residential" &&
+                    _zillowAdvertise) ...[
+                  _pfSectionCard(
+                    children: [
+                        ValueListenableBuilder<List<String>>(
+                          valueListenable: propertyAmenities,
+                          builder: (_, value, __) => AmenitiesField(
+                            label:
+                                'Property Amenities (Building/Community Level)',
+                            value: value,
+                            isStaff: false,
+                            emptyText:
+                                'No property amenities — click "Add Amenities" to select from the catalog or add custom.',
+                            onChanged: (v) => propertyAmenities.value = v,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 16,
+                  ),
+                ],
                 //rental
-                Material(
-                  elevation: 6,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: blueColor),
-                    ),
-                    child: Padding(
-                        padding: const EdgeInsets.only(
-                            left: 10, right: 10, top: 10, bottom: 10),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                const SizedBox(
-                                  width: 15,
-                                ),
-                                Text(
-                                  "Owner Information",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  500
-                                              ? 16.5
-                                              : 20),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(
-                              height: 10,
-                            ),
-                            Row(
-                              children: [
-                                const SizedBox(
-                                  width: 15,
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    "Who is the property owner ? (Required)",
+                _pfSectionCard(
+                  title: 'Owner Information',
+                  children: [
+                            //  fontWeight: FontWeight.bold,
+                            const Text.rich(
+                              TextSpan(
+                                text: 'Who is the property owner?',
+                                children: [
+                                  TextSpan(
+                                    text: ' (Required)',
                                     style: TextStyle(
-                                        color: const Color(0xFF8A95A8),
-                                        //  fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 14.5
-                                                : 18),
+                                      color: mutedClr,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: navyClr,
+                              ),
                             ),
-                            const SizedBox(
-                              height: 10,
+                            const SizedBox(height: 6),
+                            //  fontWeight: FontWeight.bold,
+                            const Text(
+                              "This information will be used to help prepare owner draws and 1099s.",
+                              style: TextStyle(fontSize: 14, color: mutedClr),
                             ),
-                            Row(
-                              children: [
-                                const SizedBox(
-                                  width: 15,
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    "This information will be used to help prepare owner draws and 1099s",
-                                    style: TextStyle(
-                                        color: const Color(0xFF8A95A8),
-                                        //  fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 14.5
-                                                : 18),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(
-                              height: 10,
-                            ),
-                            GestureDetector(
+                            const SizedBox(height: 14),
+                            _pfAddLink(
+                              "Add Rental Owner",
                               onTap: () {
                                 Navigator.push(
                                     context,
@@ -2257,363 +2472,201 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                         builder: (context) =>
                                             AddRentalowners()));
                               },
-                              child: Row(
-                                children: [
-                                  const SizedBox(width: 10),
-                                  Icon(Icons.add,
-                                      size: 25, color: Colors.green[400]),
-                                  const SizedBox(width: 9),
-                                  Text(
-                                    "Add Rental Owner",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[500],
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  500
-                                              ? 15
-                                              : 18,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 5,
                             ),
                             if (hasError &&
                                 Provider.of<OwnerDetailsProvider>(context)
                                         .OwnerDetails ==
                                     null)
-                              const Row(
-                                children: [
-                                  SizedBox(
-                                    width: 15,
+                              const Padding(
+                                padding: EdgeInsets.only(top: 6),
+                                child: Text(
+                                  'required',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 14,
                                   ),
-                                  Text(
-                                    'required',
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            const SizedBox(
-                              height: 5,
-                            ),
                             Consumer<OwnerDetailsProvider>(
                               builder: (context, provider, child) {
                                 Ownersdetails = provider.OwnerDetails;
                                 return Ownersdetails != null
                                     ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          const SizedBox(height: 10),
-                                          Row(
-                                            children: [
-                                              const SizedBox(width: 20),
-                                              Text(
-                                                "Owners Information",
-                                                style: TextStyle(
-                                                    fontSize:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 15
-                                                            : 17,
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                              ),
-                                            ],
+                                          const SizedBox(height: 20),
+                                          const Text(
+                                            "Rental Owner Information",
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: navyClr,
+                                            ),
                                           ),
-                                          const SizedBox(height: 10),
-                                          Row(
-                                            children: [
-                                              const SizedBox(width: 15),
-                                              Expanded(
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            5),
-                                                    border: Border.all(
-                                                        color: blueColor),
-                                                  ),
-                                                  child: DataTable(
-                                                    border: TableBorder(
-                                                      horizontalInside:
-                                                          BorderSide(
-                                                        color: blueColor,
-                                                        width: 1.0,
+                                          const SizedBox(height: 12),
+                                          Container(
+                                            width: double.infinity,
+                                            clipBehavior: Clip.antiAlias,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border:
+                                                  Border.all(color: borderClr),
+                                            ),
+                                            child: Column(
+                                              children: [
+                                                Container(
+                                                  color: tintBg,
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 12),
+                                                  child: const Row(
+                                                    children: [
+                                                      Expanded(
+                                                        flex: 4,
+                                                        child: Text('Name',
+                                                            style:
+                                                                _pfTableHead),
                                                       ),
-                                                    ),
-                                                    columnSpacing: 10,
-                                                    headingRowHeight:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 40
-                                                            : 40,
-                                                    dataRowHeight:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 40
-                                                            : 40,
-                                                    columns: [
-                                                      DataColumn(
-                                                        label: Expanded(
-                                                          child: Text(
-                                                            'Name',
-                                                            style: TextStyle(
-                                                                fontSize: MediaQuery.of(context)
-                                                                            .size
-                                                                            .width <
-                                                                        500
-                                                                    ? 14
-                                                                    : 18,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                          ),
-                                                        ),
+                                                      SizedBox(width: 8),
+                                                      Expanded(
+                                                        flex: 5,
+                                                        child: Text(
+                                                            'Phone Number',
+                                                            style:
+                                                                _pfTableHead),
                                                       ),
-                                                      DataColumn(
-                                                        label: Expanded(
-                                                          child: Text(
-                                                            'PhoneNumber',
-                                                            style: TextStyle(
-                                                                fontSize: MediaQuery.of(context)
-                                                                            .size
-                                                                            .width <
-                                                                        500
-                                                                    ? 14
-                                                                    : 18,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Expanded(
-                                                          child: Text(
-                                                            'Action',
-                                                            style: TextStyle(
-                                                                fontSize: MediaQuery.of(context)
-                                                                            .size
-                                                                            .width <
-                                                                        500
-                                                                    ? 14
-                                                                    : 18,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                    rows: [
-                                                      DataRow(
-                                                        cells: [
-                                                          DataCell(
-                                                            Text(
-                                                              Ownersdetails!
-                                                                      .rentalOwnerName ??
-                                                                  'N/A',
-                                                              style: TextStyle(
-                                                                  fontSize:
-                                                                      MediaQuery.of(context).size.width <
-                                                                              500
-                                                                          ? 14
-                                                                          : 18),
-                                                            ),
-                                                          ),
-                                                          DataCell(
-                                                            Text(
-                                                              Ownersdetails!
-                                                                      .rentalOwnerPhoneNumber ??
-                                                                  'N/A',
-                                                              style: TextStyle(
-                                                                  fontSize:
-                                                                      MediaQuery.of(context).size.width <
-                                                                              500
-                                                                          ? 14
-                                                                          : 18),
-                                                            ),
-                                                          ),
-                                                          DataCell(
-                                                            Row(
-                                                              children: [
-                                                                InkWell(
-                                                                  onTap: () {
-                                                                    Navigator
-                                                                        .push(
-                                                                      context,
-                                                                      MaterialPageRoute(
-                                                                        builder:
-                                                                            (context) =>
-                                                                                AddRentalowners(
-                                                                          OwnersDetails:
-                                                                              Ownersdetails,
-                                                                          isEdit:
-                                                                              true,
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                  child:
-                                                                      Container(
-                                                                    padding:
-                                                                        EdgeInsets
-                                                                            .zero,
-                                                                    child:
-                                                                        FaIcon(
-                                                                      FontAwesomeIcons
-                                                                          .edit,
-                                                                      size: MediaQuery.of(context).size.width <
-                                                                              500
-                                                                          ? 17
-                                                                          : 20,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(
-                                                                    width: 4),
-                                                                InkWell(
-                                                                  onTap: () {
-                                                                    provider
-                                                                        .clearOwners();
-
-                                                                    setState(
-                                                                        () {
-                                                                      RentalOwner?
-                                                                          owner;
-                                                                      Ownersdetails =
-                                                                          owner;
-                                                                    });
-                                                                  },
-                                                                  child:
-                                                                      Container(
-                                                                    padding:
-                                                                        EdgeInsets
-                                                                            .zero,
-                                                                    child:
-                                                                        FaIcon(
-                                                                      FontAwesomeIcons
-                                                                          .trashCan,
-                                                                      size: MediaQuery.of(context).size.width <
-                                                                              500
-                                                                          ? 17
-                                                                          : 20,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ],
+                                                      SizedBox(width: 8),
+                                                      SizedBox(
+                                                        width: 80,
+                                                        child: Text('Action',
+                                                            style:
+                                                                _pfTableHead),
                                                       ),
                                                     ],
                                                   ),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 15),
-                                            ],
+                                                Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 10),
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        flex: 4,
+                                                        child: Text(
+                                                          Ownersdetails!
+                                                                  .rentalOwnerName ??
+                                                              'N/A',
+                                                          style: _pfTableCell,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        flex: 5,
+                                                        child: Text(
+                                                          Ownersdetails!
+                                                                  .rentalOwnerPhoneNumber ??
+                                                              'N/A',
+                                                          style: _pfTableCell,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      SizedBox(
+                                                        width: 80,
+                                                        child: Row(
+                                                          children: [
+                                                            _pfIconAction(
+                                                              icon: Icons
+                                                                  .edit_outlined,
+                                                              color: const Color(
+                                                                  0xFF2C72E0),
+                                                              background:
+                                                                  const Color(
+                                                                      0xFFE8F0FC),
+                                                              onTap: () {
+                                                                Navigator
+                                                                    .push(
+                                                                  context,
+                                                                  MaterialPageRoute(
+                                                                    builder:
+                                                                        (context) =>
+                                                                            AddRentalowners(
+                                                                      OwnersDetails:
+                                                                          Ownersdetails,
+                                                                      isEdit:
+                                                                          true,
+                                                                    ),
+                                                                  ),
+                                                                );
+                                                              },
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 8),
+                                                            _pfIconAction(
+                                                              icon: Icons
+                                                                  .delete_outline,
+                                                              color: redClr,
+                                                              background:
+                                                                  const Color(
+                                                                      0xFFFBE9E7),
+                                                              onTap: () {
+                                                                provider
+                                                                    .clearOwners();
+
+                                                                setState(
+                                                                    () {
+                                                                  RentalOwner?
+                                                                      owner;
+                                                                  Ownersdetails =
+                                                                      owner;
+                                                                });
+                                                              },
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ],
                                       )
                                     : const Text('');
                               },
                             ),
-                          ],
-                        )),
-                  ),
-                ),
-                const SizedBox(height: 25),
-                Material(
-                  elevation: 6,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: blueColor),
-                    ),
-                    child: Padding(
-                        padding: const EdgeInsets.only(
-                            left: 10, right: 10, top: 10, bottom: 10),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                const SizedBox(
-                                  width: 15,
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    "Who will be primary manager of this Property ?",
-                                    style: TextStyle(
-                                        color: const Color(0xFF8A95A8),
-                                        //  fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 14.5
-                                                : 18),
-                                  ),
-                                ),
-                              ],
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 20),
+                              child: Container(
+                                height: 1,
+                                color: const Color(0xFFEAEEF4),
+                              ),
                             ),
-                            const SizedBox(
-                              height: 10,
+                            //  fontWeight: FontWeight.bold,
+                            const Text(
+                              "Who will be the primary manager of this property?",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: navyClr,
+                              ),
                             ),
-                            Row(
-                              children: [
-                                const SizedBox(
-                                  width: 15,
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    "If staff member has not yet been added as user in your account ,they can be added to the account"
-                                    ",than as the manager later through the property's summary details.",
-                                    style: TextStyle(
-                                        color: const Color(0xFF8A95A8),
-                                        //  fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 14
-                                                : 18),
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 6),
+                            //  fontWeight: FontWeight.bold,
+                            const Text(
+                              "If staff member has not yet been added as user in your account ,they can be added to the account"
+                              ",than as the manager later through the property's summary details.",
+                              style: TextStyle(fontSize: 14, color: mutedClr),
                             ),
-                            const SizedBox(
-                              height: 10,
-                            ),
-                            Row(
-                              children: [
-                                const SizedBox(
-                                  width: 15,
-                                ),
-                                Text(
-                                  "Manage (Optional)",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor,
-                                      fontSize: 15),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(
-                              height: 10,
-                            ),
-                            Row(
-                              children: [
+                            const SizedBox(height: 16),
+                            _pfFieldLabel('Manager (Optional)'),
                                 FutureBuilder<List<Staffmembers>>(
                                   future: futureStaffMembers,
                                   builder: (context, snapshot) {
@@ -3784,42 +3837,20 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                         ),
                                       );
 
-                                      return Padding(
-                                        padding: const EdgeInsets.all(10.0),
-                                        child: Container(
+                                      return SizedBox(
                                           // height: MediaQuery.of(context)
                                           //         .size
                                           //         .height *
                                           //     .05,
-                                          height: 50,
-                                          width: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              .5,
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                              color: const Color(0xFF8A95A8),
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
+                                          width: double.infinity,
                                           child: DropdownButtonHideUnderline(
                                             child: DropdownButton2<String>(
                                               value: selectedStaff,
-                                              hint: Text(
+                                              hint: const Text(
                                                 'Select',
                                                 style: TextStyle(
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 15
-                                                          : 18,
-                                                  color:
-                                                      const Color(0xFF8A95A8),
+                                                  fontSize: 14,
+                                                  color: _pfHintClr,
                                                 ),
                                               ),
                                               onChanged: (String? newValue) {
@@ -3879,24 +3910,27 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                               items: dropdownItems,
                                               isExpanded: true,
                                               buttonStyleData: ButtonStyleData(
-                                                height: 50,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4),
+                                                height: 48,
+                                                padding: const EdgeInsets.only(
+                                                    right: 12),
                                                 decoration: BoxDecoration(
                                                   borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  color: Colors.transparent,
+                                                      BorderRadius.circular(12),
+                                                  color: Colors.white,
+                                                  border: Border.all(
+                                                      color: outlineClr),
                                                 ),
+                                              ),
+                                              iconStyleData:
+                                                  const IconStyleData(
+                                                icon: Icon(
+                                                    Icons.keyboard_arrow_down,
+                                                    color: navyClr),
+                                                iconSize: 22,
                                               ),
                                               dropdownStyleData:
                                                   DropdownStyleData(
                                                 maxHeight: 300,
-                                                width: MediaQuery.of(context)
-                                                        .size
-                                                        .width *
-                                                    .5,
                                                 decoration: BoxDecoration(
                                                   borderRadius:
                                                       BorderRadius.circular(10),
@@ -3924,496 +3958,57 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                               ),
                                             ),
                                           ),
-                                        ),
                                       );
                                     }
                                   },
                                 ),
-                              ],
-                            ),
-                          ],
-                        )),
-                  ),
+                  ],
                 ),
                 const SizedBox(
-                  height: 20,
+                  height: 16,
                 ),
-                if (selectedpropertytypedata != null &&
-                    selectedpropertytypedata!.propertyType == "Residential")
-                  Material(
-                    elevation: 6,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: blueColor),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                            left: 10, right: 10, top: 10, bottom: 10),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                const SizedBox(
-                                  width: 10,
-                                ),
-                                Text(
-                                  'RESIDENTIAL UNIT',
-                                  style: TextStyle(
-                                    color: blueColor,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(
-                                  width: 10,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8.0),
-                            Row(
-                              children: [
-                                const SizedBox(
-                                  width: 10,
-                                ),
-                                Text(
-                                  'Enter Residential Units',
-                                  style: TextStyle(
-                                    color: blueColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (propertyGroups.isNotEmpty)
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SingleChildScrollView(
-                                    child: Column(
-                                      children: propertyGroups.map((group) {
-                                        int index =
-                                            propertyGroups.indexOf(group);
-                                        return Padding(
-                                          padding: const EdgeInsets.only(
-                                              left: 16, right: 16),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              // Align(
-                                              //   alignment:
-                                              //       Alignment.centerRight,
-                                              //   child: InkWell(
-                                              //     onTap: () =>
-                                              //         removePropertyGroup(
-                                              //             index),
-                                              //     child: Icon(Icons.close,
-                                              //         color: Colors.black),
-                                              //   ),
-                                              // ),
-                                              Align(
-                                                alignment:
-                                                    Alignment.centerRight,
-                                                child: Visibility(
-                                                  visible:
-                                                      !(selectedpropertytype ==
-                                                              'Residential' &&
-                                                          selectedIsMultiUnit ==
-                                                              false &&
-                                                          index == 0),
-                                                  child: InkWell(
-                                                    onTap: () =>
-                                                        removePropertyGroup(
-                                                            index),
-                                                    child: const Icon(
-                                                        Icons.close,
-                                                        color: Colors.black),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 5),
-                                              ...group,
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            const SizedBox(
-                              height: 15,
-                            ),
-                            if (selectedpropertytypedata?.isMultiunit == true)
-                              GestureDetector(
-                                onTap: () {
-                                  // if (selectedProperty != null) {
-                                  //   addPropertyGroup();
-                                  // }
-                                  addPropertyGroup();
-                                },
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.02),
-                                    Container(
-                                      height: 40,
-                                      width: MediaQuery.of(context).size.width *
-                                          .38,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        // borderRadius: BorderRadius.circular(3),
-                                        borderRadius:
-                                            BorderRadius.circular(8.0),
-                                        border: Border.all(color: blueColor),
-                                        // boxShadow: [
-                                        //   BoxShadow(
-                                        //     color: Colors.grey,
-                                        //     offset: Offset(0.0, 1.0), //(x,y)
-                                        //     blurRadius: 6.0,
-                                        //   ),
-                                        // ],
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          "Add another unit",
-                                          style: TextStyle(
-                                              color: blueColor,
-                                              // fontWeight: FontWeight.bold,
-                                              fontSize: 14),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                if (selectedpropertytypedata != null &&
-                    selectedpropertytypedata!.propertyType == "Commercial")
-                  Material(
-                    elevation: 6,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: blueColor),
-                      ),
-                      child: Padding(
-                          padding: const EdgeInsets.only(
-                              left: 10, right: 10, top: 10, bottom: 10),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  const SizedBox(
-                                    width: 10,
-                                  ),
-                                  Text(
-                                    'COMMERCIAL UNIT',
-                                    style: TextStyle(
-                                      color: blueColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                    width: 10,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8.0),
-                              Row(
-                                children: [
-                                  const SizedBox(
-                                    width: 10,
-                                  ),
-                                  Text(
-                                    'Enter Commercial Units',
-                                    style: TextStyle(
-                                      color: blueColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (propertyGroups.isNotEmpty)
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SingleChildScrollView(
-                                      child: Column(
-                                        children: propertyGroups.map((group) {
-                                          int index =
-                                              propertyGroups.indexOf(group);
-                                          return Padding(
-                                            padding: const EdgeInsets.only(
-                                                left: 16, right: 16),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                // Align(
-                                                //   alignment:
-                                                //       Alignment.centerRight,
-                                                //   child: InkWell(
-                                                //     onTap: () =>
-                                                //         removePropertyGroup(
-                                                //             index),
-                                                //     child: Icon(Icons.close,
-                                                //         color: Colors.black),
-                                                //   ),
-                                                // ),
-                                                Align(
-                                                  alignment:
-                                                      Alignment.centerRight,
-                                                  child: Visibility(
-                                                    visible:
-                                                        !(selectedpropertytype ==
-                                                                'Commercial' &&
-                                                            selectedIsMultiUnit ==
-                                                                false &&
-                                                            index == 0),
-                                                    child: InkWell(
-                                                      onTap: () =>
-                                                          removePropertyGroup(
-                                                              index),
-                                                      child: const Icon(
-                                                          Icons.close,
-                                                          color: Colors.black),
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 5),
-                                                ...group,
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              const SizedBox(height: 15),
-                              if (selectedpropertytypedata?.isMultiunit == true)
-                                GestureDetector(
-                                  onTap: () {
-                                    addPropertyGroup();
-                                  },
-                                  child: Row(
-                                    children: [
-                                      SizedBox(
-                                          width: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              0.02),
-                                      Container(
-                                        height: 40,
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                .38,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          // borderRadius: BorderRadius.circular(3),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          border: Border.all(color: blueColor),
-                                          // boxShadow: [
-                                          //   BoxShadow(
-                                          //     color: Colors.grey,
-                                          //     offset: Offset(0.0, 1.0), //(x,y)
-                                          //     blurRadius: 6.0,
-                                          //   ),
-                                          // ],
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            "Add another unit",
-                                            style: TextStyle(
-                                                color: blueColor,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          )),
-                    ),
-                  ),
-                if (iserror2)
-                  const Text(
-                    "required",
-                    style: TextStyle(color: Colors.redAccent),
-                  ),
-                const SizedBox(height: 10),
                 //Insured Value Information
-                Material(
-                  elevation: 6,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: blueColor),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 10, right: 10, top: 10, bottom: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const SizedBox(width: 15),
-                              Text(
-                                "Insured Value Information",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: blueColor,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width < 500
-                                          ? 16.5
-                                          : 20,
+                _pfSectionCard(
+                  title: "Insured Value Information",
+                  children: [
+                          _pfFieldLabel("Date Placed in Service",
+                              required: true),
+                          TextField(
+                            controller: datePlacedInService,
+                            readOnly: true,
+                            style: _pfInputText,
+                            cursorColor: navyClr,
+                            decoration: _pfInputDecoration(
+                              hint: "MM/DD/YYYY",
+                              error: datePlacedInServiceError,
+                              suffixIcon: GestureDetector(
+                                onTap: _selectDatePlacedInService,
+                                child: const Icon(
+                                  Icons.calendar_today_outlined,
+                                  color: navyClr,
+                                  size: 18,
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          Row(
-                            children: [
-                              const SizedBox(width: 15),
-                              Text(
-                                "Date Placed in Service *",
-                                style: TextStyle(
-                                  color: const Color(0xFF8A95A8),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width < 500
-                                          ? 14.5
-                                          : 18,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 15.0),
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                color: Colors.white,
-                                border: Border.all(
-                                  color: datePlacedInServiceError
-                                      ? Colors.red
-                                      : const Color(0xFFDBE0E5),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.1),
-                                    spreadRadius: 1,
-                                    blurRadius: 3,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  Positioned.fill(
-                                    child: TextField(
-                                      controller: datePlacedInService,
-                                      readOnly: true,
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 14
-                                                : 15,
-                                      ),
-                                      cursorColor: blueColor,
-                                      decoration: InputDecoration(
-                                        enabledBorder: InputBorder.none,
-                                        border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 14, vertical: 14),
-                                        hintText: "MM/DD/YYYY",
-                                        hintStyle: TextStyle(
-                                          color: Colors.grey[400],
-                                          fontSize: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? 14
-                                              : 15,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    right: 12,
-                                    top: 0,
-                                    bottom: 0,
-                                    child: Center(
-                                      child: GestureDetector(
-                                        onTap: _selectDatePlacedInService,
-                                        child: Icon(
-                                          Icons.calendar_today,
-                                          color: const Color(0xFF8A95A8),
-                                          size: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? 18
-                                              : 20,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
                           ),
                           if (datePlacedInServiceError)
                             Padding(
-                              padding: const EdgeInsets.only(left: 15, top: 5),
+                              padding: const EdgeInsets.only(top: 6),
                               child: Text(
                                 datePlacedInServiceMessage,
                                 style: const TextStyle(color: Colors.red),
                               ),
                             ),
                           const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              const SizedBox(width: 15),
-                              Text(
-                                "Historical Insured Values",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: blueColor,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width < 500
-                                          ? 16.5
-                                          : 20,
-                                ),
-                              ),
-                            ],
+                          const Text(
+                            "Historical Insured Values",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: navyClr,
+                            ),
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 12),
                           if (historicalInsuredValues.isNotEmpty)
                             ...historicalInsuredValues
                                 .asMap()
@@ -4422,8 +4017,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
                               int index = entry.key;
                               HistoricalInsuredValue item = entry.value;
                               return Padding(
-                                padding: const EdgeInsets.only(
-                                    bottom: 15, left: 15, right: 0),
+                                padding: const EdgeInsets.only(bottom: 16),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -4432,126 +4026,88 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            "YEAR *",
-                                            style: TextStyle(
-                                              color: const Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: MediaQuery.of(context)
-                                                          .size
-                                                          .width <
-                                                      500
-                                                  ? 14.5
-                                                  : 16,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Container(
-                                            height: 50,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              color: Colors.white,
-                                              border: Border.all(
-                                                color: item.yearError
-                                                    ? Colors.red
-                                                    : const Color(0xFFDBE0E5),
+                                          _pfFieldLabel("Year",
+                                              required: true),
+                                          DropdownButtonHideUnderline(
+                                            child: DropdownButton2<String>(
+                                              value: item.year,
+                                              hint: const Text(
+                                                'Select Year',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: _pfHintClr,
+                                                ),
                                               ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.grey
-                                                      .withOpacity(0.1),
-                                                  spreadRadius: 1,
-                                                  blurRadius: 3,
-                                                  offset: const Offset(0, 1),
-                                                ),
-                                              ],
-                                            ),
-                                            child: DropdownButtonHideUnderline(
-                                              child: DropdownButton2<String>(
-                                                value: item.year,
-                                                hint: Text(
-                                                  'Select Year',
-                                                  style: TextStyle(
-                                                    fontSize:
-                                                        MediaQuery.of(context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 14
-                                                            : 15,
-                                                    color: Colors.grey[400],
+                                              onChanged: (String? newValue) {
+                                                setState(() {
+                                                  item.year = newValue;
+                                                  item.yearError = false;
+                                                });
+                                              },
+                                              items: _generateYearList()
+                                                  .map((String year) {
+                                                return DropdownMenuItem<
+                                                    String>(
+                                                  value: year,
+                                                  child: Text(
+                                                    year,
+                                                    style: _pfInputText,
+                                                  ),
+                                                );
+                                              }).toList(),
+                                              isExpanded: true,
+                                              buttonStyleData:
+                                                  ButtonStyleData(
+                                                height: 48,
+                                                padding: const EdgeInsets
+                                                    .only(right: 12),
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12),
+                                                  color: Colors.white,
+                                                  border: Border.all(
+                                                    color: item.yearError
+                                                        ? Colors.red
+                                                        : outlineClr,
                                                   ),
                                                 ),
-                                                onChanged: (String? newValue) {
-                                                  setState(() {
-                                                    item.year = newValue;
-                                                    item.yearError = false;
-                                                  });
-                                                },
-                                                items: _generateYearList()
-                                                    .map((String year) {
-                                                  return DropdownMenuItem<
-                                                      String>(
-                                                    value: year,
-                                                    child: Text(
-                                                      year,
-                                                      style: TextStyle(
-                                                        fontSize: MediaQuery.of(
-                                                                        context)
-                                                                    .size
-                                                                    .width <
-                                                                500
-                                                            ? 14
-                                                            : 15,
-                                                      ),
-                                                    ),
-                                                  );
-                                                }).toList(),
-                                                isExpanded: true,
-                                                buttonStyleData:
-                                                    ButtonStyleData(
-                                                  height: 50,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 0,
-                                                      vertical: 14),
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            10),
-                                                    color: Colors.transparent,
-                                                  ),
+                                              ),
+                                              iconStyleData:
+                                                  const IconStyleData(
+                                                icon: Icon(
+                                                    Icons.keyboard_arrow_down,
+                                                    color: navyClr),
+                                                iconSize: 22,
+                                              ),
+                                              dropdownStyleData:
+                                                  DropdownStyleData(
+                                                maxHeight: 300,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          10),
+                                                  color: Colors.white,
                                                 ),
-                                                dropdownStyleData:
-                                                    DropdownStyleData(
-                                                  maxHeight: 300,
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            10),
-                                                    color: Colors.white,
-                                                  ),
-                                                  scrollbarTheme:
-                                                      ScrollbarThemeData(
-                                                    radius:
-                                                        const Radius.circular(
-                                                            40),
-                                                    thickness:
-                                                        MaterialStateProperty
-                                                            .all(6),
-                                                    thumbVisibility:
-                                                        MaterialStateProperty
-                                                            .all(true),
-                                                  ),
+                                                scrollbarTheme:
+                                                    ScrollbarThemeData(
+                                                  radius:
+                                                      const Radius.circular(
+                                                          40),
+                                                  thickness:
+                                                      MaterialStateProperty
+                                                          .all(6),
+                                                  thumbVisibility:
+                                                      MaterialStateProperty
+                                                          .all(true),
                                                 ),
-                                                menuItemStyleData:
-                                                    const MenuItemStyleData(
-                                                  height: 40,
-                                                  padding: EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 8),
-                                                ),
+                                              ),
+                                              menuItemStyleData:
+                                                  const MenuItemStyleData(
+                                                height: 40,
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 8),
                                               ),
                                             ),
                                           ),
@@ -4570,86 +4126,29 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            "VALUE (\$) *",
-                                            style: TextStyle(
-                                              color: const Color(0xFF8A95A8),
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: MediaQuery.of(context)
-                                                          .size
-                                                          .width <
-                                                      500
-                                                  ? 14.5
-                                                  : 16,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Container(
-                                            height: 50,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              color: Colors.white,
-                                              border: Border.all(
-                                                color: item.valueError
-                                                    ? Colors.red
-                                                    : const Color(0xFFDBE0E5),
-                                              ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.grey
-                                                      .withOpacity(0.1),
-                                                  spreadRadius: 1,
-                                                  blurRadius: 3,
-                                                  offset: const Offset(0, 1),
-                                                ),
-                                              ],
-                                            ),
-                                            child: TextField(
-                                              controller: item.valueController,
-                                              keyboardType: TextInputType
-                                                  .numberWithOptions(
-                                                      decimal: true),
-                                              style: TextStyle(
-                                                color: Colors.black,
-                                                fontSize: MediaQuery.of(context)
-                                                            .size
-                                                            .width <
-                                                        500
-                                                    ? 14
-                                                    : 15,
-                                              ),
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  item.valueError = false;
-                                                });
-                                              },
-                                              cursorColor: blueColor,
-                                              decoration: InputDecoration(
-                                                enabledBorder: InputBorder.none,
-                                                border: InputBorder.none,
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 14,
-                                                        vertical: 14),
-                                                hintText: "Enter value..",
-                                                hintStyle: TextStyle(
-                                                  color: Colors.grey[400],
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 14
-                                                          : 15,
-                                                ),
-                                              ),
+                                          _pfFieldLabel("Insured Value (\$)",
+                                              required: true),
+                                          TextField(
+                                            controller: item.valueController,
+                                            keyboardType: TextInputType
+                                                .numberWithOptions(
+                                                    decimal: true),
+                                            style: _pfInputText,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                item.valueError = false;
+                                              });
+                                            },
+                                            cursorColor: navyClr,
+                                            decoration: _pfInputDecoration(
+                                              hint: "Enter value",
+                                              error: item.valueError,
                                             ),
                                           ),
                                           if (item.valueError)
@@ -4667,96 +4166,265 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(width: 5),
-                                    Container(
+                                    const SizedBox(width: 8),
+                                    Padding(
                                       // color: Colors.blue,
-                                      padding: const EdgeInsets.only(top: 35),
-                                      child: InkWell(
+                                      padding: const EdgeInsets.only(top: 34),
+                                      child: _pfIconAction(
+                                        icon: Icons.delete_outline,
+                                        color: redClr,
+                                        background: const Color(0xFFFBE9E7),
                                         onTap: () =>
                                             removeHistoricalInsuredValue(index),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(5),
-                                          child: Center(
-                                            child: FaIcon(
-                                              FontAwesomeIcons.trashCan,
-                                              color: Colors.red,
-                                              size: MediaQuery.of(context)
-                                                          .size
-                                                          .width <
-                                                      500
-                                                  ? 18
-                                                  : 20,
-                                            ),
-                                          ),
-                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               );
                             }).toList(),
-                          const SizedBox(height: 10),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 15.0),
-                            child: GestureDetector(
-                              onTap: addHistoricalInsuredValue,
-                              child: Container(
-                                height: 40,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: blueColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withOpacity(0.2),
-                                      spreadRadius: 1,
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.add,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      "Add Historical Insured Value",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 13
-                                                : 15,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                          const SizedBox(height: 4),
+                          _pfAddLink(
+                            "Add Historical Insured Value",
+                            onTap: addHistoricalInsuredValue,
                           ),
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
 
+                const SizedBox(height: 16),
+
+                if (selectedpropertytypedata != null &&
+                    selectedpropertytypedata!.propertyType == "Residential")
+                  _pfSectionCard(
+                    title: 'Residential Unit',
+                    subtitle: 'Enter Residential Units',
+                    trailing: selectedpropertytypedata?.isMultiunit == true
+                        ? _pfAddLink(
+                            "Add Another Unit",
+                            // borderRadius: BorderRadius.circular(3),
+                            // boxShadow: [
+                            //   BoxShadow(
+                            //     color: Colors.grey,
+                            //     offset: Offset(0.0, 1.0), //(x,y)
+                            //     blurRadius: 6.0,
+                            //   ),
+                            // ],
+                            // fontWeight: FontWeight.bold,
+                            onTap: () {
+                              // if (selectedProperty != null) {
+                              //   addPropertyGroup();
+                              // }
+                              addPropertyGroup();
+                            },
+                          )
+                        : null,
+                    children: [
+                            if (propertyGroups.isNotEmpty)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SingleChildScrollView(
+                                    child: Column(
+                                      children: propertyGroups.map((group) {
+                                        int index =
+                                            propertyGroups.indexOf(group);
+                                        return Padding(
+                                          padding: EdgeInsets.only(
+                                              top: index == 0 ? 0 : 12),
+                                          child: _pfUnitCard(
+                                            children: [
+                                              // Align(
+                                              //   alignment:
+                                              //       Alignment.centerRight,
+                                              //   child: InkWell(
+                                              //     onTap: () =>
+                                              //         removePropertyGroup(
+                                              //             index),
+                                              //     child: Icon(Icons.close,
+                                              //         color: Colors.black),
+                                              //   ),
+                                              // ),
+                                              Row(
+                                                children: [
+                                                  if (selectedIsMultiUnit)
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Residential ${index + 1}',
+                                                        style: const TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: navyClr,
+                                                        ),
+                                                      ),
+                                                    )
+                                                  else
+                                                    const Spacer(),
+                                                  Visibility(
+                                                    visible:
+                                                        !(selectedpropertytype ==
+                                                                'Residential' &&
+                                                            selectedIsMultiUnit ==
+                                                                false &&
+                                                            index == 0),
+                                                    child: _pfIconAction(
+                                                      icon:
+                                                          Icons.delete_outline,
+                                                      color: redClr,
+                                                      background: const Color(
+                                                          0xFFFBE9E7),
+                                                      onTap: () =>
+                                                          removePropertyGroup(
+                                                              index),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (selectedIsMultiUnit)
+                                                const SizedBox(height: 16),
+                                              ...group,
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                    ],
+                  ),
+                if (selectedpropertytypedata != null &&
+                    selectedpropertytypedata!.propertyType == "Commercial")
+                  _pfSectionCard(
+                    title: 'Commercial Unit',
+                    subtitle: 'Enter Commercial Units',
+                    trailing: selectedpropertytypedata?.isMultiunit == true
+                        ? _pfAddLink(
+                            "Add Another Unit",
+                            // borderRadius: BorderRadius.circular(3),
+                            // boxShadow: [
+                            //   BoxShadow(
+                            //     color: Colors.grey,
+                            //     offset: Offset(0.0, 1.0), //(x,y)
+                            //     blurRadius: 6.0,
+                            //   ),
+                            // ],
+                            onTap: () {
+                              addPropertyGroup();
+                            },
+                          )
+                        : null,
+                    children: [
+                            if (propertyGroups.isNotEmpty)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SingleChildScrollView(
+                                    child: Column(
+                                      children: propertyGroups.map((group) {
+                                        int index =
+                                            propertyGroups.indexOf(group);
+                                        return Padding(
+                                          padding: EdgeInsets.only(
+                                              top: index == 0 ? 0 : 12),
+                                          child: _pfUnitCard(
+                                            children: [
+                                              // Align(
+                                              //   alignment:
+                                              //       Alignment.centerRight,
+                                              //   child: InkWell(
+                                              //     onTap: () =>
+                                              //         removePropertyGroup(
+                                              //             index),
+                                              //     child: Icon(Icons.close,
+                                              //         color: Colors.black),
+                                              //   ),
+                                              // ),
+                                              Row(
+                                                children: [
+                                                  if (selectedIsMultiUnit)
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Commercial ${index + 1}',
+                                                        style: const TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: navyClr,
+                                                        ),
+                                                      ),
+                                                    )
+                                                  else
+                                                    const Spacer(),
+                                                  Visibility(
+                                                    visible:
+                                                        !(selectedpropertytype ==
+                                                                'Commercial' &&
+                                                            selectedIsMultiUnit ==
+                                                                false &&
+                                                            index == 0),
+                                                    child: _pfIconAction(
+                                                      icon:
+                                                          Icons.delete_outline,
+                                                      color: redClr,
+                                                      background: const Color(
+                                                          0xFFFBE9E7),
+                                                      onTap: () =>
+                                                          removePropertyGroup(
+                                                              index),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (selectedIsMultiUnit)
+                                                const SizedBox(height: 16),
+                                              ...group,
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                    ],
+                  ),
+                if (iserror2)
+                  const Text(
+                    "required",
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
                 const SizedBox(height: 20),
 
                 Row(
                   children: [
                     // SizedBox(width: MediaQuery.of(context).size.width * 0.01),
-                    GestureDetector(
-                      onTap: () async {
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          // displayPropertyData();
+                          Navigator.pop(context);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: const BorderSide(color: outlineClr),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(
+                            color: mutedClr,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: ElevatedButton(
+                      onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           if (selectedProperty == null) {
                             setState(() {
@@ -4892,6 +4560,14 @@ class _Add_new_propertyState extends State<Add_new_property> {
                               primaryEmail:
                                   updatedOwner.rentalOwnerPrimaryEmail,
                               phoneNumber: updatedOwner.rentalOwnerPhoneNumber,
+                              // Straight from the owner screen: the Add form has
+                              // no controllers of its own for these four.
+                              alternateEmail:
+                                  ownerDetails.rentalOwnerAlternateEmail,
+                              homeNumber: ownerDetails.rentalOwnerHomeNumber,
+                              businessNumber:
+                                  ownerDetails.rentalOwnerBusinessNumber,
+                              streetAddress: ownerDetails.streetAddress,
                               city: updatedOwner.city,
                               state: updatedOwner.state,
                               country: updatedOwner.country,
@@ -4913,6 +4589,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                   List<String> dateFormats = [
                                     'yyyy-MM-dd',
                                     'yyyy-M-d',
+                                    'yyyy-MMM-dd',
                                     'dd-MM-yyyy',
                                     'd-M-yyyy',
                                     'M/d/yyyy',
@@ -4968,7 +4645,9 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                   placedInService: formattedPlacedInService,
                                   insuredValues: insuredValuesList.isNotEmpty
                                       ? insuredValuesList
-                                      : null
+                                      : null,
+                                  propertyAmenities: List<String>.from(
+                                      propertyAmenities.value)
                               );
 
                               List<Unit> units = [];
@@ -4996,6 +4675,16 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                   units[i].unit = controllers[0].text.trim();
                                   units[i].address = controllers[1].text.trim();
                                   units[i].sqft = controllers[2].text.trim();
+                                  // Optional; empty -> null so the key is
+                                  // omitted, like web (description || undefined).
+                                  final String commercialDescription =
+                                      controllers.length > 3
+                                          ? controllers[3].text.trim()
+                                          : '';
+                                  units[i].description =
+                                      commercialDescription.isEmpty
+                                          ? null
+                                          : commercialDescription;
                                   units[i].Image = propertyGroupImagenames[i];
                                   //      units[i].bath = controllers[3].text;
                                   //     units[i].bed = controllers[4].text;
@@ -5023,7 +4712,33 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                   units[i].sqft = controllers[2].text.trim();
                                   units[i].bath = controllers[3].text.trim();
                                   units[i].bed = controllers[4].text.trim();
+                                  units[i].rentPrice = controllers[5].text.trim();
+                                  units[i].halfBaths = controllers[6].text.trim();
+                                  units[i].availabilityDate =
+                                      _toApiDate(controllers[7].text);
+                                  units[i].parkingType =
+                                      controllers[8].text.trim();
+                                  units[i].leaseTerm =
+                                      controllers[9].text.trim();
+                                  units[i].securityDeposit =
+                                      controllers[10].text.trim();
+                                  units[i].securityDepositType =
+                                      controllers[11].text.trim();
+                                  units[i].securityDepositMax =
+                                      controllers[12].text.trim();
+                                  units[i].securityDepositRefundable =
+                                      controllers[13].text.trim();
+                                  units[i].petPolicy =
+                                      controllers[14].text.trim();
+                                  units[i].isFurnished =
+                                      controllers[15].text == 'true';
+                                  units[i].smokingAllowed =
+                                      controllers[16].text == 'true';
+                                  units[i].description =
+                                      controllers[17].text.trim();
                                   units[i].Image = propertyGroupImagenames[i];
+                                  units[i].amenities = List<String>.from(
+                                      propertyGroupAmenities[i].value);
 //                                  units[i].unit = controllers[0].text;
                                 }
                                 units.removeWhere((unit) =>
@@ -5046,7 +4761,33 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                   units[i].sqft = controllers[0].text.trim();
                                   units[i].bath = controllers[1].text.trim();
                                   units[i].bed = controllers[2].text.trim();
+                                  units[i].rentPrice = controllers[3].text.trim();
+                                  units[i].halfBaths = controllers[4].text.trim();
+                                  units[i].availabilityDate =
+                                      _toApiDate(controllers[5].text);
+                                  units[i].parkingType =
+                                      controllers[6].text.trim();
+                                  units[i].leaseTerm =
+                                      controllers[7].text.trim();
+                                  units[i].securityDeposit =
+                                      controllers[8].text.trim();
+                                  units[i].securityDepositType =
+                                      controllers[9].text.trim();
+                                  units[i].securityDepositMax =
+                                      controllers[10].text.trim();
+                                  units[i].securityDepositRefundable =
+                                      controllers[11].text.trim();
+                                  units[i].petPolicy =
+                                      controllers[12].text.trim();
+                                  units[i].isFurnished =
+                                      controllers[13].text == 'true';
+                                  units[i].smokingAllowed =
+                                      controllers[14].text == 'true';
+                                  units[i].description =
+                                      controllers[15].text.trim();
                                   units[i].Image = propertyGroupImagenames[i];
+                                  units[i].amenities = List<String>.from(
+                                      propertyGroupAmenities[i].value);
 //                                  units[i].unit = controllers[0].text;
                                 }
                                 units.removeWhere((unit) =>
@@ -5063,6 +4804,16 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                   List<TextEditingController> controllers =
                                       propertyGroupControllers[i];
                                   units[i].sqft = controllers[0].text.trim();
+                                  // Optional; empty -> null so the key is
+                                  // omitted, like web (description || undefined).
+                                  final String commercialDescription =
+                                      controllers.length > 1
+                                          ? controllers[1].text.trim()
+                                          : '';
+                                  units[i].description =
+                                      commercialDescription.isEmpty
+                                          ? null
+                                          : commercialDescription;
                                   units[i].Image = propertyGroupImagenames[i];
                                 }
 
@@ -5094,51 +4845,32 @@ class _Add_new_propertyState extends State<Add_new_property> {
                           // print('Form is invalid');
                         }
                       },
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(5.0),
-                        child: Container(
-                          height: 45,
-                          width: MediaQuery.of(context).size.width * .35,
-                          decoration: BoxDecoration(
-                            color: blueColor,
-                            boxShadow: [
-                              const BoxShadow(
-                                color: Colors.grey,
-                                offset: Offset(0.0, 1.0),
-                                blurRadius: 6.0,
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: loading
-                                ? const SpinKitFadingCircle(
-                                    color: Colors.white,
-                                    size: 25.0,
-                                  )
-                                : const Text(
-                                    "Create Property",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                          ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: navyClr,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 15),
-                    InkWell(
-                        onTap: () {
-                          // displayPropertyData();
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          "Cancel",
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: blueColor),
-                        )),
+                      child: loading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: SpinKitFadingCircle(
+                                color: Colors.white,
+                                size: 22.0,
+                              ),
+                            )
+                          : const Text(
+                              "Create Property",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                    )),
                   ],
                 ),
 
@@ -5570,4 +5302,41 @@ class HistoricalInsuredValue {
     this.yearError = false,
     this.valueError = false,
   });
+}
+
+/// Dashed rounded border for the unit photo upload box (look only; no
+/// package needed). Same as the Edit Property screens.
+class _PfDashedBorderPainter extends CustomPainter {
+  const _PfDashedBorderPainter();
+
+  static const Color _color = Color(0xFFCED4DA);
+  static const double _stroke = 1.2;
+  static const double _radius = 12;
+  static const double _dash = 6;
+  static const double _gap = 4;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = _color
+      ..strokeWidth = _stroke
+      ..style = PaintingStyle.stroke;
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      const Radius.circular(_radius),
+    ).deflate(_stroke / 2);
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      double d = 0;
+      while (d < metric.length) {
+        final double end =
+            d + _dash < metric.length ? d + _dash : metric.length;
+        canvas.drawPath(metric.extractPath(d, end), paint);
+        d = end + _gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

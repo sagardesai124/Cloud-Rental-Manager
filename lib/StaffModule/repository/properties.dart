@@ -216,6 +216,27 @@ class PropertiesRepository {
                 "", // Try to get sqft from rental_unit if rental_sqft is empty
             "rental_bath": unit["rental_bath"] ?? "",
             "rental_bed": unit["rental_bed"] ?? "",
+            // Residential-only; this map is a whitelist, so anything not
+            // listed here is silently dropped before the request is sent.
+            // Fall back to the current value so a commercial unit (which
+            // never sets them) is not given empty strings.
+            if (unit["rental_unit_price"] != null)
+              "rental_unit_price": unit["rental_unit_price"],
+            if (unit["half_baths"] != null)
+              "half_baths": unit["half_baths"],
+            if (unit["availability_date"] != null)
+              "availability_date": unit["availability_date"],
+            if (unit["parking_type"] != null) "parking_type": unit["parking_type"],
+            if (unit["lease_term"] != null) "lease_term": unit["lease_term"],
+            if (unit["security_deposit"] != null) "security_deposit": unit["security_deposit"],
+            if (unit["security_deposit_type"] != null) "security_deposit_type": unit["security_deposit_type"],
+            if (unit["security_deposit_max"] != null) "security_deposit_max": unit["security_deposit_max"],
+            if (unit["security_deposit_refundable"] != null) "security_deposit_refundable": unit["security_deposit_refundable"],
+            if (unit["pet_policy"] != null) "pet_policy": unit["pet_policy"],
+            if (unit["is_furnished"] != null) "is_furnished": unit["is_furnished"],
+            if (unit["smoking_allowed"] != null) "smoking_allowed": unit["smoking_allowed"],
+            if (unit["description"] != null) "description": unit["description"],
+            if (unit["amenities"] != null) "amenities": unit["amenities"],
             "rental_images": unit["rental_images"] ?? []
           };
 
@@ -233,6 +254,16 @@ class PropertiesRepository {
           rentalRequest.rentalOwnerData?.rentalOwnerPrimaryEmail,
       "rentalOwner_phoneNumber":
           rentalRequest.rentalOwnerData?.rentalOwnerPhoneNumber,
+      // Keys match web's submit helper (Functions/Rentals.js:108-112); this
+      // map is a whitelist, so anything absent here is dropped before sending.
+      // Staff was missing all four of these; Admin already sent home/business.
+      "rentalOwner_homeNumber":
+          rentalRequest.rentalOwnerData?.rentalOwnerHomeNumber ?? "",
+      "rentalOwner_businessNumber":
+          rentalRequest.rentalOwnerData?.rentalOwnerBuisinessNumber ?? "",
+      "rentalOwner_alternateEmail":
+          rentalRequest.rentalOwnerData?.rentalOwnerAlternativeEmail ?? "",
+      "street_address": rentalRequest.rentalOwnerData?.Address ?? "",
       "city": rentalRequest.rentalOwnerData?.city,
       "state": rentalRequest.rentalOwnerData?.state,
       "country": rentalRequest.rentalOwnerData?.country,
@@ -267,6 +298,14 @@ class PropertiesRepository {
           "year": (iv as dynamic).year,
           "insured_value": (iv as dynamic).insuredValue?.toString() ?? ""
         }).toList();
+      }
+
+      // Building/community amenities. Sent whenever the form provides the
+      // list (even []), so clearing every chip really clears it server-side.
+      final propertyAmenities = (rentalRequest as dynamic).propertyAmenities;
+      if (propertyAmenities != null) {
+        rentalData["property_amenities"] =
+            List<String>.from(propertyAmenities as List);
       }
     } catch (e) {
       logError('Error accessing placedInService/insuredValues: $e');
