@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -64,7 +65,10 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
   List<TeamActivityEntry> _activity = const [];
   int _activityTotal = 0;
   int _activityPage = 1;
-  static const int _activityPageSize = 25;
+  // Rows-per-page matches the app's other lists (10/25/50/100 selector). Web's
+  // Activity Log uses a fixed 25; this screen follows the app's pagination
+  // convention instead so the pager looks and behaves like every other list.
+  int _activityPageSize = 10;
   String _activityAction = ''; // '' = All actions
   bool _activityNewestFirst = true; // the server already sorts newest-first
 
@@ -263,8 +267,13 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
           setState(() => _selectedTab = index);
           // Activity is fetched when the tab is opened and refreshed on every
           // re-open, matching the web CRM — an audit trail should not go stale
-          // behind a tab. It is never fetched in the background.
-          if (index == 3 && !_isStaff) _loadActivity();
+          // behind a tab. It is never fetched in the background. Reset to page 1
+          // first so a re-open always lands on the newest events (a new entry
+          // added since last view would otherwise sit unseen on an old page).
+          if (index == 3 && !_isStaff) {
+            _activityPage = 1;
+            _loadActivity();
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -903,18 +912,61 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
   }
 
   /// Only rendered when the result actually spans more than one page.
+  /// Rows-per-page selector + page controls, matching the app's other list
+  /// screens (Property Type, Work Orders, etc.): a 10/25/50/100 dropdown and
+  /// circular chevrons. Paging is server-side, so changing any control refetches
+  /// the relevant page.
   Widget _activityPager() {
     final int totalPages =
         _activityTotal == 0 ? 1 : (_activityTotal / _activityPageSize).ceil();
-    if (totalPages <= 1) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        // Right-aligned, like the dashboard and the other list pagers.
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Compact rows-per-page box: short, dense dropdown with a soft border,
+          // sized to sit neatly beside the chevrons rather than towering over them.
+          Container(
+            height: 38,
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFD3DAE5)),
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _activityPageSize,
+                isDense: true,
+                items: [10, 25, 50, 100].map((int value) {
+                  return DropdownMenuItem<int>(
+                    value: value,
+                    child: Text(value.toString()),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _activityPageSize = newValue;
+                      _activityPage = 1; // new page size starts at page 1
+                    });
+                    _loadActivity();
+                  }
+                },
+                icon: const Icon(Icons.arrow_drop_down, color: _navy),
+                style: const TextStyle(
+                    color: _navy, fontSize: 14, fontWeight: FontWeight.w600),
+                dropdownColor: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.chevron_left),
-            color: _activityPage <= 1 ? _muted : _navy,
+            icon: FaIcon(
+              FontAwesomeIcons.circleChevronLeft,
+              color: _activityPage <= 1 ? Colors.grey : _navy,
+            ),
             onPressed: _activityPage <= 1
                 ? null
                 : () {
@@ -922,17 +974,12 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
                     _loadActivity();
                   },
           ),
-          Text(
-            'Page $_activityPage of $totalPages',
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: _navy,
-            ),
-          ),
+          Text('Page $_activityPage of $totalPages'),
           IconButton(
-            icon: const Icon(Icons.chevron_right),
-            color: _activityPage >= totalPages ? _muted : _navy,
+            icon: FaIcon(
+              FontAwesomeIcons.circleChevronRight,
+              color: _activityPage >= totalPages ? Colors.grey : _navy,
+            ),
             onPressed: _activityPage >= totalPages
                 ? null
                 : () {

@@ -297,6 +297,9 @@ class Properies_summery_Repo{
       'rental_bed': rentalbed,
       'rental_images':rentalImages
     };
+    // Server applies $set: req.body, so a null would blank the stored field
+    // (bath/bed, rental_images, even rental_id). Send only keys we have.
+    data.removeWhere((k, v) => v == null);
 
    // print('$apiUrl/$id');
     SharedPreferences prefs = await SharedPreferences.getInstance();

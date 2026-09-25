@@ -1170,6 +1170,13 @@ class _Add_new_propertyState extends State<Add_new_property> {
   }
 
   void addPropertyGroup() {
+    // This unit's slot in the per-unit lists = where its controllers land
+    // once Create strips the blank head slot. propertyGroups.length collided
+    // after a unit was removed (two cards shared one photo/amenity slot).
+    // Read it from the images list: Create strips only the controllers, so a
+    // unit added after a failed Create would otherwise take the previous
+    // unit's photo/amenity slot.
+    final int slot = propertyGroupImages.length - 1;
     // print("hello");
     List<Widget> fields = [];
     List<TextEditingController> controllers = [];
@@ -1196,7 +1203,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
         _pfHelperText(
             'Describe unit features, layout, appliances, and unique qualities'),
         _pfGap,
-        photo(propertyGroups.length), // Pass the index
+        photo(slot), // Pass the index
       ];
 
       // Unit Description is appended LAST (index 3) so indices 0-2 never shift.
@@ -1288,7 +1295,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
             placeholder:
                 'Additional pet policy notes (e.g., Max 2 pets, \$500 deposit)'),
         _pfGap,
-        unitAmenitiesField(propertyGroups.length),
+        unitAmenitiesField(slot),
         _pfGap,
         _pfTileRow(
           customCheckboxField('Furnished', furnishedController),
@@ -1300,7 +1307,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
         _pfHelperText(
             'Describe unit features, layout, appliances, and unique qualities'),
         _pfGap,
-        photo(propertyGroups.length), // Pass the index
+        photo(slot), // Pass the index
       ];
 
       controllers = [
@@ -1397,7 +1404,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
             placeholder:
                 'Additional pet policy notes (e.g., Max 2 pets, \$500 deposit)'),
         _pfGap,
-        unitAmenitiesField(propertyGroups.length),
+        unitAmenitiesField(slot),
         _pfGap,
         _pfTileRow(
           customCheckboxField('Furnished', furnishedController),
@@ -1409,7 +1416,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
         _pfHelperText(
             'Describe unit features, layout, appliances, and unique qualities'),
         _pfGap,
-        photo(propertyGroups.length), // Pass the index
+        photo(slot), // Pass the index
       ];
 
       controllers = [
@@ -1442,7 +1449,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
         _pfHelperText(
             'Describe unit features, layout, appliances, and unique qualities'),
         _pfGap,
-        photo(propertyGroups.length), // Pass the index
+        photo(slot), // Pass the index
       ];
 
       // Unit Description is appended LAST (index 1) so index 0 never shifts.
@@ -2082,6 +2089,23 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                                               .isMultiunit!;
                                                     });
                                                     propertyGroups.clear();
+                                                    // A type change used to clear only the unit cards. The per-unit lists
+                                                    // kept the old type's unit, so the save read the wrong unit (amenities
+                                                    // and photo lost) or crashed (Commercial multi -> Residential single).
+                                                    // Put them back to the one blank head slot initState leaves; Create
+                                                    // strips that slot, so the new unit saves from the index it writes to.
+                                                    propertyGroupControllers
+                                                      ..clear()
+                                                      ..add(<TextEditingController>[]);
+                                                    propertyGroupImages
+                                                      ..clear()
+                                                      ..add(null);
+                                                    propertyGroupImagenames
+                                                      ..clear()
+                                                      ..add(null);
+                                                    propertyGroupAmenities
+                                                      ..clear()
+                                                      ..add(ValueNotifier<List<String>>(<String>[]));
                                                     addPropertyGroup();
                                                     showError =
                                                         selectedProperty ==

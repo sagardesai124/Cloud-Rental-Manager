@@ -8792,6 +8792,12 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   }
 
   void _showAccount(BuildContext context) {
+    // Always open blank — no carryover from a previous add or cancel.
+    accountname.clear();
+    note.clear();
+    _selectedAccounttype = null;
+    _selectedFundtype = null;
+    isError = false;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -8917,7 +8923,14 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                     children: [
                       Expanded(
                         child: InkWell(
-                          onTap: () async {
+                          // Disabled while a save is in flight so rapid taps
+                          // cannot submit the same account more than once. The
+                          // inner guard catches any tap already dispatched before
+                          // this rebuild disables the control.
+                          onTap: isLoading
+                              ? null
+                              : () async {
+                            if (isLoading) return;
                             if (_selectedAccounttype == null ||
                                 accountname.text.trim().isEmpty ||
                                 _selectedFundtype == null) {

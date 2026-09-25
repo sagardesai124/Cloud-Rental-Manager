@@ -316,6 +316,72 @@ class _Edit_propertiesState extends State<Edit_properties> {
   }
 
   List<unit_properties> data = [];
+  // True only once fetchunits1 has rebuilt every unit's full field list.
+  // Until then the unit fields are partial or empty, and saving would blank
+  // or drop units, so Update waits for it (web waits for the load too).
+  bool _unitsLoaded = false;
+  // Unit slots whose card was removed with its delete icon. Removing drops only
+  // the card; the slot's fields stay in place, so the save skips a removed
+  // never-saved unit instead of creating it.
+  final Set<int> _removedUnitSlots = <int>{};
+
+  // A unit added with Add Another Unit that has not been removed again.
+  bool _isLiveNewUnit(int i) =>
+      i >= data.length && !_removedUnitSlots.contains(i);
+
+  // The first unit missing a field web requires, as a toast message, or null
+  // when every unit is complete. As web's unit schemas: SQFT on every unit, the
+  // unit name on multi-unit properties, and the full residential set on a newly
+  // added residential unit. Saved units are held only to SQFT and the unit
+  // name, so a property saved before the newer fields existed stays editable.
+  String? _missingUnitFields() {
+    final bool residential = selectedpropertytype == 'Residential';
+    int number = 0;
+    for (int i = 0; i < propertyGroupControllers.length; i++) {
+      if (_removedUnitSlots.contains(i)) continue;
+      number++;
+      final List<TextEditingController> c = propertyGroupControllers[i];
+      final List<String> missing = <String>[];
+      if (selectedIsMultiUnit) {
+        if (_at(c, 0).isEmpty) missing.add(residential ? 'Unit' : 'Unit Number');
+        if (_at(c, 2).isEmpty) missing.add('SQFT');
+        if (residential && i >= data.length) {
+          if (_at(c, 4).isEmpty) missing.add('Bed');
+          if (_at(c, 5).isEmpty) missing.add('Rent Price');
+          if (_at(c, 3).isEmpty) missing.add('Baths');
+          if (_at(c, 6).isEmpty) missing.add('Half Baths');
+          if (_at(c, 7).isEmpty) missing.add('Availability Date');
+        }
+      } else if (_at(c, 0).isEmpty) {
+        missing.add('SQFT');
+      }
+      if (missing.isNotEmpty) {
+        return 'Please enter ${missing.join(', ')} for Unit $number.';
+      }
+    }
+    return null;
+  }
+
+  /// Photos to save for unit [i]. This form shows one photo per unit, but a
+  /// unit can hold up to 10 (added on web). Send every stored photo back
+  /// exactly as stored, and only change the first one when the user replaced
+  /// or removed it here, so a save on mobile never drops photos 2-10.
+  List<String> _unitImagesForSave(int i) {
+    final List<String> stored = i < data.length
+        ? List<String>.from(data[i].rentalImages ?? const <String>[])
+        : <String>[];
+    final String? shown =
+        i < propertyGroupImagenames.length ? propertyGroupImagenames[i] : null;
+    final bool hasShown = shown != null && shown.isNotEmpty;
+    if (stored.isEmpty) return hasShown ? <String>[shown] : <String>[];
+    // First photo removed here: keep the rest.
+    if (!hasShown) return stored.sublist(1);
+    String name(String s) => s.split('/').last;
+    // Untouched: the form only prefixed the stored name for display.
+    if (name(shown) == name(stored.first)) return stored;
+    // First photo replaced here: keep the rest after it.
+    return <String>[shown, ...stored.sublist(1)];
+  }
   final Properies_summery_Repo unit1Repository = Properies_summery_Repo();
   Future<void> fetchunits1() async {
     try {
@@ -649,6 +715,8 @@ class _Edit_propertiesState extends State<Edit_properties> {
         // building with a single unit used to read as single-unit here, so the
         // change check and save read its fields by the wrong positions.
         selectedIsMultiUnit = selectedpropertytypedata?.isMultiunit == true;
+        _removedUnitSlots.clear();
+        _unitsLoaded = true;
       });
     } catch (e) {
       logError('Error fetching units: $e');
@@ -982,6 +1050,16 @@ class _Edit_propertiesState extends State<Edit_properties> {
 
   void removePropertyGroup(int index) {
     setState(() {
+      // Cards and unit slots share one order and cards are only ever removed,
+      // so the index-th card belongs to the index-th slot not yet removed.
+      int seen = -1;
+      for (int slot = 0; slot < propertyGroupControllers.length; slot++) {
+        if (_removedUnitSlots.contains(slot)) continue;
+        if (++seen == index) {
+          _removedUnitSlots.add(slot);
+          break;
+        }
+      }
       propertyGroups.removeAt(index);
     });
   }
@@ -2098,6 +2176,10 @@ class _Edit_propertiesState extends State<Edit_properties> {
   }
 
   void addPropertyGroup() {
+    // The unit slot this card's fields take. After a card is removed the card
+    // count is smaller than the slot count, so the photo and amenities bind to
+    // the slot, not to propertyGroups.length.
+    final int slot = propertyGroupControllers.length;
     // print("hello");
     List<Widget> fields = [];
     List<TextEditingController> controllers = [];
@@ -2120,7 +2202,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
             maxLines: 3,
             placeholder: _pfUnitDescHint,
             helperText: _pfUnitDescHelper),
-        photo(propertyGroups.length), // Pass the index
+        photo(slot), // Pass the index
       ];
 
       controllers = [
@@ -2196,7 +2278,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
             depositRefundableController),
         customOptionalField('Pet Policy', petPolicyController,
             maxLines: 3, placeholder: _pfPetPolicyHint),
-        unitAmenitiesField(propertyGroups.length),
+        unitAmenitiesField(slot),
         const SizedBox(height: 16),
         _pfCheckTilesRow(
           customCheckboxField('Furnished', furnishedController),
@@ -2206,7 +2288,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
             maxLines: 3,
             placeholder: _pfUnitDescHint,
             helperText: _pfUnitDescHelper),
-        photo(propertyGroups.length), // Pass the index
+        photo(slot), // Pass the index
       ];
 
       controllers = [
@@ -2290,7 +2372,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
             depositRefundableController),
         customOptionalField('Pet Policy', petPolicyController,
             maxLines: 3, placeholder: _pfPetPolicyHint),
-        unitAmenitiesField(propertyGroups.length),
+        unitAmenitiesField(slot),
         const SizedBox(height: 16),
         _pfCheckTilesRow(
           customCheckboxField('Furnished', furnishedController),
@@ -2300,7 +2382,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
             maxLines: 3,
             placeholder: _pfUnitDescHint,
             helperText: _pfUnitDescHelper),
-        photo(propertyGroups.length), // Pass the index
+        photo(slot), // Pass the index
       ];
 
       controllers = [
@@ -2341,7 +2423,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
               maxLines: 3,
               placeholder: _pfUnitDescHint,
               helperText: _pfUnitDescHelper),
-          photo(propertyGroups.length),
+          photo(slot),
         ];
 
         controllers = [
@@ -2358,7 +2440,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
               maxLines: 3,
               placeholder: _pfUnitDescHint,
               helperText: _pfUnitDescHelper),
-          photo(propertyGroups.length),
+          photo(slot),
         ];
 
         // Keep the same controller structure but use sqft in first position
@@ -2371,8 +2453,8 @@ class _Edit_propertiesState extends State<Edit_properties> {
       }
 
       // Initialize controllers with existing data if available
-      if (data.isNotEmpty && propertyGroups.length < data.length) {
-        var i = propertyGroups.length;
+      if (slot < data.length) {
+        var i = slot;
         var unit = data[i];
         if (selectedIsMultiUnit) {
           controllers[0].text = unit.rentalunit ?? '';
@@ -5410,7 +5492,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                                   visible:
                                                       !(selectedpropertytype ==
                                                               'Residential' &&
-                                                          data.length <= 1 &&
+                                                          data.length == 1 &&
                                                           index == 0),
                                                   child: InkWell(
                                                     onTap: () =>
@@ -5516,7 +5598,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                                     visible:
                                                         !(selectedpropertytype ==
                                                                 'Commercial' &&
-                                                            data.length <= 1 &&
+                                                            data.length == 1 &&
                                                             index == 0),
                                                     child: InkWell(
                                                       onTap: () =>
@@ -5914,6 +5996,12 @@ class _Edit_propertiesState extends State<Edit_properties> {
                       onPressed: () async {
                         // A second tap while a save is running does nothing.
                         if (loading) return;
+                        if (!_unitsLoaded) {
+                          Fluttertoast.showToast(
+                              msg:
+                                  "Unit details haven't loaded yet. Please wait, or go back and reopen this property.");
+                          return;
+                        }
                         // print("calling");
 
                         // Validate selected property
@@ -6017,8 +6105,13 @@ class _Edit_propertiesState extends State<Edit_properties> {
                         }
                         // Check for unit changes
 
-                        bool hasUnitChanges = false;
-                        if (data.length == propertyGroupControllers.length) {
+                        // A unit added with Add Another Unit (and not removed
+                        // again) is a change.
+                        bool hasUnitChanges = Iterable<int>.generate(
+                                propertyGroupControllers.length)
+                            .any(_isLiveNewUnit);
+                        // Loaded units are compared even when a unit was added.
+                        if (propertyGroupControllers.length >= data.length) {
                           for (int i = 0; i < data.length; i++) {
                             var oldUnit = data[i];
                             var controllers = propertyGroupControllers[i];
@@ -6245,6 +6338,13 @@ class _Edit_propertiesState extends State<Edit_properties> {
                         }
 
 
+                        // Required unit fields, as web requires them.
+                        final String? missingUnitField = _missingUnitFields();
+                        if (missingUnitField != null) {
+                          Fluttertoast.showToast(msg: missingUnitField);
+                          return;
+                        }
+
                         // Lock the button before the first await so a double tap cannot
                         // send a second save; the finally releases it whatever happens.
                         setState(() => loading = true);
@@ -6268,23 +6368,8 @@ class _Edit_propertiesState extends State<Edit_properties> {
 
                           List<Map<String, dynamic>> convertedUnits = [];
 
-                          // First, validate and clean up controllers
-                          if (propertyGroupControllers.isNotEmpty) {
-                            List<TextEditingController> firstControllers =
-                                propertyGroupControllers[0];
-                            // Commercial Unit Description (index 3) is optional
-                            // and must not change whether the unit counts as
-                            // blank, so only the original fields are checked.
-                            bool isFirstBlank = firstControllers
-                                .take(selectedpropertytype == 'Commercial'
-                                    ? 3
-                                    : firstControllers.length)
-                                .every((controller) =>
-                                    controller.text.trim().isEmpty);
-                            if (isFirstBlank) {
-                              propertyGroupControllers.removeAt(0);
-                            }
-                          }
+                          // Every loaded unit is sent (Update waits for the unit load), so none is
+                          // dropped here; a blank SQFT or unit name is caught above, as on web.
 
                           // Prepare units based on property type
                           for (int i = 0;
@@ -6461,6 +6546,14 @@ class _Edit_propertiesState extends State<Edit_properties> {
                               i < propertyGroupControllers.length;
                               i++) {
                             var controllers = propertyGroupControllers[i];
+                            // A never-saved unit whose card was removed.
+                            if (i >= data.length &&
+                                _removedUnitSlots.contains(i)) {
+                              continue;
+                            }
+                            // New units (Add Another Unit) have no entry in data.
+                            final unit_properties? oldUnit =
+                                i < data.length ? data[i] : null;
                             for (int j = 0; j < controllers.length; j++) {
                             }
 
@@ -6470,19 +6563,18 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                 !selectedIsMultiUnit) {
                               unit = {
                                 'admin_id': id,
-                                'unit_id': data[i].unitId ??
-                                    DateTime.now()
-                                        .millisecondsSinceEpoch
-                                        .toString(),
-                                'rental_unit':
-                                    "Unit 1", // Always "Unit 1" for single Commercial
-                                'rental_unit_adress': address.text,
+                                // New units go without an id so the server creates
+                                // them, like web; loaded units keep theirs.
+                                if (oldUnit != null) 'unit_id': oldUnit.unitId,
+                                // Send the stored unit name/address back unchanged,
+                                // like web (it used to overwrite them with "Unit 1"
+                                // and the property address).
+                                'rental_unit': oldUnit?.rentalunit ?? '',
+                                'rental_unit_adress': oldUnit?.rentalunitadress ?? '',
                                 'rental_sqft': controllers[0]
                                     .text, // sqft from first controller
                                 'rental_images':
-                                    propertyGroupImagenames[i] != null
-                                        ? [propertyGroupImagenames[i]]
-                                        : [],
+                                    _unitImagesForSave(i),
                                 'rental_bath':
                                     "", // Add empty bath for consistency
                                 'rental_bed': "", // Add empty bed for consistency
@@ -6502,17 +6594,14 @@ class _Edit_propertiesState extends State<Edit_properties> {
                               // form, so keep what the unit already has.
                               unit = {
                                 'admin_id': id,
-                                'unit_id': data[i].unitId ??
-                                    DateTime.now()
-                                        .millisecondsSinceEpoch
-                                        .toString(),
-                                'rental_unit': data[i].rentalunit ?? '',
-                                'rental_unit_adress': data[i].rentalunitadress ?? '',
+                                // New units go without an id so the server creates
+                                // them, like web; loaded units keep theirs.
+                                if (oldUnit != null) 'unit_id': oldUnit.unitId,
+                                'rental_unit': oldUnit?.rentalunit ?? '',
+                                'rental_unit_adress': oldUnit?.rentalunitadress ?? '',
                                 'rental_sqft': controllers[0].text.trim(),
                                 'rental_images':
-                                    propertyGroupImagenames[i] != null
-                                        ? [propertyGroupImagenames[i]]
-                                        : [],
+                                    _unitImagesForSave(i),
                                 'rental_bath': controllers[1].text.trim(),
                                 'rental_bed': controllers[2].text.trim(),
                                 'rental_unit_price': _at(controllers, 3),
@@ -6534,17 +6623,14 @@ class _Edit_propertiesState extends State<Edit_properties> {
                             } else {
                               unit = {
                                 'admin_id': id,
-                                'unit_id': data[i].unitId ??
-                                    DateTime.now()
-                                        .millisecondsSinceEpoch
-                                        .toString(),
+                                // New units go without an id so the server creates
+                                // them, like web; loaded units keep theirs.
+                                if (oldUnit != null) 'unit_id': oldUnit.unitId,
                                 'rental_unit': controllers[0].text,
                                 'rental_unit_adress': controllers[1].text,
                                 'rental_sqft': controllers[2].text,
                                 'rental_images':
-                                    propertyGroupImagenames[i] != null
-                                        ? [propertyGroupImagenames[i]]
-                                        : [],
+                                    _unitImagesForSave(i),
                                 'rental_bath': "",
                                 'rental_bed': "",
                               };

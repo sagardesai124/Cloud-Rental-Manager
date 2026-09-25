@@ -5207,6 +5207,7 @@ class OneTimeChargePopUp extends StatefulWidget {
 
 class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
   void _openAddAccountDialog(BuildContext context) {
+    bool isAddingAccount = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
                                   showDialog(
                                     context: context,
@@ -5440,7 +5441,9 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                                                 8.0))),
                                                                     onPressed:
                                                                         () {
-                                                                      _submitSubForm();
+                                                                      if (isAddingAccount) return;
+                                                                      isAddingAccount = true;
+                                                                      _submitSubForm().whenComplete(() => isAddingAccount = false);
                                                                     },
                                                                     child:
                                                                         const Text(
@@ -6008,6 +6011,7 @@ class RecurringChargePopUp extends StatefulWidget {
 
 class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
   void _openAddAccountDialog(BuildContext context) {
+    bool isAddingAccount = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
                                     showDialog(
                                       context: context,
@@ -6269,8 +6273,9 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                                                     8.0))),
                                                                         onPressed:
                                                                             () {
-                                                                          _submitSubForm(
-                                                                              context);
+                                                                          if (isAddingAccount) return;
+                                                                          isAddingAccount = true;
+                                                                          _submitSubForm(context).whenComplete(() => isAddingAccount = false);
                                                                         },
                                                                         child:
                                                                             const Text(

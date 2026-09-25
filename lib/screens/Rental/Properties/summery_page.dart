@@ -1385,6 +1385,27 @@ class _Summery_pageState extends State<Summery_page>
     }
   }
 
+  // Unit photos only: unlike _pickImage these never call _updateRentalImage,
+  // so the property cover photo is left alone. Null means picker cancelled.
+  Future<File?> _pickUnitImageFile() async {
+    final XFile? image =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+    return image == null ? null : File(image.path);
+  }
+
+  // Picks one unit photo and uploads it with the same call _uploadImage uses.
+  // Returns the stored filename, or null on cancel / failed upload.
+  Future<String?> _pickUnitImage() async {
+    final File? file = await _pickUnitImageFile();
+    if (file == null) return null;
+    try {
+      return await uploadImage(file);
+    } catch (e) {
+      logError('Image upload failed: $e');
+      return null;
+    }
+  }
+
   Future<void> _updateRentalImage(String fileName) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1477,6 +1498,50 @@ class _Summery_pageState extends State<Summery_page>
   }
 
   List<String> _imageUrls = [];
+  // Wide-layout unit Edit dialogs: the unit's current gallery with X to
+  // remove, same thumbnails as the phone dialogs. setDialogState is the
+  // dialog's StatefulBuilder setter.
+  Widget _unitGalleryThumbs(StateSetter setDialogState) {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: List.generate(_imageUrls.length, (index) {
+        return SizedBox(
+          width: 85,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const SizedBox(width: 60),
+                  GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        if (index >= 0 && index < _imageUrls.length) {
+                          _imageUrls.removeAt(index);
+                        }
+                      });
+                    },
+                    child: const Icon(Icons.close, color: Colors.grey),
+                  ),
+                ],
+              ),
+              Image.network(
+                "$image_url${_imageUrls[index]}",
+                height: 80,
+                width: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.error);
+                },
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
   List<String> _editimageUrls = [];
 
   bool showdetails = false;
@@ -2806,56 +2871,67 @@ class _Summery_pageState extends State<Summery_page>
                   const SizedBox(
                     height: 20,
                   ),
+                  // Back control added for parity with the Work Order, Lease and
+                  // Tenant detail screens, which all lead their header with a
+                  // rounded chevron; Property Detail sat under the app bar with no
+                  // way back but the system gesture. Same markup in both modules.
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(
-                        width: 20,
-                      ),
-                      SizedBox(
-                        width:
-                            MediaQuery.of(context).size.width > 500 ? 200 : 170,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 1),
-                          child: Text(
-                            '${widget.properties?.rentalAddress}',
-                            maxLines: 5, // Set maximum number of lines
-                            overflow: TextOverflow
-                                .ellipsis, // Handle overflow with ellipsis
-                            style: TextStyle(
-                              fontSize: MediaQuery.of(context).size.width < 500
-                                  ? 13
-                                  : 18,
-                              color: blueColor,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(width: 20),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF1F5),
+                              borderRadius: BorderRadius.circular(14),
                             ),
+                            child: Icon(Icons.chevron_left,
+                                color: blueColor, size: 28),
                           ),
                         ),
                       ),
-                      // Text('${widget.properties.rentalAddress}',
-                      //     style: TextStyle(
-                      //       color: blueColor,
-                      //       fontWeight: FontWeight.bold,
-                      //       fontSize: MediaQuery.of(context).size.width < 500 ? 14 : 20,
-                      //     )),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  Row(
-                    children: [
-                      const SizedBox(
-                        width: 20,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${widget.properties?.rentalAddress}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize:
+                                    MediaQuery.of(context).size.width < 500
+                                        ? 16
+                                        : 20,
+                                color: blueColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${widget.properties.propertyTypeData?.propertyType}',
+                              style: TextStyle(
+                                color: const Color(0xFF8A95A8),
+                                fontWeight: FontWeight.bold,
+                                fontSize:
+                                    MediaQuery.of(context).size.width < 500
+                                        ? 13
+                                        : 16,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Text(
-                          '${widget.properties.propertyTypeData?.propertyType}',
-                          style: TextStyle(
-                            color: const Color(0xFF8A95A8),
-                            fontWeight: FontWeight.bold,
-                            fontSize: MediaQuery.of(context).size.width < 500
-                                ? 13
-                                : 20,
-                          )),
+                      const SizedBox(width: 16),
                     ],
                   ),
                   const SizedBox(
@@ -8877,6 +8953,9 @@ class _Summery_pageState extends State<Summery_page>
                       bath3.clear();
                       bed3.clear();
                       _imageUrls.clear();
+                      // Each new unit starts with no photos.
+                      _images.clear();
+                      _uploadedFileNames.clear();
 
                       if (widget.properties.propertyTypeData!.isMultiunit! &&
                           widget.properties.propertyTypeData!.propertyType ==
@@ -9233,9 +9312,12 @@ class _Summery_pageState extends State<Summery_page>
                                             children: [
                                               GestureDetector(
                                                 onTap: () {
-                                                  _pickImage().then((_) {
-                                                    setState(
-                                                        () {}); // Rebuild the widget after selecting the image
+                                                  _pickUnitImageFile()
+                                                      .then((file) {
+                                                    if (file == null) return;
+                                                    setState(() {
+                                                      _images.add(file);
+                                                    }); // Rebuild the widget after selecting the image
                                                   });
                                                 },
                                                 child: const Text(
@@ -9736,9 +9818,12 @@ class _Summery_pageState extends State<Summery_page>
                                             children: [
                                               GestureDetector(
                                                 onTap: () {
-                                                  _pickImage().then((_) {
-                                                    setState(
-                                                        () {}); // Rebuild the widget after selecting the image
+                                                  _pickUnitImageFile()
+                                                      .then((file) {
+                                                    if (file == null) return;
+                                                    setState(() {
+                                                      _images.add(file);
+                                                    }); // Rebuild the widget after selecting the image
                                                   });
                                                 },
                                                 child: const Text(
@@ -10456,15 +10541,13 @@ class _Summery_pageState extends State<Summery_page>
                                                             bed3.text =
                                                                 Propertytype
                                                                     .rentalbed!;
-                                                            if (Propertytype
-                                                                    .rentalImages !=
-                                                                null) {
-                                                              setState(() {
-                                                                _imageUrls =
-                                                                    Propertytype
-                                                                        .rentalImages!;
-                                                              });
-                                                            }
+                                                            // Always reset from the tapped row (a copy, so X
+                                                            // does not mutate the model).
+                                                            setState(() {
+                                                              _imageUrls = List<String>.from(
+                                                                  Propertytype.rentalImages ??
+                                                                      const <String>[]);
+                                                            });
                                                             _images.clear();
                                                             // if (widget
                                                             //         .properties
@@ -11257,13 +11340,23 @@ class _Summery_pageState extends State<Summery_page>
                                                                                 ],
                                                                               ),
                                                                               const SizedBox(height: 8.0),
-                                                                              if (_images.isEmpty && _imageUrls.isEmpty)
+                                                                              // Unit gallery: up to 10 photos, existing ones kept.
+                                                                              if (_imageUrls.length < 10)
                                                                                 Row(
                                                                                   children: [
                                                                                     GestureDetector(
                                                                                       onTap: () {
-                                                                                        _pickImage().then((_) {
-                                                                                          setState(() {}); // Rebuild the widget after selecting the image
+                                                                                        final List<String> target = _imageUrls;
+                                                                                        _pickUnitImage().then((fileName) {
+                                                                                          // Only into the gallery that asked for it, while its dialog is
+                                                                                          // still open, and never past web's 10-photo limit.
+                                                                                          if (fileName == null ||
+                                                                                              !identical(target, _imageUrls) ||
+                                                                                              !context.mounted ||
+                                                                                              target.length >= 10) {
+                                                                                            return;
+                                                                                          }
+                                                                                          setState(() => target.add(fileName)); // Show the new thumbnail
                                                                                         });
                                                                                       },
                                                                                       child: const Text(
@@ -11273,7 +11366,7 @@ class _Summery_pageState extends State<Summery_page>
                                                                                     ),
                                                                                   ],
                                                                                 ),
-                                                                              if (_images.isEmpty && _imageUrls.isEmpty)
+                                                                              if (_imageUrls.length < 10)
                                                                                 const SizedBox(height: 8.0),
                                                                               _images.isNotEmpty || _imageUrls.isNotEmpty
                                                                                   ? Row(
@@ -11402,7 +11495,6 @@ class _Summery_pageState extends State<Summery_page>
                                                                                   ),
                                                                                   GestureDetector(
                                                                                     onTap: () async {
-                                                                                      await _uploadAllImages();
                                                                                       if (unitnum.text.trim().isEmpty || street3.text.trim().isEmpty || sqft3.text.trim().isEmpty) {
                                                                                         setState(() {
                                                                                           iserror = true;
@@ -12109,13 +12201,23 @@ class _Summery_pageState extends State<Summery_page>
                                                                                 ],
                                                                               ),
                                                                               const SizedBox(height: 8.0),
-                                                                              if (_images.isEmpty && _imageUrls.isEmpty)
+                                                                              // Unit gallery: up to 10 photos, existing ones kept.
+                                                                              if (_imageUrls.length < 10)
                                                                                 Row(
                                                                                   children: [
                                                                                     GestureDetector(
                                                                                       onTap: () {
-                                                                                        _pickImage().then((_) {
-                                                                                          setState(() {}); // Rebuild the widget after selecting the image
+                                                                                        final List<String> target = _imageUrls;
+                                                                                        _pickUnitImage().then((fileName) {
+                                                                                          // Only into the gallery that asked for it, while its dialog is
+                                                                                          // still open, and never past web's 10-photo limit.
+                                                                                          if (fileName == null ||
+                                                                                              !identical(target, _imageUrls) ||
+                                                                                              !context.mounted ||
+                                                                                              target.length >= 10) {
+                                                                                            return;
+                                                                                          }
+                                                                                          setState(() => target.add(fileName)); // Show the new thumbnail
                                                                                         });
                                                                                       },
                                                                                       child: const Text(
@@ -12125,7 +12227,7 @@ class _Summery_pageState extends State<Summery_page>
                                                                                     ),
                                                                                   ],
                                                                                 ),
-                                                                              if (_images.isEmpty && _imageUrls.isEmpty)
+                                                                              if (_imageUrls.length < 10)
                                                                                 const SizedBox(height: 8.0),
                                                                               _images.isNotEmpty || _imageUrls.isNotEmpty
                                                                                   ? Row(
@@ -12254,7 +12356,6 @@ class _Summery_pageState extends State<Summery_page>
                                                                                   ),
                                                                                   GestureDetector(
                                                                                     onTap: () async {
-                                                                                      await _uploadAllImages();
                                                                                       if (unitnum.text.trim().isEmpty || street3.text.trim().isEmpty || sqft3.text.trim().isEmpty) {
                                                                                         setState(() {
                                                                                           iserror = true;
@@ -12266,16 +12367,11 @@ class _Summery_pageState extends State<Summery_page>
                                                                                         });
                                                                                         SharedPreferences prefs = await SharedPreferences.getInstance();
                                                                                         String? id = prefs.getString("adminId");
-                                                                                        List<String> combinedImageUrls = [
-                                                                                          ..._imageUrls,
-                                                                                          ..._editimageUrls.where((url) => !_imageUrls.contains(url))
-                                                                                        ];
-
                                                                                         Properies_summery_Repo()
                                                                                             .Editunit(
                                                                                           rentalunit: unitnum.text.trim(),
                                                                                           rentalsqft: sqft3.text.trim(),
-                                                                                          rentalImages: combinedImageUrls,
+                                                                                          rentalImages: _imageUrls,
                                                                                           rentalunitadress: street3.text.trim(),
                                                                                           unitId: Propertytype.unitId!,
                                                                                           rentalId: Propertytype.rentalId!,
@@ -12739,26 +12835,29 @@ class _Summery_pageState extends State<Summery_page>
                                                           ),
                                                           InkWell(
                                                             onTap: () {
+                                                              // Edit the tapped row, not the first unit.
+                                                              final unit_properties tappedUnit =
+                                                                  _pagedDatamulti[i];
                                                               unitnum.text =
-                                                                  _tableDatamulti
-                                                                      .first
+                                                                  tappedUnit
                                                                       .rentalunit!;
                                                               street3.text =
-                                                                  _tableDatamulti
-                                                                      .first
+                                                                  tappedUnit
                                                                       .rentalunitadress!;
                                                               sqft3.text =
-                                                                  _tableDatamulti
-                                                                      .first
+                                                                  tappedUnit
                                                                       .rentalsqft!!;
                                                               bath3.text =
-                                                                  _tableDatamulti
-                                                                      .first
+                                                                  tappedUnit
                                                                       .rentalbath!;
                                                               bed3.text =
-                                                                  _tableDatamulti
-                                                                      .first
+                                                                  tappedUnit
                                                                       .rentalbed!;
+                                                              // Always reset from the tapped row (a copy, so X
+                                                              // does not mutate the model).
+                                                              _imageUrls = List<String>.from(
+                                                                  tappedUnit.rentalImages ??
+                                                                      const <String>[]);
                                                               if (widget
                                                                       .properties
                                                                       .propertyTypeData!
@@ -13036,21 +13135,36 @@ class _Summery_pageState extends State<Summery_page>
                                                                                   ],
                                                                                 ),
                                                                                 const SizedBox(height: 8.0),
-                                                                                Row(
-                                                                                  children: [
-                                                                                    GestureDetector(
-                                                                                      onTap: () {
-                                                                                        _pickImage().then((_) {
-                                                                                          setState(() {}); // Rebuild the widget after selecting the image
-                                                                                        });
-                                                                                      },
-                                                                                      child: const Text(
-                                                                                        '+ Add',
-                                                                                        style: TextStyle(color: Colors.green),
+                                                                                // Unit gallery: up to 10 photos, existing ones kept.
+                                                                                if (_imageUrls.length < 10)
+                                                                                  Row(
+                                                                                    children: [
+                                                                                      GestureDetector(
+                                                                                        onTap: () {
+                                                                                          final List<String> target = _imageUrls;
+                                                                                          _pickUnitImage().then((fileName) {
+                                                                                            // Only into the gallery that asked for it, while its dialog is
+                                                                                            // still open, and never past web's 10-photo limit.
+                                                                                            if (fileName == null ||
+                                                                                                !identical(target, _imageUrls) ||
+                                                                                                !context.mounted ||
+                                                                                                target.length >= 10) {
+                                                                                              return;
+                                                                                            }
+                                                                                            setState(() => target.add(fileName)); // Show the new thumbnail
+                                                                                          });
+                                                                                        },
+                                                                                        child: const Text(
+                                                                                          '+ Add',
+                                                                                          style: TextStyle(color: Colors.green),
+                                                                                        ),
                                                                                       ),
-                                                                                    ),
-                                                                                  ],
-                                                                                ),
+                                                                                    ],
+                                                                                  ),
+                                                                                if (_imageUrls.isNotEmpty)
+                                                                                  const SizedBox(height: 8.0),
+                                                                                if (_imageUrls.isNotEmpty)
+                                                                                  _unitGalleryThumbs(setState),
                                                                                 const SizedBox(
                                                                                   height: 10,
                                                                                 ),
@@ -13087,7 +13201,7 @@ class _Summery_pageState extends State<Summery_page>
                                                                                           SharedPreferences prefs = await SharedPreferences.getInstance();
 
                                                                                           String? id = prefs.getString("adminId");
-                                                                                          Properies_summery_Repo().Editunit(rentalunit: unitnum.text, rentalsqft: sqft3.text, rentalunitadress: street3.text, rentalbath: bath3.text, rentalbed: bed3.text, unitId: _tableDatamulti.first.unitId!, adminId: id, rentalId: _tableDatamulti.first.rentalId!).then((value) {
+                                                                                          Properies_summery_Repo().Editunit(rentalunit: unitnum.text, rentalsqft: sqft3.text, rentalunitadress: street3.text, rentalbath: bath3.text, rentalbed: bed3.text, unitId: tappedUnit.unitId!, adminId: id, rentalId: tappedUnit.rentalId!, rentalImages: _imageUrls).then((value) {
                                                                                             setState(() {
                                                                                               isLoading = false;
                                                                                             });
@@ -13362,21 +13476,36 @@ class _Summery_pageState extends State<Summery_page>
                                                                                   ],
                                                                                 ),
                                                                                 const SizedBox(height: 8.0),
-                                                                                Row(
-                                                                                  children: [
-                                                                                    GestureDetector(
-                                                                                      onTap: () {
-                                                                                        _pickImage().then((_) {
-                                                                                          setState(() {}); // Rebuild the widget after selecting the image
-                                                                                        });
-                                                                                      },
-                                                                                      child: const Text(
-                                                                                        '+ Add',
-                                                                                        style: TextStyle(color: Colors.green),
+                                                                                // Unit gallery: up to 10 photos, existing ones kept.
+                                                                                if (_imageUrls.length < 10)
+                                                                                  Row(
+                                                                                    children: [
+                                                                                      GestureDetector(
+                                                                                        onTap: () {
+                                                                                          final List<String> target = _imageUrls;
+                                                                                          _pickUnitImage().then((fileName) {
+                                                                                            // Only into the gallery that asked for it, while its dialog is
+                                                                                            // still open, and never past web's 10-photo limit.
+                                                                                            if (fileName == null ||
+                                                                                                !identical(target, _imageUrls) ||
+                                                                                                !context.mounted ||
+                                                                                                target.length >= 10) {
+                                                                                              return;
+                                                                                            }
+                                                                                            setState(() => target.add(fileName)); // Show the new thumbnail
+                                                                                          });
+                                                                                        },
+                                                                                        child: const Text(
+                                                                                          '+ Add',
+                                                                                          style: TextStyle(color: Colors.green),
+                                                                                        ),
                                                                                       ),
-                                                                                    ),
-                                                                                  ],
-                                                                                ),
+                                                                                    ],
+                                                                                  ),
+                                                                                if (_imageUrls.isNotEmpty)
+                                                                                  const SizedBox(height: 8.0),
+                                                                                if (_imageUrls.isNotEmpty)
+                                                                                  _unitGalleryThumbs(setState),
                                                                                 const SizedBox(height: 8.0),
                                                                                 _image != null
                                                                                     ? Column(
@@ -13415,13 +13544,17 @@ class _Summery_pageState extends State<Summery_page>
                                                                                             rentalunit: unitnum.text,
                                                                                             rentalsqft: sqft3.text,
                                                                                             rentalunitadress: street3.text,
-                                                                                            unitId: _tableDatamulti.first.unitId!,
+                                                                                            unitId: tappedUnit.unitId!,
+                                                                                            rentalId: tappedUnit.rentalId!,
+                                                                                            rentalImages: _imageUrls,
                                                                                           )
                                                                                               .then((value) {
                                                                                             setState(() {
                                                                                               isLoading = false;
                                                                                             });
                                                                                             Navigator.of(context).pop(true);
+                                                                                            // Refresh like the phone path, so the next Edit seeds the saved gallery.
+                                                                                            reload_Screen();
                                                                                           }).catchError((e) {
                                                                                             setState(() {
                                                                                               isLoading = false;

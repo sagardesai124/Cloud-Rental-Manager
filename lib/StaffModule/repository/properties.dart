@@ -206,10 +206,9 @@ class PropertiesRepository {
           // For Commercial single unit, ensure sqft is in the correct field
           var formattedUnit = {
             "admin_id": rentalRequest.adminId,
-            "unit_id": unit["unit_id"] ??
-                DateTime.now().millisecondsSinceEpoch.toString(),
-            "rental_unit": unit["rental_unit"] ??
-                "Unit 1", // Default to "Unit 1" if empty
+            // A new unit has no id; the server creates it (web sends none).
+            if (unit["unit_id"] != null) "unit_id": unit["unit_id"],
+            "rental_unit": unit["rental_unit"] ?? "",
             "rental_unit_adress": unit["rental_unit_adress"] ?? "",
             "rental_sqft": unit["rental_sqft"] ??
                 unit["rental_unit"] ??

@@ -1995,7 +1995,10 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                                       //     () {
                                                                                                       //   _submitSubForm(context);
                                                                                                       // },
-                                                                                                      onPressed: () async {
+                                                                                                      onPressed: isLoading
+                                                                                                          ? null
+                                                                                                          : () async {
+                                                                                                        if (isLoading) return;
                                                                                                         if (_selectedAccountType == null || _accountNameController.text.isEmpty || _selectedFundType == null || _notesController.text.isEmpty) {
                                                                                                           setState(() {
                                                                                                             isError = true;
