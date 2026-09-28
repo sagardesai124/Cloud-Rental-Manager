@@ -21,6 +21,7 @@ import 'package:flutter/services.dart';
 
 import '../../../Model/Scheduled_Payment_model.dart';
 import '../../../Model/schduled_charge.dart';
+import '../../../Model/charge_history_entry.dart';
 import '../../../constant/constant.dart';
 import '../../../provider/dateProvider.dart';
 import '../../../repository/GetAdminAddressPdf.dart';
@@ -72,6 +73,10 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
   int? expandedIndex;
   Set<int> expandedIndices = {};
   late bool isExpanded;
+  // Per-charge change-history (audit log) panel state.
+  String? _historyOpenTaskId;
+  final Map<String, List<ChargeHistoryEntry>> _historyByTask = {};
+  final Set<String> _historyLoadingTaskIds = {};
   bool sorting1 = false;
   bool sorting2 = false;
   bool sorting3 = false;
@@ -250,6 +255,114 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
       _connectivityResult = connectiondata;
     });
   }
+
+  Future<void> _toggleHistory(String taskId) async {
+    if (taskId.isEmpty) return;
+    if (_historyOpenTaskId == taskId) {
+      setState(() => _historyOpenTaskId = null);
+      return;
+    }
+    setState(() => _historyOpenTaskId = taskId);
+    if (!_historyByTask.containsKey(taskId)) {
+      setState(() => _historyLoadingTaskIds.add(taskId));
+      final list = await ScheduledChargesRepository().fetchChargeHistory(taskId);
+      if (!mounted) return;
+      setState(() {
+        _historyByTask[taskId] = list;
+        _historyLoadingTaskIds.remove(taskId);
+      });
+    }
+  }
+
+  String _formatHistoryAt(String iso) {
+    try {
+      return DateFormat('yyyy-MM-dd hh:mm a')
+          .format(DateTime.parse(iso).toLocal());
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  Widget _historyEntryRow(ChargeHistoryEntry e) {
+    final bool isDelete = e.action.toUpperCase() == 'DELETE';
+    final Color actionColor = isDelete ? const Color(0xFFB42318) : blueColor;
+    final String actionLabel =
+        (e.action.isEmpty ? 'UPDATE' : e.action).toUpperCase();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(left: 10),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Color(0xFF3F6AD8), width: 3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                    text: '$actionLabel ',
+                    style: TextStyle(
+                        color: actionColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
+                TextSpan(
+                    text: e.description,
+                    style: TextStyle(
+                        color: blueColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13)),
+                if (e.reason.isNotEmpty)
+                  TextSpan(
+                      text: ' — reason: ${e.reason}',
+                      style: TextStyle(color: grey, fontSize: 13)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text('${e.by} · ${_formatHistoryAt(e.at)}',
+              style: TextStyle(color: grey, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChangeHistoryPanel(String taskId) {
+    final bool loading = _historyLoadingTaskIds.contains(taskId);
+    final List<ChargeHistoryEntry>? entries = _historyByTask[taskId];
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(18, 8, 8, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F8FB),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Change history',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: blueColor, fontSize: 15)),
+          const SizedBox(height: 10),
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else if (entries == null || entries.isEmpty)
+            Text('No changes recorded yet.',
+                style: TextStyle(color: grey, fontSize: 13))
+          else
+            ...entries.map(_historyEntryRow),
+        ],
+      ),
+    );
+  }
+
 
   void _showAlert(BuildContext context, String id, ScheduledCharges payment) {
     TextEditingController reason = TextEditingController();
@@ -1649,9 +1762,29 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
                                                         //mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                         mainAxisAlignment: MainAxisAlignment.end,
                                                         children: [
-                                                          if (widget.leaseID ==
-                                                              null)
-                                                            GestureDetector(
+                                                          if (widget.leaseID != null) ...[GestureDetector(
+                                                            onTap: () => _toggleHistory(Propertytype.taskId ?? ''),
+                                                            child: Container(
+                                                              height: 35,
+                                                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                              decoration: BoxDecoration(
+                                                                borderRadius: BorderRadius.circular(8),
+                                                                color: const Color(0xFFEFF3FA),
+                                                              ),
+                                                              child: Row(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Icon(Icons.access_time, size: 15, color: blueColor),
+                                                                  const SizedBox(width: 6),
+                                                                  Text('History',
+                                                                      style: TextStyle(
+                                                                          color: blueColor, fontWeight: FontWeight.w600, fontSize: 13)),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 5),],
+                                                          GestureDetector(
                                                                                                                             onTap:
                                                               () async {
                                                             if (Propertytype
@@ -1756,9 +1889,7 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
                                                                                                                          
                                                                                                                           ),
 
-                                                          if (widget.leaseID ==
-                                                              null)
-                                                            SizedBox(
+                                                          SizedBox(
                                                               width: 5,
                                                             ),
                                                           GestureDetector(
@@ -1788,6 +1919,8 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
                                                           SizedBox(width: 15),
                                                         ],
                                                       ),
+                                                      if (widget.leaseID != null && _historyOpenTaskId == Propertytype.taskId)
+                                                        _buildChangeHistoryPanel(Propertytype.taskId ?? ''),
                                                       SizedBox(height: 10),
                                                     ],
                                                   ),

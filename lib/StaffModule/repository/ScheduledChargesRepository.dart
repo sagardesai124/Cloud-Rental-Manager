@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 
 import '../../Model/schduled_charge.dart';
+import '../../Model/charge_history_entry.dart';
 
 
 
@@ -41,6 +42,34 @@ class ScheduledChargesRepository {
       }
     } catch (e) {
       throw Exception('Error: $e');
+    }
+  }
+
+  /// Change history (audit log) for one scheduled charge.
+  /// GET /api/charge/scheduled-charges/{task_id}/history →
+  /// { statusCode, data: [ {action, description, reason, by, at} ] }.
+  /// Returns an empty list on any failure so the panel shows an empty state.
+  Future<List<ChargeHistoryEntry>> fetchChargeHistory(String taskId) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+      String? id = prefs.getString("staff_id");
+      final response = await apiGet(
+        Uri.parse('$Api_url/api/charge/scheduled-charges/$taskId/history'),
+        headers: <String, String>{
+          "authorization": "CRM $token",
+          "id": "CRM $id",
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      );
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final List<dynamic> data = responseBody['data'] ?? [];
+        return data.map((e) => ChargeHistoryEntry.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
     }
   }
 

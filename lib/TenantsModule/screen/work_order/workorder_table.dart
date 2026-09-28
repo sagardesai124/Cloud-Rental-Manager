@@ -1056,14 +1056,24 @@ class _WorkOrderTableState extends State<WorkOrderTable>
                       if (selectedValue == "Over Due") {
                         data = data.where((element) {
                           if (element.date == null) return false;
+                          // Overdue = not in a terminal status AND the due day
+                          // is strictly before today (calendar day, not the
+                          // current time). Matches the web/server rule so
+                          // anything due today or already Closed/Completed is
+                          // not counted as overdue.
+                          final DateTime now = DateTime.now();
+                          final DateTime todayDay =
+                              DateTime(now.year, now.month, now.day);
                           final DateTime dueDate =
                               parseDate(element.date.toString());
-                          final bool isOverDue =
-                              dueDate.isBefore(DateTime.now());
-                          final bool isNotCompleted =
-                              element.status != "Completed" &&
-                                  element.status != "Complete";
-                          return isOverDue && isNotCompleted;
+                          final DateTime dueDay = DateTime(
+                              dueDate.year, dueDate.month, dueDate.day);
+                          final bool isTerminal = const {
+                            'Completed',
+                            'Complete',
+                            'Closed'
+                          }.contains(element.status);
+                          return !isTerminal && dueDay.isBefore(todayDay);
                         }).toList();
                       } else {
                         data = data

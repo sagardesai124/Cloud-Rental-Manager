@@ -919,11 +919,24 @@ class _WorkOrderTableState extends State<WorkOrderTable>
                                   element.date!.isEmpty) {
                                 return false; // Skip if no date
                               }
-                              DateTime dueDate = DateTime.parse(element.date!);
-                              bool isOverDue = dueDate.isBefore(DateTime.now());
-                              bool isNotCompleted =
-                                  element.status != "Completed";
-                              return isOverDue && isNotCompleted;
+                              // Overdue = not in a terminal status AND the due
+                              // day is strictly before today (calendar day, not
+                              // the current time). Matches the web/server rule
+                              // so anything due today or already Closed/Completed
+                              // is not counted as overdue.
+                              final DateTime now = DateTime.now();
+                              final DateTime todayDay =
+                                  DateTime(now.year, now.month, now.day);
+                              final DateTime dueDate =
+                                  DateTime.parse(element.date!);
+                              final DateTime dueDay = DateTime(
+                                  dueDate.year, dueDate.month, dueDate.day);
+                              final bool isTerminal = const {
+                                'Completed',
+                                'Complete',
+                                'Closed'
+                              }.contains(element.status);
+                              return !isTerminal && dueDay.isBefore(todayDay);
                             } catch (e) {
                               logError(
                                   'Error parsing date for work order ${element.workOrderId}: ${element.date} - $e');

@@ -8791,6 +8791,211 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     );
   }
 
+  // ===== Web-parity "Account" dialog UI helpers (visual only) =====
+  Widget _acctDialogHeader(BuildContext context, String title, IconData icon) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 14, 14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEEF2F8),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, color: blueColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: blueColor,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () => Navigator.pop(context),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F3F6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.close,
+                      color: Color(0xFF6B7A90), size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, thickness: 1, color: Color(0xFFEDF0F4)),
+      ],
+    );
+  }
+
+  Widget _acctFieldLabel(String text, {bool required = true}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: RichText(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: blueColor,
+            fontSize: 15,
+          ),
+          children: required
+              ? [
+                  TextSpan(
+                    text: ' *',
+                    style:
+                        TextStyle(color: blueColor, fontWeight: FontWeight.bold),
+                  ),
+                ]
+              : const [],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _acctInputDecoration({String? hintText}) {
+    OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: c, width: w),
+        );
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: const TextStyle(color: Color(0xFF9AA5B5), fontSize: 15),
+      isDense: true,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      enabledBorder: border(const Color(0xFFE4E8EF), 1.2),
+      border: border(const Color(0xFFE4E8EF), 1.2),
+      focusedBorder: border(blueColor, 1.4),
+    );
+  }
+
+  Widget _acctTextInput({
+    required TextEditingController controller,
+    required String hint,
+    int maxLines = 1,
+    ValueChanged<String>? onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      onChanged: onChanged,
+      cursorColor: blueColor,
+      style: TextStyle(color: blueColor, fontSize: 15),
+      decoration: _acctInputDecoration(hintText: hint),
+    );
+  }
+
+  Widget _acctDropdownInput({
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final String? safeValue =
+        (value != null && items.contains(value)) ? value : null;
+    return DropdownButtonFormField<String>(
+      value: safeValue,
+      isExpanded: true,
+      icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B7A90)),
+      hint: const Text('Select',
+          style: TextStyle(color: Color(0xFF9AA5B5), fontSize: 15)),
+      style: TextStyle(color: blueColor, fontSize: 15),
+      dropdownColor: Colors.white,
+      decoration: _acctInputDecoration(),
+      items: items
+          .map((e) => DropdownMenuItem<String>(
+                value: e,
+                child: Text(e, overflow: TextOverflow.ellipsis),
+              ))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _acctCancelButton(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: () => Navigator.pop(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFD3DAE5), width: 1.2),
+          ),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+                color: blueColor, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // `enabled` controls the color only (blue when enabled, grey when not).
+  // Tappability is controlled by the caller via `onTap` (pass null to disable).
+  Widget _acctPrimaryButton({
+    required String label,
+    required bool loading,
+    required VoidCallback? onTap,
+    bool enabled = true,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: enabled ? blueColor : const Color(0xFFE4E8EF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: loading
+              ? const SpinKitFadingCircle(color: Colors.white, size: 22)
+              : Text(
+                  label,
+                  style: TextStyle(
+                      color: enabled ? Colors.white : const Color(0xFF9AA5B5),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _acctPrivacyNote() {
+    return Text(
+      'We store this information privately and securely.',
+      style: TextStyle(
+        color: blueColor,
+        fontWeight: FontWeight.w600,
+        fontSize: 13.5,
+      ),
+    );
+  }
+
+
   void _showAccount(BuildContext context) {
     // Always open blank — no carryover from a previous add or cancel.
     accountname.clear();
@@ -8802,230 +9007,130 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(builder: (context, setState) {
-          return AlertDialog(
-            title: Text(
-              'Add Account',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: blueColor,
-              ),
-            ),
-            content: SingleChildScrollView(
+          return Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // const SizedBox(height: 20),
-                  Text(
-                    "Account Name",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: blueColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CustomTextField(
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter account name';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.text,
-                    hintText: 'Enter account name',
-                    controller: accountname,
-                    showElevation: false,
-                    borderColor: const Color(0xFFCED4DA),
-                    borderWidth: 1.0,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Account Type",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: blueColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CustomDropdown(
-                    validator: (value) {
-                      if (_selectedAccounttype == null) {
-                        return 'Please select an account type';
-                      }
-                      return null;
-                    },
-                    labelText: 'Select',
-                    items: accounttypeitems,
-                    selectedValue: _selectedAccounttype,
-                    onChanged: (String? value) {
-                      setState(() {
-                        _selectedAccounttype = value;
-                      });
-                    },
-                    useBorderStyle: true,
-                    dropdownHeight: 50,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Fund Type",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: blueColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CustomDropdown(
-                    validator: (value) {
-                      if (_selectedFundtype == null) {
-                        return 'Please select a fund type';
-                      }
-                      return null;
-                    },
-                    labelText: 'Select',
-                    items: fundtypeitems,
-                    selectedValue: _selectedFundtype,
-                    onChanged: (String? value) {
-                      setState(() {
-                        _selectedFundtype = value;
-                      });
-                    },
-                    useBorderStyle: true,
-                    dropdownHeight: 50,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Note",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: blueColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CustomTextField(
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter notes';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.text,
-                    hintText: 'Enter notes',
-                    controller: note,
-                    showElevation: false,
-                    borderColor: const Color(0xFFCED4DA),
-                    borderWidth: 1.0,
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          // Disabled while a save is in flight so rapid taps
-                          // cannot submit the same account more than once. The
-                          // inner guard catches any tap already dispatched before
-                          // this rebuild disables the control.
-                          onTap: isLoading
-                              ? null
-                              : () async {
-                            if (isLoading) return;
-                            if (_selectedAccounttype == null ||
-                                accountname.text.trim().isEmpty ||
-                                _selectedFundtype == null) {
+                  _acctDialogHeader(context, 'Add Account', Icons.credit_card),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _acctFieldLabel('Account Name'),
+                          _acctTextInput(
+                              controller: accountname,
+                              hint: 'Enter account name'),
+                          const SizedBox(height: 16),
+                          _acctFieldLabel('Account Type'),
+                          _acctDropdownInput(
+                            value: _selectedAccounttype,
+                            items: accounttypeitems,
+                            onChanged: (value) {
                               setState(() {
-                                isError = true;
+                                _selectedAccounttype = value;
                               });
-                            } else {
-                              setState(() {
-                                isLoading = true;
-                                isError = false;
-                              });
-
-                              SharedPreferences prefs =
-                                  await SharedPreferences.getInstance();
-                              String? id = prefs.getString("adminId");
-
-                              try {
-                                await accountRepository().addAccount(
-                                  adminId: id!,
-                                  account: accountname.text.trim(),
-                                  accounttype: _selectedAccounttype,
-                                  fundtype: _selectedFundtype,
-                                  chargetype: "",
-                                  notes: note.text.trim(),
-                                );
-                                Navigator.pop(context);
-                                _refreshAccounts();
-                              } catch (e) {
-                                setState(() {
-                                  isError = true;
-                                });
-                              } finally {
-                                setState(() {
-                                  isLoading = false;
-                                });
-                              }
-                            }
-                          },
-                          child: Container(
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: blueColor,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Center(
-                              child: isLoading
-                                  ? const SpinKitFadingCircle(
-                                      color: Colors.white,
-                                      size: 20,
-                                    )
-                                  : const Text(
-                                      'Add',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                            ),
+                            },
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 30),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                          child: Container(
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(3),
-                              border: Border.all(color: blueColor),
-                            ),
-                            child: Center(
+                          const SizedBox(height: 16),
+                          _acctFieldLabel('Fund Type'),
+                          _acctDropdownInput(
+                            value: _selectedFundtype,
+                            items: fundtypeitems,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedFundtype = value;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _acctFieldLabel('Note', required: false),
+                          _acctTextInput(
+                              controller: note,
+                              hint: 'Enter notes',
+                              maxLines: 4),
+                          const SizedBox(height: 16),
+                          _acctPrivacyNote(),
+                          if (isError)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 12.0),
                               child: Text(
-                                'Cancel',
-                                style: TextStyle(
-                                    color: blueColor,
-                                    fontWeight: FontWeight.bold),
+                                'Please fill all fields',
+                                style: TextStyle(color: Colors.red),
                               ),
                             ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              _acctCancelButton(context),
+                              const SizedBox(width: 14),
+                              _acctPrimaryButton(
+                                label: 'Add Account',
+                                loading: isLoading,
+                                // Disabled while a save is in flight so rapid
+                                // taps cannot submit the same account more than
+                                // once. The inner guard catches any tap already
+                                // dispatched before this rebuild disables it.
+                                onTap: isLoading
+                                    ? null
+                                    : () async {
+                                        if (isLoading) return;
+                                        if (_selectedAccounttype == null ||
+                                            accountname.text.trim().isEmpty ||
+                                            _selectedFundtype == null) {
+                                          setState(() {
+                                            isError = true;
+                                          });
+                                        } else {
+                                          setState(() {
+                                            isLoading = true;
+                                            isError = false;
+                                          });
+
+                                          SharedPreferences prefs =
+                                              await SharedPreferences
+                                                  .getInstance();
+                                          String? id =
+                                              prefs.getString("adminId");
+
+                                          try {
+                                            await accountRepository().addAccount(
+                                              adminId: id!,
+                                              account: accountname.text.trim(),
+                                              accounttype: _selectedAccounttype,
+                                              fundtype: _selectedFundtype,
+                                              chargetype: "",
+                                              notes: note.text.trim(),
+                                            );
+                                            Navigator.pop(context);
+                                            _refreshAccounts();
+                                          } catch (e) {
+                                            setState(() {
+                                              isError = true;
+                                            });
+                                          } finally {
+                                            setState(() {
+                                              isLoading = false;
+                                            });
+                                          }
+                                        }
+                                      },
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  if (isError)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        'Please fill all fields',
-                        style: TextStyle(color: Colors.red),
+                        ],
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
@@ -9034,6 +9139,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       },
     );
   }
+
 
   void _showEditAccount(BuildContext context, Setting4 account) {
     // Store original values for comparison
@@ -9056,238 +9162,139 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(builder: (context, setState) {
-          return AlertDialog(
-            title: Text(
-              'Edit Account',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: blueColor,
-              ),
-            ),
-            content: SingleChildScrollView(
+          // Recomputed on every rebuild (field/dropdown change) so the
+          // Update button enables only when something actually changed.
+          final bool hasChanges =
+              editAccountName.text.trim() != originalAccountName ||
+                  editNote.text.trim() != originalNote ||
+                  editSelectedAccounttype != originalAccountType ||
+                  editSelectedFundtype != originalFundType;
+          return Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // const SizedBox(height: 20),
-                  Text(
-                    "Account Name",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: blueColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CustomTextField(
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter account name';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.text,
-                    hintText: 'Enter account name',
-                    controller: editAccountName,
-                    showElevation: false,
-                    borderColor: const Color(0xFFCED4DA),
-                    borderWidth: 1.0,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Account Type",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: blueColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CustomDropdown(
-                    validator: (value) {
-                      if (editSelectedAccounttype == null) {
-                        return 'Please select an account type';
-                      }
-                      return null;
-                    },
-                    labelText: 'Select',
-                    items: accounttypeitems,
-                    selectedValue: editSelectedAccounttype,
-                    onChanged: (String? value) {
-                      setState(() {
-                        editSelectedAccounttype = value;
-                      });
-                    },
-                    useBorderStyle: true,
-                    dropdownHeight: 50,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Fund Type",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: blueColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CustomDropdown(
-                    validator: (value) {
-                      if (editSelectedFundtype == null) {
-                        return 'Please select a fund type';
-                      }
-                      return null;
-                    },
-                    labelText: 'Select',
-                    items: fundtypeitems,
-                    selectedValue: editSelectedFundtype,
-                    onChanged: (String? value) {
-                      setState(() {
-                        editSelectedFundtype = value;
-                      });
-                    },
-                    useBorderStyle: true,
-                    dropdownHeight: 50,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Note",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: blueColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CustomTextField(
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter notes';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.text,
-                    hintText: 'Enter notes',
-                    controller: editNote,
-                    showElevation: false,
-                    borderColor: const Color(0xFFCED4DA),
-                    borderWidth: 1.0,
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            if (editSelectedAccounttype == null ||
-                                editAccountName.text.trim().isEmpty ||
-                                editSelectedFundtype == null) {
+                  _acctDialogHeader(context, 'Edit Account', Icons.credit_card),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _acctFieldLabel('Account Name'),
+                          _acctTextInput(
+                              controller: editAccountName,
+                              hint: 'Enter account name',
+                              onChanged: (_) => setState(() {})),
+                          const SizedBox(height: 16),
+                          _acctFieldLabel('Account Type'),
+                          _acctDropdownInput(
+                            value: editSelectedAccounttype,
+                            items: accounttypeitems,
+                            onChanged: (value) {
                               setState(() {
-                                editIsError = true;
+                                editSelectedAccounttype = value;
                               });
-                            } else {
-                              // Check if any changes were made
-                              final String currentAccountName =
-                                  editAccountName.text.trim();
-                              final String currentNote = editNote.text.trim();
-
-                              bool hasChanges =
-                                  currentAccountName != originalAccountName ||
-                                      currentNote != originalNote ||
-                                      editSelectedAccounttype !=
-                                          originalAccountType ||
-                                      editSelectedFundtype != originalFundType;
-
-                              if (!hasChanges) {
-                                // No changes made, just close dialog and show message
-                                Navigator.pop(context);
-                                Fluttertoast.showToast(msg: "No changes made");
-                                return;
-                              }
-
-                              setState(() {
-                                editIsLoading = true;
-                                editIsError = false;
-                              });
-
-                              try {
-                                await accountRepository().updateAccount(
-                                  accountId: account.accountId!,
-                                  account: currentAccountName,
-                                  accounttype: editSelectedAccounttype,
-                                  fundtype: editSelectedFundtype,
-                                  chargetype: account.chargeType ?? "",
-                                  notes: currentNote,
-                                );
-                                Navigator.pop(context);
-                                _refreshAccounts();
-                              } catch (e) {
-                                setState(() {
-                                  editIsError = true;
-                                });
-                              } finally {
-                                setState(() {
-                                  editIsLoading = false;
-                                });
-                              }
-                            }
-                          },
-                          child: Container(
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: blueColor,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Center(
-                              child: editIsLoading
-                                  ? const SpinKitFadingCircle(
-                                      color: Colors.white,
-                                      size: 20,
-                                    )
-                                  : const Text(
-                                      'Update',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                            ),
+                            },
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                          child: Container(
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(3),
-                              border: Border.all(color: blueColor),
-                            ),
-                            child: Center(
+                          const SizedBox(height: 16),
+                          _acctFieldLabel('Fund Type'),
+                          _acctDropdownInput(
+                            value: editSelectedFundtype,
+                            items: fundtypeitems,
+                            onChanged: (value) {
+                              setState(() {
+                                editSelectedFundtype = value;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _acctFieldLabel('Note', required: false),
+                          _acctTextInput(
+                              controller: editNote,
+                              hint: 'Enter notes',
+                              maxLines: 4,
+                              onChanged: (_) => setState(() {})),
+                          const SizedBox(height: 16),
+                          _acctPrivacyNote(),
+                          if (editIsError)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 12.0),
                               child: Text(
-                                'Cancel',
-                                style: TextStyle(
-                                    color: blueColor,
-                                    fontWeight: FontWeight.bold),
+                                'Please fill all fields',
+                                style: TextStyle(color: Colors.red),
                               ),
                             ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              _acctCancelButton(context),
+                              const SizedBox(width: 14),
+                              _acctPrimaryButton(
+                                label: 'Update Account',
+                                loading: editIsLoading,
+                                enabled: hasChanges,
+                                onTap: (!hasChanges || editIsLoading)
+                                    ? null
+                                    : () async {
+                                        if (editSelectedAccounttype == null ||
+                                            editAccountName.text
+                                                .trim()
+                                                .isEmpty ||
+                                            editSelectedFundtype == null) {
+                                          setState(() {
+                                            editIsError = true;
+                                          });
+                                        } else {
+                                          final String currentAccountName =
+                                              editAccountName.text.trim();
+                                          final String currentNote =
+                                              editNote.text.trim();
+
+                                          setState(() {
+                                            editIsLoading = true;
+                                            editIsError = false;
+                                          });
+
+                                          try {
+                                            await accountRepository()
+                                                .updateAccount(
+                                              accountId: account.accountId!,
+                                              account: currentAccountName,
+                                              accounttype:
+                                                  editSelectedAccounttype,
+                                              fundtype: editSelectedFundtype,
+                                              chargetype:
+                                                  account.chargeType ?? "",
+                                              notes: currentNote,
+                                            );
+                                            Navigator.pop(context);
+                                            _refreshAccounts();
+                                          } catch (e) {
+                                            setState(() {
+                                              editIsError = true;
+                                            });
+                                          } finally {
+                                            setState(() {
+                                              editIsLoading = false;
+                                            });
+                                          }
+                                        }
+                                      },
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  if (editIsError)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        'Please fill all fields',
-                        style: TextStyle(color: Colors.red),
+                        ],
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
