@@ -13,6 +13,7 @@ import 'package:keyboard_actions/keyboard_actions_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 import 'package:three_zero_two_property/widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 import 'package:three_zero_two_property/widgets/clearable_date_picker.dart';
 import 'package:three_zero_two_property/widgets/clearable_date_suffix.dart';
 import 'package:http/http.dart' as http;
@@ -2287,68 +2288,21 @@ class _Add_rentalownersState extends State<Add_rentalowners> {
                                                 ? 15
                                                 : 20),
                                       ),
-                                      Material(
-                                        // elevation: 4,
-                                        child: Container(
-                                          height: 50,
-                                          width: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              .6,
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                            border: Border.all(
-                                              color: const Color(0xFFCED4DA),
-                                            ),
-                                          ),
-                                          child: Stack(
-                                            children: [
-                                              Positioned.fill(
-                                                child: TextField(
-                                                  keyboardType:
-                                                      TextInputType.text,
-                                                  onChanged: (value) {
-                                                    setState(() {
-                                                      state2error = false;
-                                                    });
-                                                  },
-                                                  controller: state2,
-                                                  cursorColor: blueColor,
-                                                  decoration: InputDecoration(
-                                                    hintText: "Enter state",
-                                                    hintStyle: TextStyle(
-                                                      fontSize:
-                                                          MediaQuery.of(context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 15
-                                                              : 18,
-                                                      color: const Color(
-                                                          0xFFA1A8B0),
-                                                    ),
-                                                    enabledBorder: state2error
-                                                        ? OutlineInputBorder(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        10),
-                                                            borderSide:
-                                                                const BorderSide(
-                                                              color: Colors.red,
-                                                            ),
-                                                          )
-                                                        : InputBorder.none,
-                                                    border: InputBorder.none,
-                                                    contentPadding:
-                                                        const EdgeInsets.all(
-                                                            12),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                      SizedBox(
+                                        width: MediaQuery.of(context)
+                                                .size
+                                                .width *
+                                            .6,
+                                        child: UsStateDropdown(
+                                          controller: state2,
+                                          hintText: 'Select state',
+                                          borderColor:
+                                              state2error ? redClr : null,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              state2error = false;
+                                            });
+                                          },
                                         ),
                                       ),
                                     ],

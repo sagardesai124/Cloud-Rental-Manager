@@ -25,6 +25,7 @@ import 'package:three_zero_two_property/model/staffmember.dart';
 
 import '../../../../provider/dateProvider.dart';
 import '../../../widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 
 import '../../../../Model/propertytype.dart';
 import '../../../../constant/constant.dart';
@@ -2390,20 +2391,15 @@ class _Add_new_propertyState extends State<Add_new_property> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _pfFieldLabel("State", required: true),
-                          TextField(
-                            keyboardType: TextInputType.text,
+                          UsStateDropdown(
                             controller: state,
-                            style: _pfInputStyle,
+                            hintText: 'Select state',
+                            borderColor: stateerror ? redClr : null,
                             onChanged: (value) {
                               setState(() {
                                 stateerror = false;
                               });
                             },
-                            cursorColor: blueColor,
-                            decoration: _pfInputDecoration(
-                              hint: "Enter state",
-                              error: stateerror,
-                            ),
                           ),
                           stateerror
                               ? _pfErrorText(statemessage)

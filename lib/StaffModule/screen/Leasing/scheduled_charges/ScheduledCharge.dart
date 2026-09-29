@@ -34,6 +34,7 @@ import '../../../widgets/appbar.dart';
 import '../../../widgets/custom_drawer.dart';
 
 import '../RentalRoll/SummeryPageLease.dart';
+import '../RentalRoll/enterCharge.dart';
 import 'package:three_zero_two_property/screens/Rental/Tenants/add_tenants.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as syncXlsx;
 import 'package:http/http.dart' as http;
@@ -618,9 +619,14 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
             ),
           ),
         );
+    bool editIsRecurring = (selectedChargeType ?? '').toLowerCase().contains('recurring') ||
+        (selectedChargeType ?? '').toLowerCase().contains('rent');
+    String editRentCycle = 'Monthly';
+    bool editSaving = false;
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => AlertDialog(
         backgroundColor: Colors.white,
         insetPadding:
             const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -732,6 +738,40 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
                       ? 'Please enter memo'
                       : null,
                 ),
+                const SizedBox(height: 14),
+                _label("Type"),
+                DropdownButtonFormField<bool>(
+                  isExpanded: true,
+                  value: editIsRecurring,
+                  decoration: _fieldDecoration(),
+                  icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF8A95A8)),
+                  dropdownColor: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  style: TextStyle(color: blueColor, fontSize: 16),
+                  items: const [
+                    DropdownMenuItem(value: false, child: Text('One-time')),
+                    DropdownMenuItem(value: true, child: Text('Recurring')),
+                  ],
+                  onChanged: (v) => setSheetState(() => editIsRecurring = v ?? false),
+                ),
+                if (editIsRecurring) ...[
+                  const SizedBox(height: 14),
+                  _label("Frequency"),
+                  DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    value: editRentCycle,
+                    decoration: _fieldDecoration(),
+                    icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF8A95A8)),
+                    dropdownColor: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    style: TextStyle(color: blueColor, fontSize: 16),
+                    items: const [
+                      DropdownMenuItem(value: 'Monthly', child: Text('Monthly')),
+                      DropdownMenuItem(value: 'Weekly', child: Text('Weekly')),
+                    ],
+                    onChanged: (v) => setSheetState(() => editRentCycle = v ?? 'Monthly'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -754,32 +794,53 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
                   borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
             ),
-            child: const Text('Save',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            onPressed: () async {
+            child: editSaving
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Text('Save',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: editSaving
+                ? null
+                : () async {
               if (!(_editChargeFormKey.currentState?.validate() ?? false)) {
                 return;
               }
-              var response = await ScheduledChargesRepository().submitCharge(
-                  amount: amountController.text,
-                  account: selectedAccount,
-                  chargeType: selectedChargeType,
-                  action_date: _apiActionDate,
-                  description: memoController.text,
-                  charge_id: charge_id);
-              if (response != null) {
-                Fluttertoast.showToast(msg: "Charge updated successfully");
-                setState(() {
-                  futurescheduledpayment = _fetchCharges();
-                });
-                Navigator.of(context).pop();
-              } else {
+              setSheetState(() => editSaving = true);
+              try {
+                var response =
+                    await ScheduledChargesRepository().submitCharge(
+                        amount: amountController.text,
+                        account: selectedAccount,
+                        chargeType: editIsRecurring
+                            ? "Recurring Charge"
+                            : selectedChargeType,
+                        action_date: _apiActionDate,
+                        description: memoController.text,
+                        charge_id: charge_id,
+                        isRecurring: editIsRecurring,
+                        rentCycle: editIsRecurring ? editRentCycle : null);
+                if (response != null) {
+                  Fluttertoast.showToast(msg: "Charge updated successfully");
+                  setState(() {
+                    futurescheduledpayment = _fetchCharges();
+                  });
+                  Navigator.of(context).pop();
+                  return;
+                } else {
+                  Fluttertoast.showToast(msg: "Failed to update charge");
+                }
+              } catch (e) {
                 Fluttertoast.showToast(msg: "Failed to update charge");
               }
+              setSheetState(() => editSaving = false);
             },
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -1324,6 +1385,33 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
                             );
                           },
                         ),
+                        if (widget.leaseID != null) ...[
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            height: 45,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: blueColor,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                              ),
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => enterCharge(leaseId: widget.leaseID!),
+                                  ),
+                                );
+                                if (!mounted) return;
+                                setState(() {
+                                  futurescheduledpayment = _fetchCharges();
+                                });
+                              },
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Add'),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1762,6 +1850,35 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
                                                           ),
                                                         ),
                                                       ),
+                                                      if (widget.leaseID != null)
+                                                        Padding(
+                                                          padding: const EdgeInsets.only(left: 18.0, top: 10.0),
+                                                          child: Row(
+                                                            children: [
+                                                              Text('Type : ',
+                                                                  style: TextStyle(fontWeight: FontWeight.bold, color: blueColor)),
+                                                              Builder(builder: (_) {
+                                                                final String t = (Propertytype.chargeType ?? '').toLowerCase();
+                                                                final bool recurring = t.contains('recurring') || t.contains('rent');
+                                                                return Container(
+                                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                                                  decoration: BoxDecoration(
+                                                                    color: recurring ? const Color(0xFFE7EEFB) : const Color(0xFFEEF1F5),
+                                                                    borderRadius: BorderRadius.circular(20),
+                                                                  ),
+                                                                  child: Text(
+                                                                    recurring ? 'Recurring' : 'One-time',
+                                                                    style: TextStyle(
+                                                                      color: recurring ? blueColor : const Color(0xFF6B7A90),
+                                                                      fontWeight: FontWeight.w600,
+                                                                      fontSize: 13,
+                                                                    ),
+                                                                  ),
+                                                                );
+                                                              }),
+                                                            ],
+                                                          ),
+                                                        ),
                                                       const SizedBox(
                                                         height: 15,
                                                       ),

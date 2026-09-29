@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 
 import 'package:three_zero_two_property/widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 import 'package:three_zero_two_property/widgets/collectjs_card_field.dart';
 
 import 'CardModel.dart';
@@ -986,11 +987,9 @@ class _AddCardState extends State<AddCard> {
                                                         fontWeight:
                                                             FontWeight.bold,
                                                         color: Colors.grey)),
-                                                CustomTextField(
-                                                  keyboardType:
-                                                      TextInputType.text,
-                                                  hintText: 'Enter State',
+                                                UsStateDropdown(
                                                   controller: state,
+                                                  hintText: 'Select state',
                                                 ),
                                                 const SizedBox(
                                                   height: 8,
@@ -1610,10 +1609,9 @@ class _AddCardState extends State<AddCard> {
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.grey)),
-                                        CustomTextField(
-                                          keyboardType: TextInputType.text,
-                                          hintText: 'Enter State',
+                                        UsStateDropdown(
                                           controller: state,
+                                          hintText: 'Select state',
                                         ),
                                         const SizedBox(
                                           height: 8,

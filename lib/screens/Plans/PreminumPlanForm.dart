@@ -25,6 +25,7 @@ import 'package:three_zero_two_property/widgets/titleBar.dart';
 
 import '../../StaffModule/screen/Leasing/RentalRoll/edit_lease.dart';
 import '../../widgets/appbar.dart';
+import '../../widgets/us_state_dropdown.dart';
 import '../../widgets/drawer_tiles.dart';
 
 class PreminumPlanForm extends StatefulWidget {
@@ -365,15 +366,9 @@ class _PreminumPlanFormState extends State<PreminumPlanForm> {
                     const SizedBox(
                       height: 10,
                     ),
-                    CustomTextField(
-                      hintText: 'Enter state',
+                    UsStateDropdown(
                       controller: state,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'State is required';
-                        }
-                        return null;
-                      },
+                      hintText: 'Select state',
                     ),
                     SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                      Text(

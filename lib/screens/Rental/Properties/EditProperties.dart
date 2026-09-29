@@ -20,6 +20,7 @@ import 'package:three_zero_two_property/repository/Staffmember.dart';
 import 'package:three_zero_two_property/screens/Rental/Properties/Edit_Rentalowners.dart';
 import 'package:three_zero_two_property/screens/Rental/Properties/add_rentalowners.dart';
 import 'package:three_zero_two_property/widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 import 'package:three_zero_two_property/widgets/amenities_picker.dart';
 import '../../../Model/propertytype.dart';
 import '../../../constant/constant.dart';
@@ -3464,22 +3465,16 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       _pfFieldLabel("State", required: true),
-                                              TextField(
-                                                keyboardType:
-                                                    TextInputType.text,
-                                                controller: state,
-                                                style: _pfInputText,
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    stateerror = false;
-                                                  });
-                                                },
-                                                cursorColor: blueColor,
-                                                decoration: _pfInputDecoration(
-                                                  hint: "Enter state",
-                                                  error: stateerror,
-                                                ),
-                                              ),
+                                      UsStateDropdown(
+                                        controller: state,
+                                        hintText: 'Select state',
+                                        borderColor: stateerror ? redClr : null,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            stateerror = false;
+                                          });
+                                        },
+                                      ),
                                       const SizedBox(height: 5),
                                       stateerror
                                           ? Row(

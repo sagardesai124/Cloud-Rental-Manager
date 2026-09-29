@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/Model/applicant_summery_model.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/provider/editapplicationsummaryForm.dart';
 import '../../../../repository/applicant_summery_repo.dart';
@@ -558,10 +559,9 @@ class _ApplicantContentState extends State<ApplicantContent> {
                                         const SizedBox(
                                           height: 5,
                                         ),
-                                        NewCustomTextField(
-                                          optional: true,
-                                          hintText: 'State',
+                                        UsStateDropdown(
                                           controller: _applicantStateController,
+                                          hintText: 'Select state',
                                         ),
                                         const SizedBox(
                                           height: 12,
@@ -827,10 +827,9 @@ class _ApplicantContentState extends State<ApplicantContent> {
                                         const SizedBox(
                                           height: 5,
                                         ),
-                                        NewCustomTextField(
-                                          optional: true,
-                                          hintText: 'State',
+                                        UsStateDropdown(
                                           controller: _rentalStateController,
+                                          hintText: 'Select state',
                                         ),
                                         const SizedBox(
                                           height: 12,
@@ -1174,11 +1173,10 @@ class _ApplicantContentState extends State<ApplicantContent> {
                                         const SizedBox(
                                           height: 5,
                                         ),
-                                        NewCustomTextField(
-                                          hintText: 'State',
-                                          optional: true,
+                                        UsStateDropdown(
                                           controller:
-                                          _employmentStateController,
+                                              _employmentStateController,
+                                          hintText: 'Select state',
                                         ),
                                         const SizedBox(
                                           height: 12,
@@ -2349,12 +2347,12 @@ class _ApplicantContentState extends State<ApplicantContent> {
                                                     const SizedBox(
                                                       height: 5,
                                                     ),
-                                                    NewCustomTextField(
-                                                      showElevation: false,
-                                                      borderColor: const Color(0xFFDBE0E5),
-                                                      hintText: 'State',
+                                                    UsStateDropdown(
                                                       controller:
                                                           _applicantStateController,
+                                                      hintText: 'Select state',
+                                                      borderColor: const Color(
+                                                          0xFFDBE0E5),
                                                     ),
                                                     const SizedBox(
                                                       height: 12,
@@ -2641,12 +2639,12 @@ class _ApplicantContentState extends State<ApplicantContent> {
                                                     const SizedBox(
                                                       height: 5,
                                                     ),
-                                                    NewCustomTextField(
-                                                      showElevation: false,
-                                                      borderColor: const Color(0xFFDBE0E5),
-                                                      hintText: 'State',
+                                                    UsStateDropdown(
                                                       controller:
                                                           _rentalStateController,
+                                                      hintText: 'Select state',
+                                                      borderColor: const Color(
+                                                          0xFFDBE0E5),
                                                     ),
                                                     const SizedBox(
                                                       height: 12,
@@ -3021,12 +3019,12 @@ class _ApplicantContentState extends State<ApplicantContent> {
                                                     const SizedBox(
                                                       height: 5,
                                                     ),
-                                                    NewCustomTextField(
-                                                      showElevation: false,
-                                                      borderColor: const Color(0xFFDBE0E5),
-                                                      hintText: 'State',
+                                                    UsStateDropdown(
                                                       controller:
                                                           _employmentStateController,
+                                                      hintText: 'Select state',
+                                                      borderColor: const Color(
+                                                          0xFFDBE0E5),
                                                     ),
                                                     const SizedBox(
                                                       height: 12,

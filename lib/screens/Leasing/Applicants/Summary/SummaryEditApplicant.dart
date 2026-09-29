@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/Model/applicant_summery_model.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 import 'package:three_zero_two_property/provider/edit_applicant.dart';
 import 'package:three_zero_two_property/provider/editapplicationsummaryForm.dart';
 import 'package:three_zero_two_property/repository/applicant_summery_repo.dart';
@@ -544,10 +545,9 @@ class _EditApplicantSummaryState extends State<EditApplicantSummary> {
                     const SizedBox(
                       height: 5,
                     ),
-                    NewCustomTextField(
-                      optional: true,
-                      hintText: 'State',
+                    UsStateDropdown(
                       controller: _applicantStateController,
+                      hintText: 'Select state',
                     ),
                     const SizedBox(
                       height: 12,
@@ -803,10 +803,9 @@ class _EditApplicantSummaryState extends State<EditApplicantSummary> {
                     const SizedBox(
                       height: 5,
                     ),
-                    NewCustomTextField(
-                      optional: true,
-                      hintText: 'State',
+                    UsStateDropdown(
                       controller: _rentalStateController,
+                      hintText: 'Select state',
                     ),
                     const SizedBox(
                       height: 12,
@@ -1144,10 +1143,9 @@ class _EditApplicantSummaryState extends State<EditApplicantSummary> {
                     const SizedBox(
                       height: 5,
                     ),
-                    NewCustomTextField(
-                      optional: true,
-                      hintText: 'State',
+                    UsStateDropdown(
                       controller: _employmentStateController,
+                      hintText: 'Select state',
                     ),
                     const SizedBox(
                       height: 12,

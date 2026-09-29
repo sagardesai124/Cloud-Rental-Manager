@@ -168,10 +168,40 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       });
       _recordingTimer?.cancel();
 
-      widget.onVideoCaptured(File(video.path));
+      // The camera plugin writes the recording to a temp path that often has
+      // no video extension (e.g. a `.temp` file on Android). Without a known
+      // video extension the upload can't detect its MIME type and the server
+      // rejects it as `application/octet-stream`. Ensure the file carries a
+      // `.mp4` extension so it is recognised as a video, matching how
+      // gallery-picked videos already upload successfully.
+      final File recorded = await _ensureVideoExtension(File(video.path));
+
+      widget.onVideoCaptured(recorded);
       Navigator.pop(context);
     } catch (e) {
       logError('Error stopping video recording: $e');
+    }
+  }
+
+  // Returns a File whose name ends in a recognised video extension. If the
+  // recorded file already has one (e.g. iOS `.mov`) it is returned unchanged;
+  // otherwise the file is copied to a sibling `.mp4` path so the upload can
+  // detect its video MIME type. Falls back to the original file if the copy
+  // fails for any reason.
+  Future<File> _ensureVideoExtension(File file) async {
+    const videoExtensions = ['.mp4', '.mov', '.webm', '.m4v'];
+    final String lowerPath = file.path.toLowerCase();
+    final bool hasVideoExtension =
+        videoExtensions.any((ext) => lowerPath.endsWith(ext));
+    if (hasVideoExtension) {
+      return file;
+    }
+    try {
+      final String newPath = '${file.path}.mp4';
+      return await file.copy(newPath);
+    } catch (e) {
+      logError('Error normalising recorded video extension: $e');
+      return file;
     }
   }
 

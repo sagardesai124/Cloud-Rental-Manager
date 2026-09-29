@@ -81,6 +81,8 @@ class ScheduledChargesRepository {
 
         String? description,
         String? charge_id,
+        bool? isRecurring,
+        String? rentCycle,
       }
 
       ) async {
@@ -101,9 +103,11 @@ class ScheduledChargesRepository {
       "account": account,
       "action_date": action_date,
       "amount": double.tryParse(amount ?? "") ?? 0.0,
-      "chargeType": chargeType,
+      "charge_type": chargeType,
       "company_name": company_name,
       "description": description,
+      "is_recurring": isRecurring ?? false,
+      "rent_cycle": rentCycle,
     };
 
     final response = charge_id == null

@@ -18,6 +18,7 @@ import 'package:three_zero_two_property/widgets/titleBar.dart';
 import '../../constant/constant.dart';
 import '../widgets/drawer_tiles.dart';
 import '../widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 
 class Profile_screen extends StatefulWidget {
   const Profile_screen({Key? key}) : super(key: key);
@@ -785,10 +786,28 @@ class _Profile_screenState extends State<Profile_screen>
                                   controller: _cityController,
                                   hint: 'Enter city',
                                 ),
-                                _buildTextField(
-                                  label: 'State *',
-                                  controller: _stateController,
-                                  hint: 'Enter state',
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'State *',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      UsStateDropdown(
+                                        controller: _stateController,
+                                        hintText: 'Select state',
+                                        borderColor: Colors.grey.shade400,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 _buildTextField(
                                   label: 'Zip Code *',

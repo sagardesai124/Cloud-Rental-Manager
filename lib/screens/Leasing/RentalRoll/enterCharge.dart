@@ -483,6 +483,8 @@ class _enterChargeState extends State<enterCharge> {
         'amount': 0.0,
         'memo': Memo.text,
         'date': _startDate.text,
+        'is_recurring': false,
+        'rent_cycle': 'Monthly',
       };
 
   void addRow() {
@@ -1400,6 +1402,51 @@ class _enterChargeState extends State<enterCharge> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _fieldLabel('Recurring'),
+                    const Spacer(),
+                    Switch(
+                      value: rows[index]['is_recurring'] == true,
+                      activeColor: navyClr,
+                      onChanged: (v) {
+                        setState(() {
+                          rows[index]['is_recurring'] = v;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                if (rows[index]['is_recurring'] == true) ...[
+                  const SizedBox(height: 8),
+                  _fieldLabel('Frequency'),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: outlineClr),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: (rows[index]['rent_cycle'] ?? 'Monthly') as String,
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'Monthly', child: Text('Monthly')),
+                          DropdownMenuItem(
+                              value: 'Weekly', child: Text('Weekly')),
+                        ],
+                        onChanged: (v) {
+                          setState(() {
+                            rows[index]['rent_cycle'] = v ?? 'Monthly';
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1436,7 +1483,7 @@ class _enterChargeState extends State<enterCharge> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Click to upload files',
+                  'Add attachment',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
@@ -1446,7 +1493,7 @@ class _enterChargeState extends State<enterCharge> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'All file types supported',
+                  'image, receipt, PDF...',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12, color: Color(0xFF9AA0A6)),
                 ),
@@ -1726,62 +1773,112 @@ class _enterChargeState extends State<enterCharge> {
                             return;
                           }
 
-                          List<Entry> entryList = [];
+                          // Web parity (LeaseSummaryTab.jsx): a row flagged
+                          // Recurring is posted to add-recurring-charge; the
+                          // rest go in a single one-time /charge/charge POST.
+                          final List<int> oneTimeIndexes = [];
+                          final List<int> recurringIndexes = [];
                           for (int i = 0; i < rows.length; i++) {
-                            final row = rows[i];
-                            // Web parity: the single Date field is applied
-                            // to every entry (values.date), rather than the
-                            // copy taken when the row was created.
-                            String formattedDate = _startDate.text;
-                            final num amount = rowAmounts[i];
-                            entryList.add(Entry(
-                              account: row['account'],
-                              amount: amount,
-                              // Web sends due_amount = amount.
-                              dueAmount: amount,
-                              // Web parity: read the memo from the field at save
-                              // time (AddCharge.js sends values.charges_memo ||
-                              // item.account). It used to be snapshotted into the
-                              // row when Add Row was tapped, so a memo typed
-                              // after adding the rows was silently dropped.
-                              memo: Memo.text.trim().isEmpty
-                                  ? row['account']
-                                  : Memo.text,
-                              // API always receives yyyy-MM-dd, whatever
-                              // the on-screen display format is.
-                              date: reverseFormatDate(formattedDate),
-                              chargeType: _resolveChargeType(row),
-                              isRepeatable: false,
-                              entryId: row['entry_id'],
-                            ));
+                            if (rows[i]['is_recurring'] == true) {
+                              recurringIndexes.add(i);
+                            } else {
+                              oneTimeIndexes.add(i);
+                            }
                           }
 
-                          Charge charge = Charge(
-                            adminId: adminId,
-                            isLeaseAdded: false,
-                            leaseId: widget.leaseId,
-                            // Send the selected lease tenant
-                            // when available (web sends the
-                            // chosen tenant_id).
-                            tenantId: selectedTenantId ?? "",
-                            totalAmount: totalAmount,
-                            uploadedFile: _uploadedFileNames,
-                            entry: entryList,
-                          );
-
-
                           LeaseRepository apiService = LeaseRepository();
-                          final response = await apiService.postCharge(charge);
-                          final int statusCode = response.statusCode;
-                          Map<String, dynamic> respBody = {};
-                          try {
-                            final decoded = jsonDecode(response.body);
-                            if (decoded is Map<String, dynamic>) {
-                              respBody = decoded;
-                            }
-                          } catch (_) {}
+                          bool allSucceeded = true;
+                          http.Response? oneTimeResponse;
 
-                          if (statusCode == 200) {
+                          // One-time rows -> a single charge, as before.
+                          if (oneTimeIndexes.isNotEmpty) {
+                            List<Entry> entryList = [];
+                            for (final i in oneTimeIndexes) {
+                              final row = rows[i];
+                              // Web parity: the single Date field is applied
+                              // to every entry (values.date), rather than the
+                              // copy taken when the row was created.
+                              String formattedDate = _startDate.text;
+                              final num amount = rowAmounts[i];
+                              entryList.add(Entry(
+                                account: row['account'],
+                                amount: amount,
+                                // Web sends due_amount = amount.
+                                dueAmount: amount,
+                                // Web parity: read the memo from the field at save
+                                // time (AddCharge.js sends values.charges_memo ||
+                                // item.account). It used to be snapshotted into the
+                                // row when Add Row was tapped, so a memo typed
+                                // after adding the rows was silently dropped.
+                                memo: Memo.text.trim().isEmpty
+                                    ? row['account']
+                                    : Memo.text,
+                                // API always receives yyyy-MM-dd, whatever
+                                // the on-screen display format is.
+                                date: reverseFormatDate(formattedDate),
+                                chargeType: _resolveChargeType(row),
+                                isRepeatable: false,
+                                entryId: row['entry_id'],
+                              ));
+                            }
+
+                            Charge charge = Charge(
+                              adminId: adminId,
+                              isLeaseAdded: false,
+                              leaseId: widget.leaseId,
+                              // Send the selected lease tenant
+                              // when available (web sends the
+                              // chosen tenant_id).
+                              tenantId: selectedTenantId ?? "",
+                              totalAmount: totalAmount,
+                              uploadedFile: _uploadedFileNames,
+                              entry: entryList,
+                            );
+
+                            oneTimeResponse =
+                                await apiService.postCharge(charge);
+                            if (oneTimeResponse.statusCode != 200) {
+                              allSucceeded = false;
+                            }
+                          }
+
+                          // Recurring rows -> one add-recurring-charge each.
+                          if (allSucceeded) {
+                            for (final i in recurringIndexes) {
+                              final recurringResponse =
+                                  await apiService.addRecurringCharge(
+                                leaseId: widget.leaseId,
+                                amount: rowAmounts[i],
+                                account: rows[i]['account'],
+                                memo: Memo.text.trim().isEmpty
+                                    ? rows[i]['account']
+                                    : Memo.text,
+                                rentCycle: (rows[i]['rent_cycle'] ?? 'Monthly'),
+                                chargeStart:
+                                    reverseFormatDate(_startDate.text),
+                              );
+                              if (recurringResponse.statusCode != 200 &&
+                                  recurringResponse.statusCode != 201) {
+                                allSucceeded = false;
+                                break;
+                              }
+                            }
+                          }
+
+                          // Prefer the one-time charge's server message (e.g.
+                          // scheduled) when that call was made.
+                          Map<String, dynamic> respBody = {};
+                          if (oneTimeResponse != null) {
+                            try {
+                              final decoded =
+                                  jsonDecode(oneTimeResponse.body);
+                              if (decoded is Map<String, dynamic>) {
+                                respBody = decoded;
+                              }
+                            } catch (_) {}
+                          }
+
+                          if (allSucceeded) {
                             setState(() {
                               _isLoading = false;
                             });
@@ -1799,7 +1896,9 @@ class _enterChargeState extends State<enterCharge> {
                                       (serverMessage != null &&
                                           serverMessage.isNotEmpty))
                                   ? (serverMessage ?? "Charge scheduled")
-                                  : "Charge posted successfully",
+                                  : (oneTimeResponse != null
+                                      ? "Charge posted successfully"
+                                      : "Charge added successfully"),
                             );
                             if (isChecked == true) {
                               resetFields();

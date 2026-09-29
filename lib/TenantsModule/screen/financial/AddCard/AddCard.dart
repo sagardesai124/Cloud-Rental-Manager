@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 
 import '../../../widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 import '../../../widgets/custom_drawer.dart';
 
 import 'package:three_zero_two_property/widgets/collectjs_card_field.dart';
@@ -722,14 +723,10 @@ class _AddCardState extends State<AddCard> {
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: Colors.grey)),
-                    CustomTextField(
-                      keyboardType: TextInputType.text,
-                      hintText: 'Enter State',
+                    UsStateDropdown(
                       controller: state,
+                      hintText: 'Select state',
                       borderColor: Colors.grey.shade300,
-                      borderWidth: 1,
-                      showElevation: false,
-                      optional: true,
                     ),
                     const SizedBox(
                       height: 8,

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:three_zero_two_property/constant/constant.dart' show asDoubleN;
 
 class Lease {
   ChargeData chargeData;
@@ -221,9 +222,7 @@ class LeaseData {
       companyName: json['company_name'],
       endDate: json['end_date'],
       entry: (json['entry'] as List).map((i) => Entry.fromJson(i)).toList(),
-      leaseAmount: json['lease_amount'] is int
-          ? (json['lease_amount'] as int).toDouble()
-          : json['lease_amount']?.toDouble(),
+      leaseAmount: asDoubleN(json['lease_amount']),
       leaseType: json['lease_type'],
       rentalId: json['rental_id'],
       startDate: json['start_date'],

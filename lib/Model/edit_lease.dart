@@ -1,3 +1,4 @@
+import 'package:three_zero_two_property/constant/constant.dart' show asDouble;
 import 'package:three_zero_two_property/Model/tenants.dart';
 import 'package:three_zero_two_property/Model/unit.dart';
 
@@ -223,7 +224,7 @@ class EditLease {
       leaseType: json['lease_type']?.toString() ?? "",
       startDate: json['start_date']?.toString() ?? "",
       endDate: json['end_date']?.toString() ?? "",
-      leaseAmount: json['lease_amount'] is String ? double.parse(json['lease_amount']) : (json['lease_amount'] as num?)?.toDouble() ?? 0.0,
+      leaseAmount: asDouble(json['lease_amount']),
       uploadedFile: json['uploaded_file'] != null ? List<dynamic>.from(json['uploaded_file']):[],
       entry: json['entry'] != null ? (json['entry'] as List)
           .map((entry) => Entry.fromJson(entry))

@@ -21,6 +21,7 @@ import 'package:three_zero_two_property/repository/rental_properties.dart';
 import 'package:three_zero_two_property/screens/Rental/Properties/add_rentalowners.dart';
 import 'package:three_zero_two_property/widgets/appbar.dart';
 import 'package:three_zero_two_property/widgets/amenities_picker.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 import '../../../Model/propertytype.dart';
 import '../../../constant/constant.dart';
 import '../../../model/add_property.dart';
@@ -2335,20 +2336,15 @@ class _Add_new_propertyState extends State<Add_new_property> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _pfFieldLabel('State', required: true),
-                                TextField(
-                                  keyboardType: TextInputType.text,
+                                UsStateDropdown(
                                   controller: state,
-                                  style: _pfInputText,
+                                  hintText: 'Select state',
+                                  borderColor: stateerror ? redClr : null,
                                   onChanged: (value) {
                                     setState(() {
                                       stateerror = false;
                                     });
                                   },
-                                  cursorColor: navyClr,
-                                  decoration: _pfInputDecoration(
-                                    hint: "Enter state",
-                                    error: stateerror,
-                                  ),
                                 ),
                                 stateerror
                                     ? _pfErrorText(statemessage)

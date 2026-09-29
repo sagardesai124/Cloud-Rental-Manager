@@ -42,6 +42,7 @@ import 'package:three_zero_two_property/widgets/amenities_picker.dart';
 import '../../../../model/unitsummery_propeties.dart';
 import '../../../widgets/custom_drawer.dart';
 import '../../../widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 
 class Edit_properties extends StatefulWidget {
   propertytype? property;
@@ -3328,25 +3329,16 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       _pfFieldLabel("State", required: true),
-                                      TextField(
-                                                keyboardType:
-                                                    TextInputType.text,
-                                                controller: state,
-                                                style: const TextStyle(
-                                                  color: navyClr,
-                                                  fontSize: 14,
-                                                ),
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    stateerror = false;
-                                                  });
-                                                },
-                                                cursorColor: blueColor,
-                                                decoration: _pfInputDecoration(
-                                                  hint: "Enter state",
-                                                  error: stateerror,
-                                                ),
-                                              ),
+                                      UsStateDropdown(
+                                        controller: state,
+                                        hintText: 'Select state',
+                                        borderColor: stateerror ? redClr : null,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            stateerror = false;
+                                          });
+                                        },
+                                      ),
                                       stateerror
                                           ? Row(
                                               mainAxisAlignment:

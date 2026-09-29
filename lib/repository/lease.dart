@@ -869,6 +869,38 @@ class LeaseRepository {
     return response;
   }
 
+  // Web parity (LeaseSummaryTab.jsx "Create Recurring"): a row flagged
+  // Recurring posts to /leases/{lease_id}/add-recurring-charge instead of the
+  // one-time /charge/charge endpoint. Body matches the web payload.
+  Future<http.Response> addRecurringCharge({
+    required String? leaseId,
+    required num amount,
+    required String? account,
+    required String? memo,
+    required String? rentCycle,
+    required String? chargeStart,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+    String? id = prefs.getString("adminId");
+    final response = await apiPost(
+      Uri.parse('$Api_url/api/leases/$leaseId/add-recurring-charge'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'CRM $token',
+        "id": "CRM $id",
+      },
+      body: jsonEncode({
+        'amount': amount,
+        'account': account,
+        'memo': memo,
+        'rent_cycle': rentCycle,
+        'charge_start': chargeStart,
+      }),
+    );
+    return response;
+  }
+
   Future<http.Response> EditCharge(Charge charge, String charge_id) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');

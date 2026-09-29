@@ -332,10 +332,11 @@ class RenewLeases {
     }
 
     endDate = json['end_date'] ?? "";
-    amount = json['amount'] != null ? (json['amount'] as num).toDouble() : null;
-    leaseAmount = json['lease_amount'] != null
-        ? (json['lease_amount'] as num).toDouble()
-        : null;
+    // asDouble* (constant.dart): num, numeric string, or null all handled — a
+    // string amount from the API can no longer throw on `as num` and crash the
+    // Lease Summary screen. Same shared rule the Edit Lease model uses.
+    amount = asDoubleN(json['amount']);
+    leaseAmount = asDoubleN(json['lease_amount']);
     isDelete = json['is_delete'] ?? false;
     isrenewed = json['is_renewed'] ?? false;
     createdAt = json['createdAt'] ?? "";

@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import 'package:three_zero_two_property/screens/Signup/signup_screen.dart';
 import 'package:three_zero_two_property/widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:three_zero_two_property/widgets/titleBar.dart';
@@ -380,46 +381,17 @@ class _PlanformState extends State<Planform> {
                           ),
                           Column(
                             children: [
-                              Container(
+                              SizedBox(
                                 width: 110,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(5),
-                                  //  color: Color.fromRGBO(196, 196, 196, .3),
-                                  border: Border.all(color: Colors.grey),
-                                ),
-                                child: Stack(
-                                  children: [
-                                    Positioned.fill(
-                                      child: TextField(
-                                        onChanged: (value) {
-                                          setState(() {
-                                            stateerror = false;
-                                          });
-                                        },
-                                        controller: state,
-                                        cursorColor:
-                                           blueColor,
-                                        decoration: InputDecoration(
-                                          enabledBorder: stateerror
-                                              ? OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(2),
-                                                  borderSide: const BorderSide(
-                                                      color: Colors
-                                                          .red), // Set border color here
-                                                )
-                                              : InputBorder.none,
-                                          border: InputBorder.none,
-                                          contentPadding:
-                                              const EdgeInsets.all(12),
-                                          hintText: "Enter state*",
-                                          hintStyle:
-                                              const TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                child: UsStateDropdown(
+                                  controller: state,
+                                  hintText: 'State*',
+                                  borderColor: stateerror ? redClr : null,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      stateerror = false;
+                                    });
+                                  },
                                 ),
                               ),
                               stateerror

@@ -1,3 +1,5 @@
+import 'package:three_zero_two_property/constant/constant.dart' show asDoubleN;
+
 class tenant_lease {
   String? sId;
   String? leaseId;
@@ -58,9 +60,7 @@ class tenant_lease {
     leaseType = json['lease_type'];
     startDate = json['start_date'];
     endDate = json['end_date'];
-    leaseAmount = json['lease_amount'] != null
-        ? (json['lease_amount'] as num).toDouble()
-        : null;
+    leaseAmount = asDoubleN(json['lease_amount']);
     uploadedFile = json['uploaded_file'] != null
         ? (json['uploaded_file'] as List).cast<String>()
         : <String>[];

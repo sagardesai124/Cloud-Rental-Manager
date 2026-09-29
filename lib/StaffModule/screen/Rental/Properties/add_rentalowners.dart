@@ -11,6 +11,7 @@ import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../widgets/appbar.dart';
+import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
 
 import '../../../../constant/constant.dart';
 import '../../../../model/rental_properties.dart';
@@ -1700,78 +1701,16 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                                 ),
                                               ),
                                               const SizedBox(height: 5),
-                                              Container(
-                                                height: 50,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  border: Border.all(
-                                                      color: const Color(
-                                                          0xFF8A95A8)),
-                                                ),
-                                                child: Stack(
-                                                  children: [
-                                                    Positioned.fill(
-                                                      child: TextField(
-                                                        keyboardType:
-                                                            TextInputType.text,
-                                                        controller: state2,
-                                                        style: TextStyle(
-                                                          color: Colors.black,
-                                                          fontSize: MediaQuery.of(
-                                                                          context)
-                                                                      .size
-                                                                      .width <
-                                                                  500
-                                                              ? 14
-                                                              : 15,
-                                                        ),
-                                                        onChanged: (value) {
-                                                          setState(() {
-                                                            state2error = false;
-                                                          });
-                                                        },
-                                                        cursorColor: const Color
-                                                            .fromRGBO(
-                                                            21, 43, 81, 1),
-                                                        decoration:
-                                                            InputDecoration(
-                                                          // enabledBorder:
-                                                          //     state2error
-                                                          //         ? OutlineInputBorder(
-                                                          //             borderRadius:
-                                                          //                 BorderRadius.circular(
-                                                          //                     10),
-                                                          //             borderSide:
-                                                          //                 BorderSide(
-                                                          //                     color: Colors.red), // Error border color
-                                                          //           )
-                                                          //         : InputBorder
-                                                          //             .none,
-                                                          border:
-                                                              InputBorder.none,
-                                                          contentPadding:
-                                                              const EdgeInsets
-                                                                  .all(14),
-                                                          hintText:
-                                                              "Enter state",
-                                                          hintStyle: TextStyle(
-                                                            color: const Color(
-                                                                0xFF8A95A8),
-                                                            fontSize: MediaQuery.of(
-                                                                            context)
-                                                                        .size
-                                                                        .width <
-                                                                    500
-                                                                ? 14
-                                                                : 18,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                              UsStateDropdown(
+                                                controller: state2,
+                                                hintText: 'Select state',
+                                                borderColor:
+                                                    state2error ? redClr : null,
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    state2error = false;
+                                                  });
+                                                },
                                               ),
                                               const SizedBox(height: 5),
                                               state2error
