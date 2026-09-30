@@ -398,6 +398,15 @@ class DateProvider with ChangeNotifier {
     return result;
   }
 
+  /// Formats [dateTime] in the device's local time with the saved Date & Time
+  /// Format — the mobile twin of web's `formatDateTime` (moment, local time).
+  /// Unlike [formatCurrentDateTime] it applies no fixed +5:30 shift.
+  String formatLocalDateTime(DateTime dateTime) {
+    String timeFormatPattern = _timeFormat == '24' ? 'HH:mm:ss' : 'h:mm:ss a';
+    return DateFormat('$_dateFormat $timeFormatPattern')
+        .format(dateTime.toLocal());
+  }
+
   // Future<void> checkToken(String token) async {
   //   try {
   //     final prefs = await SharedPreferences.getInstance();

@@ -24,6 +24,8 @@ import '../../../repository/tenants.dart';
 import 'package:three_zero_two_property/repository/setting.dart';
 import '../../../widgets/custom_drawer.dart';
 
+import 'package:three_zero_two_property/widgets/tenant_pets_vehicles_section.dart';
+
 class AddTenant extends StatefulWidget {
   @override
   State<AddTenant> createState() => _AddTenantState();
@@ -64,6 +66,9 @@ class _AddTenantState extends State<AddTenant> {
   // emergency contacts, and the read-only global debit fee line.
   bool sendWelcomeEmail = true;
   final List<_EmergencyContactRow> emergencyContactsList = [];
+  // Web parity (CRM-4585): optional Pets / Vehicles rows.
+  final List<TenantSubdocRow> petsList = [];
+  final List<TenantSubdocRow> vehiclesList = [];
   // Owner's configured global debit fee (surcharge_percent_debit). Null until
   // loaded; WEB parity — the fee line + override UI stay hidden while null
   // (TenantFormFields.jsx `globalDebitFee != null` guard).
@@ -192,6 +197,9 @@ class _AddTenantState extends State<AddTenant> {
     for (final row in emergencyContactsList) {
       row.dispose();
     }
+    for (final row in [...petsList, ...vehiclesList]) {
+      row.dispose();
+    }
     super.dispose();
   }
 
@@ -226,6 +234,16 @@ class _AddTenantState extends State<AddTenant> {
                   _notesCard(),
                   const SizedBox(height: 16),
                   _emergencyContactsCard(),
+                  const SizedBox(height: 16),
+                  TenantSubdocSection.pets(
+                    rows: petsList,
+                    onChanged: () => setState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  TenantSubdocSection.vehicles(
+                    rows: vehiclesList,
+                    onChanged: () => setState(() {}),
+                  ),
                   const SizedBox(height: 16),
                   _paymentSettingsCard(),
                   const SizedBox(height: 20),
@@ -949,6 +967,8 @@ class _AddTenantState extends State<AddTenant> {
       "comments": comments.text.trim(),
       "send_welcome_email": sendWelcomeEmail,
       "emergency_contacts": emergencyContacts,
+      "pets": tenantSubdocPayload(petsList),
+      "vehicles": tenantSubdocPayload(vehiclesList),
       "enable_override_fee": enableOverrideFee,
       "override_fee": enableOverrideFee ? overrideFee.text.trim() : "",
       "allow_ach": enableACH,

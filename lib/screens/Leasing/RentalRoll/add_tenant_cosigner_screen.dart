@@ -40,6 +40,7 @@ import 'package:three_zero_two_property/screens/Rental/Tenants/add_tenants.dart'
 import 'package:three_zero_two_property/widgets/appbar.dart' show widget_302;
 import 'package:three_zero_two_property/widgets/custom_drawer.dart'
     show CustomDrawer;
+import 'package:three_zero_two_property/widgets/tenant_pets_vehicles_section.dart';
 import 'package:three_zero_two_property/StaffModule/widgets/appbar.dart'
     show widget_302_Staff;
 import 'package:three_zero_two_property/StaffModule/widgets/custom_drawer.dart'
@@ -87,6 +88,9 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
   bool _chooseExisting = false;
   bool _sendWelcomeEmail = true;
   final List<_EcRow> _emergencyContacts = [];
+  // Web parity (CRM-4585): optional Pets / Vehicles rows.
+  final List<TenantSubdocRow> _pets = [];
+  final List<TenantSubdocRow> _vehicles = [];
 
   bool _enableOverrideFee = false;
   bool _enableACH = true;
@@ -153,6 +157,9 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
       c.dispose();
     }
     for (final r in _emergencyContacts) {
+      r.dispose();
+    }
+    for (final r in [..._pets, ..._vehicles]) {
       r.dispose();
     }
     super.dispose();
@@ -338,6 +345,8 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
       allowAch: _enableACH,
       allowCard: _enableCard,
       sendWelcomeEmail: _sendWelcomeEmail,
+      pets: tenantSubdocPayload(_pets),
+      vehicles: tenantSubdocPayload(_vehicles),
     );
     Provider.of<SelectedTenantsProvider>(context, listen: false)
         .addTenant(tenant);
@@ -502,6 +511,16 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
           _notesCard(),
           const SizedBox(height: 16),
           _emergencyContactsCard(),
+          const SizedBox(height: 16),
+          TenantSubdocSection.pets(
+            rows: _pets,
+            onChanged: () => setState(() {}),
+          ),
+          const SizedBox(height: 16),
+          TenantSubdocSection.vehicles(
+            rows: _vehicles,
+            onChanged: () => setState(() {}),
+          ),
           const SizedBox(height: 16),
           _paymentSettingsCard(),
           const SizedBox(height: 20),

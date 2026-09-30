@@ -5,13 +5,11 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
-import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
@@ -22,6 +20,9 @@ import 'package:three_zero_two_property/widgets/titleBar.dart';
 
 import 'package:html/parser.dart' as htmlParser;
 import '../../../../../Model/TenantCommunication.dart';
+import '../../../../../Model/Comunication_model/Send_email_table.dart'
+    show Emailss, Opens;
+import '../../../Communications/E-mail Logs/email_details_screen.dart';
 
 import '../../../../../constant/constant.dart';
 import '../../../../../provider/dateProvider.dart';
@@ -103,7 +104,6 @@ class _Tenant_communicationState extends State<Tenant_communication>
               ),
             ),
             Expanded(
-              flex: 4,
               child: InkWell(
                 onTap: () {
                   setState(() {
@@ -128,10 +128,10 @@ class _Tenant_communicationState extends State<Tenant_communication>
                 child: Row(
                   children: [
                     width < 400
-                        ? Text("Rental Address",
+                        ? Text(" Subject",
                             style: TextStyle(
                                 color: blueColor, fontWeight: FontWeight.bold))
-                        : Text("Rental Address",
+                        : Text(" Subject",
                             style: TextStyle(
                                 color: blueColor, fontWeight: FontWeight.bold)),
                     // Text("Property", style: TextStyle(color: Colors.white)),
@@ -157,11 +157,7 @@ class _Tenant_communicationState extends State<Tenant_communication>
                 ),
               ),
             ),
-            SizedBox(
-              width: 5,
-            ),
             Expanded(
-              flex: 3,
               child: InkWell(
                 onTap: () {
                   setState(() {
@@ -186,7 +182,7 @@ class _Tenant_communicationState extends State<Tenant_communication>
                 },
                 child: Row(
                   children: [
-                    Text("         Sent",
+                    Text("     Sent",
                         style: TextStyle(
                             color: blueColor, fontWeight: FontWeight.bold)),
                     SizedBox(width: 3),
@@ -323,152 +319,6 @@ class _Tenant_communicationState extends State<Tenant_communication>
   //     },
   //   );
   // }
-  void _showAlert(BuildContext context, String id, Emails data) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header Section
-                Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: blueColor, // Customize color
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  child: Center(
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 15,
-                        ),
-                        Text(
-                          "Email Details",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Spacer(),
-                        GestureDetector(
-                            onTap: () {
-                              Navigator.pop(context);
-                            },
-                            child: Icon(
-                              Icons.close,
-                              color: Colors.white,
-                            )),
-                        SizedBox(
-                          width: 8,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: 5,
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10, right: 10),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildField("Subject", '${data.subject}', Colors.black),
-                        _buildField(
-                            "Recipient Email", '${data.email}', Colors.black),
-                        _buildField("From Email", '${data.from}', Colors.black),
-                        _buildField(
-                            "Created Time",
-                            Provider.of<DateProvider>(context, listen: false)
-                                .formatCurrentDateTime('${data.createdAt}'),
-                            Colors.black),
-                        _buildFieldhtml("Body", '${data.body}', Colors.black),
-                        SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: 5,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-// Field-like container function
-  Widget _buildField(String label, String value, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 14, color: blueColor),
-          ),
-          SizedBox(height: 5),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[200], // Light background like input field
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade400),
-            ),
-            child: Text(
-              value,
-              style: TextStyle(
-                  fontSize: 14, color: grey, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFieldhtml(String label, String value, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 14, color: blueColor),
-          ),
-          SizedBox(height: 5),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[200], // Light background like input field
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade400),
-            ),
-            child: Html(
-              data: value,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   TableRow _buildTableRow(String title, String value, Color textColor) {
     return TableRow(
       children: [
@@ -831,7 +681,7 @@ class _Tenant_communicationState extends State<Tenant_communication>
                             child: Column(
                               children: [
                                 _buildHeaders(),
-                                SizedBox(height: 20),
+                                SizedBox(height: 10),
                                 Container(
                                   // decoration: BoxDecoration(
                                   //     border: Border.all(
@@ -851,7 +701,18 @@ class _Tenant_communicationState extends State<Tenant_communication>
                                       Emails Propertytype = entry.value;
 
                                       //return CustomExpansionTile(data: Propertytype, index: index);
-                                      return Container(
+                                      // Whole card toggles expand, like E-mail Logs
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            if (expandedIndex == index) {
+                                              expandedIndex = null;
+                                            } else {
+                                              expandedIndex = index;
+                                            }
+                                          });
+                                        },
+                                        child: Container(
                                         margin:
                                             EdgeInsets.symmetric(vertical: 6),
                                         decoration: BoxDecoration(
@@ -878,19 +739,6 @@ class _Tenant_communicationState extends State<Tenant_communication>
                                                   children: <Widget>[
                                                     InkWell(
                                                       onTap: () {
-                                                        // setState(() {
-                                                        //    isExpanded = !isExpanded;
-                                                        // //  expandedIndex = !expandedIndex;
-                                                        //
-                                                        // });
-                                                        // setState(() {
-                                                        //   if (isExpanded) {
-                                                        //     expandedIndex = null;
-                                                        //     isExpanded = !isExpanded;
-                                                        //   } else {
-                                                        //     expandedIndex = index;
-                                                        //   }
-                                                        // });
                                                         setState(() {
                                                           if (expandedIndex ==
                                                               index) {
@@ -922,7 +770,7 @@ class _Tenant_communicationState extends State<Tenant_communication>
                                                       ),
                                                     ),
                                                     Expanded(
-                                                      flex: 4,
+                                                      flex: 3,
                                                       child: InkWell(
                                                         onTap: () {
                                                           setState(() {
@@ -937,10 +785,10 @@ class _Tenant_communicationState extends State<Tenant_communication>
                                                           });
                                                         },
                                                         child: Text(
-                                                          Propertytype.rentalAddress
+                                                          Propertytype.subject
                                                                       ?.isNotEmpty ==
                                                                   true
-                                                              ? '${Propertytype.rentalAddress}'
+                                                              ? '${Propertytype.subject}'
                                                               : 'N/A',
                                                           style: TextStyle(
                                                             color: blueColor,
@@ -956,17 +804,13 @@ class _Tenant_communicationState extends State<Tenant_communication>
                                                                     context)
                                                                 .size
                                                                 .width *
-                                                            .05),
+                                                            .099),
                                                     Expanded(
-                                                      flex: 2,
+                                                      flex: 3,
                                                       child: Text(
-                                                        // '${widget.data.createdAt}',
-                                                        // formatDate(
-                                                        //     '${Propertytype.createdAt}'),
                                                         dateProvider
                                                             .formatCurrentDateTime(
                                                                 '${Propertytype.createdAt}'),
-
                                                         style: TextStyle(
                                                           color: blueColor,
                                                           fontWeight:
@@ -976,298 +820,237 @@ class _Tenant_communicationState extends State<Tenant_communication>
                                                       ),
                                                     ),
                                                     SizedBox(
-                                                        width: MediaQuery.of(
-                                                                    context)
-                                                                .size
-                                                                .width *
-                                                            .01),
+                                                      width: 2,
+                                                    ),
                                                   ],
                                                 ),
                                               ),
                                             ),
                                             if (isExpanded)
                                               Container(
-                                                // padding: EdgeInsets.symmetric(
-                                                //     horizontal: 2.0),
-                                                // margin: EdgeInsets.only(
-                                                //     bottom: 2),
-                                                padding: EdgeInsets.all(16),
-                                                decoration: BoxDecoration(
-                                                  border: Border(
-                                                    top: BorderSide(
-                                                        color:
-                                                            Color(0xFFDBE0E5),
-                                                        width: 1),
-                                                  ),
-                                                ),
-                                                child: SingleChildScrollView(
-                                                  child: Column(
-                                                    children: [
-                                                      Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          FaIcon(
-                                                            isExpanded
-                                                                ? FontAwesomeIcons
-                                                                    .sortUp
-                                                                : FontAwesomeIcons
-                                                                    .sortDown,
-                                                            size: 50,
-                                                            color: Colors
-                                                                .transparent,
-                                                          ),
-                                                          Expanded(
-                                                            child: Column(
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .start,
-                                                              children: <Widget>[
-                                                                Text.rich(
-                                                                  TextSpan(
-                                                                    children: [
-                                                                      TextSpan(
-                                                                        text:
-                                                                            'Subject   :  ',
-                                                                        style: TextStyle(
-                                                                            fontWeight:
-                                                                                FontWeight.bold,
-                                                                            color: blueColor), // Bold and black
-                                                                      ),
-                                                                      TextSpan(
-                                                                        // text: formatDate(
-                                                                        //     '${Propertytype.updatedAt}'),
-                                                                        text: Propertytype.subject?.isNotEmpty ==
-                                                                                true
-                                                                            ? Propertytype.subject
-                                                                            : 'N/A',
-                                                                        style: TextStyle(
-                                                                            fontWeight:
-                                                                                FontWeight.w700,
-                                                                            color: grey), // Light and grey
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                                // Text.rich(
-                                                                //   TextSpan(
-                                                                //     children: [
-                                                                //       TextSpan(
-                                                                //         text:
-                                                                //         'Opened  :  ',
-                                                                //         style: TextStyle(
-                                                                //             fontWeight: FontWeight.bold,
-                                                                //             color: blueColor), // Bold and black
-                                                                //       ),
-                                                                //       TextSpan(
-                                                                //         // text: formatDate(
-                                                                //         //     '${Propertytype.updatedAt}'),
-                                                                //         text: DateFormat("yyyy-MM-dd HH:mm:ss").format(DateTime.fromMillisecondsSinceEpoch(int.parse('${Propertytype.openedAt}')).toLocal())
-                                                                //             ,
-                                                                //         style: TextStyle(
-                                                                //             fontWeight: FontWeight.w700,
-                                                                //             color: grey), // Light and grey
-                                                                //       ),
-                                                                //     ],
-                                                                //   ),
-                                                                // ),
-                                                                SizedBox(
-                                                                  height: 15,
-                                                                ),
-                                                                Text.rich(
-                                                                  TextSpan(
-                                                                    children: [
-                                                                      TextSpan(
-                                                                        text:
-                                                                            'Body : ',
-                                                                        style:
-                                                                            TextStyle(
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                          color:
-                                                                              blueColor, // Bold and black
-                                                                        ),
-                                                                      ),
-                                                                      TextSpan(
-                                                                        text: Propertytype.body!.isNotEmpty
-                                                                            ? extractText(Propertytype.body!)
-                                                                            : 'N/A',
-                                                                        style:
-                                                                            TextStyle(
-                                                                          fontWeight:
-                                                                              FontWeight.w700,
-                                                                          color:
-                                                                              grey, // Light and grey
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  maxLines:
-                                                                      1, // Restrict to 2 lines
-                                                                  overflow:
-                                                                      TextOverflow
-                                                                          .ellipsis, // Show "..." if the text is too long
-                                                                ),
-                                                                SizedBox(
-                                                                  height: 15,
-                                                                ),
-                                                                Text.rich(
-                                                                  TextSpan(
-                                                                    children: [
-                                                                      TextSpan(
-                                                                        text:
-                                                                            'Opened On : ',
-                                                                        style:
-                                                                            TextStyle(
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                          color:
-                                                                              blueColor,
-                                                                        ),
-                                                                      ),
-                                                                      TextSpan(
-                                                                        text: Propertytype.isOpened ??
-                                                                                false
-                                                                            ? (() {
-                                                                                try {
-                                                                                  final timestamp = int.parse(Propertytype.openedAt ?? Propertytype.createdAt!);
-                                                                                  final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-                                                                                  return DateFormat('yyyy-MM-dd hh:mm:ss a').format(date);
-                                                                                } catch (e) {
-                                                                                  return 'Date not available';
-                                                                                }
-                                                                              })()
-                                                                            : 'Not Opened',
-                                                                        style:
-                                                                            TextStyle(
-                                                                          fontWeight:
-                                                                              FontWeight.w700,
-                                                                          color:
-                                                                              grey,
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  maxLines:
-                                                                      1, // Restrict to 2 lines
-                                                                  overflow:
-                                                                      TextOverflow
-                                                                          .ellipsis, // Show "..." if the text is too long
-                                                                ),
-                                                                SizedBox(
-                                                                  height: 15,
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      Row(
-                                                        //mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                        children: [
-                                                          Expanded(
-                                                            child:
-                                                                GestureDetector(
-                                                              onTap: () {
-                                                                _showDeleteAlert(
-                                                                    context,
-                                                                    Propertytype
-                                                                        .emailId!);
-                                                              },
-                                                              child: Container(
-                                                                height: 40,
-                                                                decoration: BoxDecoration(
-                                                                    color: Colors
-                                                                            .grey[
-                                                                        350]),
-                                                                child: Row(
-                                                                  mainAxisAlignment:
-                                                                      MainAxisAlignment
-                                                                          .center,
-                                                                  crossAxisAlignment:
-                                                                      CrossAxisAlignment
-                                                                          .center,
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 2.0),
+                                                margin:
+                                                    EdgeInsets.only(bottom: 2),
+                                                child: Column(
+                                                  children: [
+                                                    SizedBox(
+                                                      height: 7,
+                                                    ),
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        FaIcon(
+                                                          isExpanded
+                                                              ? FontAwesomeIcons
+                                                                  .sortUp
+                                                              : FontAwesomeIcons
+                                                                  .sortDown,
+                                                          size: 23,
+                                                          color: Colors
+                                                              .transparent,
+                                                        ),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: <Widget>[
+                                                              Text.rich(
+                                                                TextSpan(
                                                                   children: [
-                                                                    FaIcon(
-                                                                      FontAwesomeIcons
-                                                                          .trashCan,
-                                                                      size: 15,
-                                                                      color:
-                                                                          blueColor,
-                                                                    ),
-                                                                    SizedBox(
-                                                                      width: 10,
-                                                                    ),
-                                                                    Text(
-                                                                      "Delete",
+                                                                    TextSpan(
+                                                                      text:
+                                                                          'Rental Address : ',
                                                                       style: TextStyle(
-                                                                          color:
-                                                                              blueColor,
                                                                           fontWeight:
-                                                                              FontWeight.bold),
-                                                                    )
+                                                                              FontWeight.bold,
+                                                                          color: blueColor),
+                                                                    ),
+                                                                    TextSpan(
+                                                                      text: Propertytype.rentalAddress?.isNotEmpty ==
+                                                                              true
+                                                                          ? Propertytype.rentalAddress
+                                                                          : 'N/A',
+                                                                      style: TextStyle(
+                                                                          fontWeight:
+                                                                              FontWeight.w700,
+                                                                          color: grey),
+                                                                    ),
                                                                   ],
                                                                 ),
                                                               ),
-                                                            ),
-                                                          ),
-                                                          SizedBox(
-                                                            width: 5,
-                                                          ),
-                                                          Expanded(
-                                                            child:
-                                                                GestureDetector(
-                                                              onTap: () {
-                                                                _showAlert(
-                                                                    context,
-                                                                    Propertytype
-                                                                        .emailId!,
-                                                                    Propertytype);
-                                                              },
-                                                              child: Container(
-                                                                height: 40,
-                                                                decoration: BoxDecoration(
-                                                                    color: Colors
-                                                                            .grey[
-                                                                        350]),
-                                                                child: Row(
-                                                                  mainAxisAlignment:
-                                                                      MainAxisAlignment
-                                                                          .center,
-                                                                  crossAxisAlignment:
-                                                                      CrossAxisAlignment
-                                                                          .center,
+                                                              Text.rich(
+                                                                TextSpan(
                                                                   children: [
-                                                                    Image.asset(
-                                                                      'assets/icons/view.png',
-                                                                      color:
-                                                                          blueColor,
-                                                                    ),
-                                                                    SizedBox(
-                                                                      width: 10,
-                                                                    ),
-                                                                    Text(
-                                                                      "Details",
+                                                                    TextSpan(
+                                                                      text:
+                                                                          'Body : ',
                                                                       style: TextStyle(
-                                                                          color:
-                                                                              blueColor,
                                                                           fontWeight:
-                                                                              FontWeight.bold),
-                                                                    )
+                                                                              FontWeight.bold,
+                                                                          color: blueColor),
+                                                                    ),
+                                                                    TextSpan(
+                                                                      text: Propertytype.body!.isNotEmpty
+                                                                          ? extractText(Propertytype.body!)
+                                                                          : 'N/A',
+                                                                      style: TextStyle(
+                                                                          fontWeight:
+                                                                              FontWeight.w700,
+                                                                          color: grey),
+                                                                    ),
                                                                   ],
                                                                 ),
+                                                                maxLines: 1,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                              Text.rich(
+                                                                TextSpan(
+                                                                  children: [
+                                                                    TextSpan(
+                                                                      text:
+                                                                          'Opened On : ',
+                                                                      style: TextStyle(
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
+                                                                          color: blueColor),
+                                                                    ),
+                                                                    TextSpan(
+                                                                      // Web parity: formatted with the saved Date & Time
+                                                                      // Format in local time; no openedAt = Not Opened.
+                                                                      text: (Propertytype.openedAt ?? '').isNotEmpty
+                                                                          ? (() {
+                                                                              try {
+                                                                                final timestamp = int.parse(Propertytype.openedAt!);
+                                                                                return dateProvider.formatLocalDateTime(DateTime.fromMillisecondsSinceEpoch(timestamp));
+                                                                              } catch (e) {
+                                                                                return 'Date not available';
+                                                                              }
+                                                                            })()
+                                                                          : 'Not Opened',
+                                                                      style: TextStyle(
+                                                                          fontWeight:
+                                                                              FontWeight.w700,
+                                                                          color: grey),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                maxLines: 1,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                              SizedBox(
+                                                                height: 15,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        FaIcon(
+                                                          isExpanded
+                                                              ? FontAwesomeIcons
+                                                                  .sortUp
+                                                              : FontAwesomeIcons
+                                                                  .sortDown,
+                                                          size: 25,
+                                                          color: Colors
+                                                              .transparent,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment.end,
+                                                      children: [
+                                                        // View full email details (Subject/To/From/Status/Body)
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder: (_) =>
+                                                                    EmailDetailsScreen(
+                                                                  email: _toEmailDetails(
+                                                                      Propertytype),
+                                                                  drawerPage:
+                                                                      "Tenants",
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
+                                                          child: Container(
+                                                            height: 40,
+                                                            width: 48,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: Colors
+                                                                  .grey.shade200,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
+                                                            ),
+                                                            child: const Center(
+                                                              child: FaIcon(
+                                                                FontAwesomeIcons
+                                                                    .eye,
+                                                                color: Colors
+                                                                    .black,
+                                                                size: 16,
                                                               ),
                                                             ),
                                                           ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 8),
+                                                        // Delete
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            _showDeleteAlert(
+                                                                context,
+                                                                Propertytype
+                                                                    .emailId!);
+                                                          },
+                                                          child: Container(
+                                                            height: 40,
+                                                            width: 48,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: Colors
+                                                                  .red.shade50,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
+                                                            ),
+                                                            child: const Center(
+                                                              child: FaIcon(
+                                                                FontAwesomeIcons
+                                                                    .trashCan,
+                                                                color:
+                                                                    Colors.red,
+                                                                size: 16,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        // trailing gap so the last button isn't flush to the card edge
+                                                        const SizedBox(
+                                                            width: 12),
+                                                      ],
+                                                    ),
+                                                    // gap below the action buttons
+                                                    const SizedBox(height: 5),
+                                                  ],
                                                 ),
                                               ),
-                                            //SizedBox(height: 13,),
                                           ],
+                                        ),
                                         ),
                                       );
                                     }).toList(),
@@ -1416,6 +1199,24 @@ class _Tenant_communicationState extends State<Tenant_communication>
             ),
           )
         : NoInternetView(onRetry: retryNow);
+  }
+
+  /// Tenant rows carry a single `email` and a flat `openedAt`; map them onto
+  /// the E-mail Logs model so View opens the shared Email Details screen, the
+  /// way web reuses EmailDialog for both lists.
+  Emailss _toEmailDetails(Emails data) {
+    return Emailss(
+      emailId: data.emailId,
+      subject: data.subject,
+      body: data.body,
+      from: data.from,
+      to: (data.email ?? '').isNotEmpty ? [data.email!] : [],
+      opens: (data.openedAt ?? '').isNotEmpty
+          ? [Opens(openedAt: data.openedAt)]
+          : [],
+      rentalAddress: data.rentalAddress,
+      createdAt: data.createdAt,
+    );
   }
 
   String extractText(String htmlString) {

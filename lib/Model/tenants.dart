@@ -67,6 +67,11 @@ class Tenant {
   // Welcome-email flow (replaces the password field) — captured from
   // AddTenantCosignerScreen; matches the web lease dialog.
   bool? sendWelcomeEmail;
+  // Web parity (CRM-4585): pets / vehicles captured by AddTenantCosignerScreen
+  // for a NEW tenant, forwarded on the lease payload. Not parsed in fromJson —
+  // an existing tenant keeps its stored arrays untouched.
+  List<Map<String, String>>? pets;
+  List<Map<String, String>>? vehicles;
 
   Tenant({
     this.id,
@@ -101,6 +106,8 @@ class Tenant {
     this.allowAch,
     this.allowCard,
     this.sendWelcomeEmail,
+    this.pets,
+    this.vehicles,
   }); // Added leaseData
 
   Tenant.fromJson(Map<String, dynamic> json) {

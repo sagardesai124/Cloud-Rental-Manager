@@ -24,6 +24,8 @@ import '../../../Model/tenants.dart';
 import '../../../repository/tenants.dart';
 import '../../../widgets/custom_drawer.dart';
 
+import 'package:three_zero_two_property/widgets/tenant_pets_vehicles_section.dart';
+
 class EditTenants extends StatefulWidget {
   Tenant tenants;
 
@@ -145,6 +147,12 @@ class _EditTenantsState extends State<EditTenants> {
   // Web-aligned Edit form state: dynamic emergency contacts + the
   // read-only global debit fee line.
   final List<_EditEmergencyContactRow> emergencyContactsList = [];
+  // Web parity (CRM-4585): optional Pets / Vehicles rows, hydrated from
+  // get_tenant. Only sent back once loaded, so a failed load can never
+  // overwrite the stored arrays with [] (server $set's only sent keys).
+  final List<TenantSubdocRow> petsList = [];
+  final List<TenantSubdocRow> vehiclesList = [];
+  bool petsVehiclesLoaded = false;
   // TODO(API): replace with the owner's configured global debit fee.
   String globalDebitCardFee = "8";
 
@@ -307,6 +315,9 @@ class _EditTenantsState extends State<EditTenants> {
     for (final row in emergencyContactsList) {
       row.dispose();
     }
+    for (final row in [...petsList, ...vehiclesList]) {
+      row.dispose();
+    }
     super.dispose();
   }
 
@@ -397,6 +408,19 @@ class _EditTenantsState extends State<EditTenants> {
         // [EC-DEBUG] Temporary diagnostic (remove after emergency-contact
         // reload issue is resolved). Prints contact_id presence only, no PII.
 
+        for (final r in [...petsList, ...vehiclesList]) {
+          r.dispose();
+        }
+        petsList
+          ..clear()
+          ..addAll(tenantSubdocRowsFromJson(
+              tenantData['pets'], kTenantPetFields));
+        vehiclesList
+          ..clear()
+          ..addAll(tenantSubdocRowsFromJson(
+              tenantData['vehicles'], kTenantVehicleFields));
+        petsVehiclesLoaded = true;
+
         isInitialLoading = false; // Mark initial loading as complete
       });
     } else {
@@ -435,6 +459,16 @@ class _EditTenantsState extends State<EditTenants> {
                         _personalInfoCard(),
                         const SizedBox(height: 16),
                         _emergencyContactsCard(),
+                        const SizedBox(height: 16),
+                        TenantSubdocSection.pets(
+                          rows: petsList,
+                          onChanged: () => setState(() {}),
+                        ),
+                        const SizedBox(height: 16),
+                        TenantSubdocSection.vehicles(
+                          rows: vehiclesList,
+                          onChanged: () => setState(() {}),
+                        ),
                         const SizedBox(height: 16),
                         _paymentSettingsCard(),
                         const SizedBox(height: 20),
@@ -1007,6 +1041,8 @@ class _EditTenantsState extends State<EditTenants> {
         "phoneNumber": "",
       },
       "emergency_contacts": emergencyContacts,
+      if (petsVehiclesLoaded) "pets": tenantSubdocPayload(petsList),
+      if (petsVehiclesLoaded) "vehicles": tenantSubdocPayload(vehiclesList),
       "enable_override_fee": enableOverrideFee,
       "override_fee": enableOverrideFee ? overrideFee.text.trim() : "",
       "allow_ach": enableACH,

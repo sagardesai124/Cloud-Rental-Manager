@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../Model/Comunication_model/Send_email_table.dart';
@@ -12,11 +11,16 @@ import 'package:three_zero_two_property/widgets/titleBar.dart';
 
 /// Full "Email Details" view (Subject, To, From, Status, Body) — the mobile
 /// equivalent of tapping the Subject on web (EmailDialog.jsx). All fields come
-/// straight off the email-log row, so no extra API call is needed.
+/// straight off the email-log row, so no extra API call is needed. Tenant
+/// Communications opens it too (web reuses EmailDialog for both lists), so
+/// [drawerPage] keeps the drawer on the page the user came from.
 class EmailDetailsScreen extends StatelessWidget {
   final Emailss email;
+  final String drawerPage;
 
-  const EmailDetailsScreen({Key? key, required this.email}) : super(key: key);
+  const EmailDetailsScreen(
+      {Key? key, required this.email, this.drawerPage = "E-mail Logs"})
+      : super(key: key);
 
   bool get _isOpened => email.opens != null && email.opens!.isNotEmpty;
 
@@ -32,10 +36,8 @@ class EmailDetailsScreen extends StatelessWidget {
       final dt = ms != null
           ? DateTime.fromMillisecondsSinceEpoch(ms)
           : DateTime.parse(raw);
-      final datePart =
-          dateProvider.formatCurrentDate(DateFormat('yyyy-MM-dd').format(dt));
-      final timePart = DateFormat('hh:mm a').format(dt);
-      return '$datePart $timePart';
+      // Saved Date & Time Format (12/24-hour, with seconds), like web.
+      return dateProvider.formatLocalDateTime(dt);
     } catch (_) {
       return '';
     }
@@ -48,7 +50,7 @@ class EmailDetailsScreen extends StatelessWidget {
       appBar: widget_302_Staff.App_Bar(context: context),
       backgroundColor: Colors.white,
       drawer: CustomDrawerStaff(
-        currentpage: "E-mail Logs",
+        currentpage: drawerPage,
         dropdown: true,
       ),
       body: SingleChildScrollView(

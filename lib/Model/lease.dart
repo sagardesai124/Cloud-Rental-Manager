@@ -392,6 +392,9 @@ class TenantData {
   String? overrideFee;
   bool? allowAch;
   bool? allowCard;
+  // Web parity (CRM-4585): new-tenant pets / vehicles (sent only when set).
+  List<Map<String, String>>? pets;
+  List<Map<String, String>>? vehicles;
 
   TenantData({
     this.adminId,
@@ -422,6 +425,8 @@ class TenantData {
     this.overrideFee,
     this.allowAch,
     this.allowCard,
+    this.pets,
+    this.vehicles,
   });
 
   factory TenantData.fromJson(Map<String, dynamic> json) {
@@ -486,6 +491,8 @@ class TenantData {
       if (overrideFee != null) 'override_fee': overrideFee,
       if (allowAch != null) 'allow_ach': allowAch,
       if (allowCard != null) 'allow_card': allowCard,
+      if (pets != null) 'pets': pets,
+      if (vehicles != null) 'vehicles': vehicles,
     };
   }
 }

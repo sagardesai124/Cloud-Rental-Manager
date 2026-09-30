@@ -1090,6 +1090,9 @@ class _addLease3State extends State<addLease3>
     Map<int, Map<String, String>> tenantsMap =
         tenants.asMap().map((index, tenant) {
       return MapEntry(index, {
+        // Web parity (CRM-4585): new-tenant pets / vehicles ('' = not set).
+        'petsArray': tenant.pets == null ? '' : jsonEncode(tenant.pets),
+        'vehiclesArray': tenant.vehicles == null ? '' : jsonEncode(tenant.vehicles),
         'ecArray': (tenant.emergencyContacts != null && tenant.emergencyContacts!.isNotEmpty)
             ? jsonEncode(tenant.emergencyContacts!.map((e) => {'name': e.name ?? '', 'relation': e.relation ?? '', 'email': e.email ?? '', 'phoneNumber': e.phoneNumber ?? ''}).toList())
             : '',
@@ -4067,6 +4070,16 @@ class _addLease3State extends State<addLease3>
                                           int index = entry.key;
                                           final tenantMap = entry.value;
                                           return TenantData(
+                                          pets: (tenantMap['petsArray'] ?? '').isEmpty
+                                              ? null
+                                              : (jsonDecode(tenantMap['petsArray']!) as List)
+                                                  .map((e) => Map<String, String>.from(e as Map))
+                                                  .toList(),
+                                          vehicles: (tenantMap['vehiclesArray'] ?? '').isEmpty
+                                              ? null
+                                              : (jsonDecode(tenantMap['vehiclesArray']!) as List)
+                                                  .map((e) => Map<String, String>.from(e as Map))
+                                                  .toList(),
                                           emergencyContactsList: (tenantMap['ecArray'] ?? '').isEmpty
                                               ? null
                                               : (jsonDecode(tenantMap['ecArray']!) as List)
@@ -4292,6 +4305,16 @@ class _addLease3State extends State<addLease3>
                                           tenantsMap.entries.map((entry) {
                                         final tenantMap = entry.value;
                                         return TenantData(
+                                          pets: (tenantMap['petsArray'] ?? '').isEmpty
+                                              ? null
+                                              : (jsonDecode(tenantMap['petsArray']!) as List)
+                                                  .map((e) => Map<String, String>.from(e as Map))
+                                                  .toList(),
+                                          vehicles: (tenantMap['vehiclesArray'] ?? '').isEmpty
+                                              ? null
+                                              : (jsonDecode(tenantMap['vehiclesArray']!) as List)
+                                                  .map((e) => Map<String, String>.from(e as Map))
+                                                  .toList(),
                                           emergencyContactsList: (tenantMap['ecArray'] ?? '').isEmpty
                                               ? null
                                               : (jsonDecode(tenantMap['ecArray']!) as List)
