@@ -206,6 +206,20 @@ class _Dashboard_staffState extends State<Dashboard_staff>
     }
   }
 
+  // Coming back from a dashboard card: reload the counts and work-order
+  // numbers in place (both loads are loader-free). Guarded so a failed or
+  // late reply leaves the current numbers instead of surfacing an error.
+  Future<void> _refreshCountsQuietly() async {
+    if (!mounted) return;
+    try {
+      await fetchDatacount();
+      if (!mounted) return;
+      await fetchData();
+    } catch (e) {
+      logError('Error refreshing dashboard counts: $e');
+    }
+  }
+
   int newworkorder = 0;
   int overdueworkorder = 0;
   double currentMonthRentDue = 0.0;
@@ -1475,6 +1489,7 @@ class _Dashboard_staffState extends State<Dashboard_staff>
                 lastMonthRentPaid: lastMonthRentPaid,
                 totalRentPastDue: totalRentPastDue,
                 fromStaffModule: true,
+                onReturn: _refreshCountsQuietly,
               )
               /*  LayoutBuilder(
                 builder:

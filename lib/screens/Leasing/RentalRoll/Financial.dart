@@ -56,12 +56,16 @@ class FinancialTable extends StatefulWidget {
   final String? status;
   final String? rentalAddress;
   final String? rentalUnit;
+  // Called on return from Scheduled Charges via the pending-charges link, so
+  // the host screen can reload figures it shows outside this table.
+  final VoidCallback? onScheduledChargesClosed;
   FinancialTable(
       {required this.leaseId,
       required this.status,
       required this.tenantId,
       this.rentalAddress,
-      this.rentalUnit});
+      this.rentalUnit,
+      this.onScheduledChargesClosed});
   @override
   _FinancialTableState createState() => _FinancialTableState();
 }
@@ -784,8 +788,8 @@ class _FinancialTableState extends State<FinancialTable>
             child: Divider(height: 1, color: Color(0xFFEBD9A6)),
           ),
           InkWell(
-            onTap: () {
-              Navigator.of(context).push(
+            onTap: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => ScheduledChargeTable(
                     leaseID: widget.leaseId,
@@ -793,6 +797,15 @@ class _FinancialTableState extends State<FinancialTable>
                   ),
                 ),
               );
+              // Charges may have been added from Scheduled Charges;
+              // reload the ledger so they show on return.
+              if (!mounted) return;
+              setState(() {
+                _fetchData();
+              });
+              _fetchPendingScheduled();
+              // The lease page's Balance Overview sits outside this table.
+              widget.onScheduledChargesClosed?.call();
             },
             borderRadius: BorderRadius.circular(6),
             child: Row(

@@ -16,6 +16,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'EditProperties.dart' show Edit_properties;
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
@@ -75,11 +76,19 @@ import 'package:three_zero_two_property/provider/network_retry_state.dart';
 
 class Summery_page extends StatefulWidget {
   Rentals properties;
+
+  /// Called after a save in Edit Property, so the list behind can reload.
+  final VoidCallback? onPropertyUpdated;
   TenantData? tenants;
   unit_properties? unit;
 
   //RentalSummary? tenantsummery;
-  Summery_page({super.key, required this.properties, this.tenants, this.unit});
+  Summery_page(
+      {super.key,
+      required this.properties,
+      this.tenants,
+      this.unit,
+      this.onPropertyUpdated});
   @override
   _Summery_pageState createState() => _Summery_pageState();
 }
@@ -253,6 +262,65 @@ class _Summery_pageState extends State<Summery_page>
           Properies_summery_Repo().fetchWorkOrders(widget.properties.rentalId!);
     });
     fetchunits1();
+  }
+
+  bool _openingEdit = false;
+
+  /// Header Edit -> Edit Property, like the web property detail page. Edit
+  /// gets the fresh rental_summary record, never widget.properties: the Staff
+  /// notification entry holds only a Rentals(rentalId) placeholder, and a save
+  /// from it would send property_id: null and wipe the property type.
+  Future<void> _openEditProperty() async {
+    final String id = widget.properties.rentalId ?? '';
+    if (id.isEmpty || _openingEdit) return;
+    setState(() => _openingEdit = true); // spinner on the button
+    Rentals? loaded;
+    try {
+      loaded = await futureRentalDetails;
+    } catch (_) {
+      try {
+        loaded = await Properies_summery_Repo().fetchrentalDetails(id);
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    setState(() => _openingEdit = false);
+    // The user may have moved on while the details were loading.
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    if (loaded == null || (loaded.rentalId ?? '').isEmpty) {
+      Fluttertoast.showToast(
+          msg: "Property details haven't loaded yet. Please try again.");
+      return;
+    }
+    final Rentals source = loaded;
+    final saved = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Edit_properties(properties: source, rentalId: id),
+      ),
+    );
+    if (saved == true && mounted) _refreshAfterPropertyEdit(id);
+  }
+
+  /// After a save in Edit Property, reload what the edit can change.
+  /// futureRentalDetails must be reassigned before _loadSummaryWithFinancial(),
+  /// which reads it when called.
+  void _refreshAfterPropertyEdit(String id) {
+    final Future<Rentals> details =
+        Properies_summery_Repo().fetchrentalDetails(id);
+    setState(() {
+      futureRentalDetails = details;
+      futureSummaryWithFinancial = _loadSummaryWithFinancial();
+      futurerentalowners = PropertiesRepository().fetchProperties();
+      _propertyValuesRentalOverride = null;
+      _purchaseInfoRentalOverride = null;
+      _historyRefreshKey++;
+      showdetails = false; // an open unit view holds the pre-edit unit
+    });
+    reloadData();
+    details.then((fresh) {
+      if (mounted) setState(() => widget.properties = fresh); // header
+    }).catchError((_) {});
+    widget.onPropertyUpdated?.call(); // Properties list behind this screen
   }
 
   @override
@@ -2929,6 +2997,37 @@ class _Summery_pageState extends State<Summery_page>
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      // Edit, like the web property detail page.
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: _openEditProperty,
+                        // Same round button as the Lease summary Edit.
+                        child: Container(
+                          height: 38,
+                          constraints: const BoxConstraints(minWidth: 70),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: blueColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: _openingEdit
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text(
+                                  "Edit",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(width: 16),

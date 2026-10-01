@@ -211,6 +211,7 @@ class _PropertiesTableState extends State<PropertiesTable>
         MaterialPageRoute(
             builder: (context) => Summery_page(
                   properties: properties,
+                  onPropertyUpdated: _reloadProperties,
                 )));
     /* if (result == true) {
       setState(() {
@@ -2004,6 +2005,7 @@ class _PropertiesTableState extends State<PropertiesTable>
                                                                       MaterialPageRoute(
                                                                           builder: (context) => Summery_page(
                                                                                 properties: rentals,
+                                                                                onPropertyUpdated: _reloadProperties,
                                                                               )));
                                                                 },
                                                                 child:
@@ -2493,6 +2495,7 @@ class _PropertiesTableState extends State<PropertiesTable>
                   MaterialPageRoute(
                       builder: (context) => Summery_page(
                             properties: inkText,
+                            onPropertyUpdated: _reloadProperties,
                           )));
             },
             child: Text(text?.isNotEmpty == true ? text! : 'N/A',

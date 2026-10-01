@@ -327,7 +327,7 @@ class _AddRentalownersState extends State<AddRentalowners> {
                     ),
                     Expanded(
                       child: Text(
-                        "choose an existing rental owner",
+                        "Choose an existing rental owner",
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF8A95A8),
@@ -460,21 +460,6 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                       DataColumn(
                                           label: Expanded(
                                         child: Text(
-                                          'Processor ID  ',
-                                          style: TextStyle(
-                                              fontSize: MediaQuery.of(context)
-                                                          .size
-                                                          .width <
-                                                      500
-                                                  ? 14
-                                                  : 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: blueColor),
-                                        ),
-                                      )),
-                                      DataColumn(
-                                          label: Expanded(
-                                        child: Text(
                                           'Select ',
                                           style: TextStyle(
                                               fontSize: MediaQuery.of(context)
@@ -496,24 +481,6 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                             Text(
                                               '${filteredOwners[index].rentalOwnername} '
                                               '\n${filteredOwners[index].phoneNumber}',
-                                              style: TextStyle(
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 13
-                                                          : 18),
-                                            ),
-                                          ),
-                                          DataCell(
-                                            Text(
-                                              filteredOwners[index]
-                                                  .processorList
-                                                  .map((processor) =>
-                                                      processor.processorId)
-                                                  .join(
-                                                      '\n'), // Join processor IDs with newline
                                               style: TextStyle(
                                                   fontSize:
                                                       MediaQuery.of(context)
@@ -634,7 +601,7 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                         width: 15,
                                       ),
                                       Text(
-                                        "Contact Name",
+                                        "Contact Name *",
                                         style: TextStyle(
                                             color: const Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold,
@@ -751,7 +718,7 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                         width: 15,
                                       ),
                                       Text(
-                                        "Company Name",
+                                        "Company Name *",
                                         style: TextStyle(
                                             color: const Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold,
@@ -869,7 +836,7 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                         width: 15,
                                       ),
                                       Text(
-                                        "Primary Email",
+                                        "Primary Email *",
                                         style: TextStyle(
                                             color: const Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold,
@@ -1108,7 +1075,7 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                         width: 15,
                                       ),
                                       Text(
-                                        "Phone Numbers",
+                                        "Phone Numbers *",
                                         style: TextStyle(
                                             color: const Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold,

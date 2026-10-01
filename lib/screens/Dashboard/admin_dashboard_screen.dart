@@ -25,6 +25,8 @@ class DashboardAdminSample extends StatefulWidget {
   double currentMonthRentPaid = 0.0;
   double lastMonthRentPaid = 0.0;
   double totalRentPastDue = 0.0;
+  // Called after a card's list closes, so the dashboard can reload its counts.
+  final VoidCallback? onReturn;
   DashboardAdminSample(
       {super.key,
       required this.countList,
@@ -32,13 +34,21 @@ class DashboardAdminSample extends StatefulWidget {
       required this.lastMonthRentDue,
       required this.currentMonthRentPaid,
       required this.lastMonthRentPaid,
-      required this.totalRentPastDue});
+      required this.totalRentPastDue,
+      this.onReturn});
   @override
   State<DashboardAdminSample> createState() => _DashboardAdminSampleState();
 }
 
 class _DashboardAdminSampleState extends State<DashboardAdminSample> {
   String selectedRentType = 'Rent Due';
+
+  // Anything added or removed in a card's list changes that card's number,
+  // so ask the dashboard to reload its counts once the list closes.
+  void _afterCardReturn() {
+    if (!mounted) return;
+    widget.onReturn?.call();
+  }
 
   void _showRentTypeMenu(BuildContext context) async {
     final RenderBox button =
@@ -151,56 +161,61 @@ class _DashboardAdminSampleState extends State<DashboardAdminSample> {
                       "assets/icons/Group 1.svg",
                       _formatCount(widget.countList[0]),
                       'Properties  ->',
-                      () {
-                        Navigator.push(
+                      () async {
+                        await Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (context) => PropertiesTable()));
+                        _afterCardReturn();
                       },
                     ),
                     _dashboardCard(
                       "assets/icons/Frame.svg",
                       _formatCount(widget.countList[1]),
                       'Tenants  ->',
-                      () {
-                        Navigator.push(
+                      () async {
+                        await Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (context) => Tenants_table()));
+                        _afterCardReturn();
                       },
                     ),
                     _dashboardCard(
                       "assets/icons/Vector.svg",
                       _formatCount(widget.countList[2]),
                       'Applicants  ->',
-                      () {
-                        Navigator.push(
+                      () async {
+                        await Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (context) => Applicants_table()));
+                        _afterCardReturn();
                       },
                     ),
                     _dashboardCard(
                       "assets/icons/Vector (1).svg",
                       _formatCount(widget.countList[3]),
                       'Vendors  ->',
-                      () {
-                        Navigator.push(
+                      () async {
+                        await Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (context) =>
                                     const TabBarExample(initialTab: 'Vendors')));
+                        _afterCardReturn();
                       },
                     ),
                     _dashboardCard(
                       "assets/icons/Frame1.svg",
                       _formatCount(widget.countList[4]),
                       'Work Orders ->',
-                      () {
-                        Navigator.push(
+                      () async {
+                        await Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (context) => Workorder_table()));
+                        _afterCardReturn();
                       },
                     ),
                   ],

@@ -121,10 +121,14 @@ class _DashboardState extends State<Dashboard>
     Vendor_table(),
     Workorder_table(),
   ];
-  Future<void> fetchDatacount() async {
-    setState(() {
-      loading = true;
-    });
+  // `quiet` reloads the numbers in place (coming back from a dashboard card);
+  // the first load and pull-to-refresh still show the full-screen loader.
+  Future<void> fetchDatacount({bool quiet = false}) async {
+    if (!quiet) {
+      setState(() {
+        loading = true;
+      });
+    }
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? id = prefs.getString("adminId");
@@ -555,6 +559,7 @@ class _DashboardState extends State<Dashboard>
                                 lastMonthRentDue: lastMonthRentDue,
                                 lastMonthRentPaid: lastMonthRentPaid,
                                 totalRentPastDue: totalRentPastDue,
+                                onReturn: () => fetchDatacount(quiet: true),
                               ),
                               //welcome
                               // LayoutBuilder(

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
@@ -47,6 +49,43 @@ class UsStateDropdown extends StatefulWidget {
 }
 
 class _UsStateDropdownState extends State<UsStateDropdown> {
+  static const TextStyle _itemStyle =
+      TextStyle(fontSize: 15, color: Colors.black87);
+  static const double _itemPadding = 14;
+
+  double _longestNameWidth = 0;
+  Object? _longestNameKey;
+
+  /// Popup width that shows every state name in full ("North Carolina", not
+  /// "North Carol…") but is never narrower than the field. The package caps it
+  /// at the screen width and shifts a wide popup left to keep it on screen.
+  double _menuWidth(BuildContext context, double fieldWidth) {
+    // Items render on the button's text style (titleMedium) plus _itemStyle.
+    final style = (Theme.of(context).textTheme.titleMedium ?? const TextStyle())
+        .merge(_itemStyle);
+    final scaler = MediaQuery.textScalerOf(context);
+    final key = (style, scaler);
+    if (_longestNameKey != key) {
+      double widest = 0;
+      for (final name in kUsStateNames) {
+        final painter = TextPainter(
+          text: TextSpan(text: name, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: scaler,
+          maxLines: 1,
+        )..layout();
+        widest = math.max(widest, painter.width);
+        painter.dispose();
+      }
+      _longestNameWidth = widest;
+      _longestNameKey = key;
+    }
+    // Name + item padding on both sides + popup border + scrollbar room.
+    final needed =
+        (_longestNameWidth + _itemPadding * 2 + 2 + 12).ceilToDouble();
+    return math.max(fieldWidth, needed);
+  }
+
   @override
   Widget build(BuildContext context) {
     // Read from the controller on every build so an external update (e.g. an
@@ -64,68 +103,72 @@ class _UsStateDropdownState extends State<UsStateDropdown> {
         border: Border.all(color: widget.borderColor ?? outlineClr, width: 1),
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton2<String>(
-          isExpanded: true,
-          value: isKnown ? current : null,
-          hint: Text(
-            current.isEmpty ? widget.hintText : current,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 15,
-              color: current.isEmpty ? mutedClr : Colors.black87,
+        child: LayoutBuilder(
+          builder: (context, constraints) => DropdownButton2<String>(
+            isExpanded: true,
+            value: isKnown ? current : null,
+            hint: Text(
+              current.isEmpty ? widget.hintText : current,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 15,
+                color: current.isEmpty ? mutedClr : Colors.black87,
+              ),
             ),
-          ),
-          items: kUsStateNames
-              .map((state) => DropdownMenuItem<String>(
-                    value: state,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+            items: kUsStateNames
+                .map((state) => DropdownMenuItem<String>(
+                      value: state,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: _itemPadding),
+                        child: Text(
+                          state,
+                          overflow: TextOverflow.ellipsis,
+                          style: _itemStyle,
+                        ),
+                      ),
+                    ))
+                .toList(),
+            selectedItemBuilder: (context) => kUsStateNames
+                .map((state) => Align(
+                      alignment: AlignmentDirectional.centerStart,
                       child: Text(
                         state,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontSize: 15, color: Colors.black87),
                       ),
-                    ),
-                  ))
-              .toList(),
-          selectedItemBuilder: (context) => kUsStateNames
-              .map((state) => Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      state,
-                      overflow: TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(fontSize: 15, color: Colors.black87),
-                    ),
-                  ))
-              .toList(),
-          onChanged: (value) {
-            if (value == null) return;
-            setState(() => widget.controller.text = value);
-            widget.onChanged?.call(value);
-          },
-          buttonStyleData: ButtonStyleData(
-            padding: EdgeInsets.zero,
-            height: widget.height,
-          ),
-          iconStyleData: IconStyleData(
-            icon: Icon(Icons.keyboard_arrow_down_rounded,
-                color: blueColor, size: 22),
-          ),
-          dropdownStyleData: DropdownStyleData(
-            maxHeight:
-                (MediaQuery.sizeOf(context).height * 0.35).clamp(200.0, 320.0),
-            elevation: 3,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: outlineClr),
+                    ))
+                .toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => widget.controller.text = value);
+              widget.onChanged?.call(value);
+            },
+            buttonStyleData: ButtonStyleData(
+              padding: EdgeInsets.zero,
+              height: widget.height,
             ),
-          ),
-          menuItemStyleData: const MenuItemStyleData(
-            height: 42,
-            padding: EdgeInsets.zero,
+            iconStyleData: IconStyleData(
+              icon: Icon(Icons.keyboard_arrow_down_rounded,
+                  color: blueColor, size: 22),
+            ),
+            dropdownStyleData: DropdownStyleData(
+              width: _menuWidth(context,
+                  constraints.hasBoundedWidth ? constraints.maxWidth : 0),
+              maxHeight: (MediaQuery.sizeOf(context).height * 0.35)
+                  .clamp(200.0, 320.0),
+              elevation: 3,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: outlineClr),
+              ),
+            ),
+            menuItemStyleData: const MenuItemStyleData(
+              height: 42,
+              padding: EdgeInsets.zero,
+            ),
           ),
         ),
       ),

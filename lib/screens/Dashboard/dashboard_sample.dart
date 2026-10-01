@@ -42,6 +42,8 @@ class DashboardMobileSimple extends StatefulWidget {
   final double totalRentPastDue;
   /// When true, rent-detail screens use staff app bar and staff drawer (Dashboard selected).
   final bool fromStaffModule;
+  // Called after a card's list closes, so the dashboard can reload its counts.
+  final VoidCallback? onReturn;
 
   const DashboardMobileSimple({
     Key? key,
@@ -59,6 +61,7 @@ class DashboardMobileSimple extends StatefulWidget {
     this.lastMonthRentPaid = 0.0,
     this.totalRentPastDue = 0.0,
     this.fromStaffModule = false,
+    this.onReturn,
   }) : super(key: key);
 
   @override
@@ -131,45 +134,57 @@ class _DashboardMobileSimpleState extends State<DashboardMobileSimple> {
     );
   }
 
-  void _navigateToTable(BuildContext context, String label) {
+  // Anything added or removed in a card's list changes that card's number,
+  // so ask the dashboard to reload its counts once the list closes.
+  void _afterCardReturn() {
+    if (!mounted) return;
+    widget.onReturn?.call();
+  }
+
+  Future<void> _navigateToTable(BuildContext context, String label) async {
     // Add navigation logic for each table
     if (label == 'Properties') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => PropertiesTable()),
       );
     } else if (label == 'Tenants') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => Tenants_table()),
       );
     } else if (label == 'Applicants') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => Applicants_table()),
       );
     } else if (label == 'Vendors') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => const TabBarExample(initialTab: 'Vendors')),
       );
     } else if (label == 'Unpaid Properties') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const Unpaid_Properties()),
       );
+    } else {
+      // Add more navigation as needed
+      return;
     }
-    // Add more navigation as needed
+    _afterCardReturn();
   }
 
-  void _navigateToWorkOrderTable(BuildContext context, {String? filter}) {
-    Navigator.push(
+  Future<void> _navigateToWorkOrderTable(BuildContext context,
+      {String? filter}) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => Workorder_table(filter: filter),
       ),
     );
+    _afterCardReturn();
   }
 
   Widget workOrderCard(BuildContext context, String title, int total) {

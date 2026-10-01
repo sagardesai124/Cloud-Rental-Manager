@@ -2837,13 +2837,8 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Web parity: Vendor is optional, like Add Work Order and web.
                               FormField<String>(
-                                validator: (value) {
-                                  if (_selectedvendorsId == null) {
-                                    return 'Please select an option';
-                                  }
-                                  return null;
-                                },
                                 builder: (FormFieldState<String> state) {
                                   return Column(
                                     crossAxisAlignment:
@@ -6330,15 +6325,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                                                       right:
                                                                           14),
                                                             ),
-                                                            validator: (value) {
-                                                              if (value ==
-                                                                      null ||
-                                                                  value
-                                                                      .isEmpty) {
-                                                                return 'Please select an option';
-                                                              }
-                                                              return null;
-                                                            },
+                                                            // Web parity: Vendor is optional, like Add Work Order and web.
                                                           ),
                                                         ),
                                                       ],

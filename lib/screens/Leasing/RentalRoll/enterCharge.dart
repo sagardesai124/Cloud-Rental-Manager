@@ -1616,10 +1616,18 @@ class _enterChargeState extends State<enterCharge> {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: (isLoading || blockUnchanged)
+            onPressed: (isLoading || blockUnchanged || _isLoading)
                 ? null
                 : () async {
-                    if (_formKey.currentState?.validate() ?? false) {
+                    // Ignore extra taps while a save is in flight — a
+                    // double tap must not create the charge twice.
+                    if (_isLoading) return;
+                    try {
+                    // Amount-mismatch validation must not leave the
+                    // button spinning: only show the spinner once the
+                    // charge is actually about to be saved.
+                    if ((_formKey.currentState?.validate() ?? false) &&
+                        validationMessage == null) {
                       setState(() {
                         _isLoading = true;
                       });
@@ -1822,6 +1830,14 @@ class _enterChargeState extends State<enterCharge> {
                               ));
                             }
 
+                            // Web parity (AddCharge.jsx postOneTimeCharge):
+                            // this charge's total covers only its own rows;
+                            // recurring rows are posted separately below.
+                            // With no recurring rows it is the same total.
+                            num oneTimeTotal = 0;
+                            for (final i in oneTimeIndexes) {
+                              oneTimeTotal += rowAmounts[i];
+                            }
                             Charge charge = Charge(
                               adminId: adminId,
                               isLeaseAdded: false,
@@ -1830,7 +1846,10 @@ class _enterChargeState extends State<enterCharge> {
                               // when available (web sends the
                               // chosen tenant_id).
                               tenantId: selectedTenantId ?? "",
-                              totalAmount: totalAmount,
+                              totalAmount: recurringIndexes.isEmpty
+                                  ? totalAmount
+                                  : double.parse(
+                                      oneTimeTotal.toStringAsFixed(2)),
                               uploadedFile: _uploadedFileNames,
                               entry: entryList,
                             );
@@ -1926,6 +1945,16 @@ class _enterChargeState extends State<enterCharge> {
 
                       //charges
                     } else {
+                    }
+                    } catch (e) {
+                      // A network error or timeout throws out of the save;
+                      // re-enable the button so the user can retry.
+                      if (mounted) {
+                        setState(() {
+                          _isLoading = false;
+                        });
+                      }
+                      Fluttertoast.showToast(msg: "Failed to post charge");
                     }
                   },
             style: ElevatedButton.styleFrom(

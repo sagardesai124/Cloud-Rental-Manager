@@ -643,7 +643,7 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                                 ),
                               ),
                               units.isNotEmpty
-                                  ? Text('Unit',
+                                  ? Text('Unit *',
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
@@ -755,7 +755,7 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                           SizedBox(
                             height: 4,
                           ),
-                          Text('Category',
+                          Text('Category *',
                               style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,

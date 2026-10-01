@@ -451,7 +451,7 @@ class accountRepository {
         body: jsonEncode({"reason": reason}));
     var responseData = json.decode(response.body);
     if (responseData["statusCode"] == 200) {
-      Fluttertoast.showToast(msg: responseData["message"]);
+      Fluttertoast.showToast(msg: 'Category deleted successfully'); // web wording
       return json.decode(response.body);
     } else {
       Fluttertoast.showToast(msg: responseData["message"]);

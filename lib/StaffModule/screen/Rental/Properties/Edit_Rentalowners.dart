@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:email_validator/email_validator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -344,7 +345,7 @@ class _EditRentalownersState extends State<EditRentalowners> {
                     ),
                     Expanded(
                       child: Text(
-                        "choose an existing rental owner",
+                        "Choose an existing rental owner",
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF8A95A8),
@@ -477,21 +478,6 @@ class _EditRentalownersState extends State<EditRentalowners> {
                                       DataColumn(
                                           label: Expanded(
                                         child: Text(
-                                          'Processor ID  ',
-                                          style: TextStyle(
-                                              fontSize: MediaQuery.of(context)
-                                                          .size
-                                                          .width <
-                                                      500
-                                                  ? 14
-                                                  : 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: blueColor),
-                                        ),
-                                      )),
-                                      DataColumn(
-                                          label: Expanded(
-                                        child: Text(
                                           'Select ',
                                           style: TextStyle(
                                               fontSize: MediaQuery.of(context)
@@ -513,24 +499,6 @@ class _EditRentalownersState extends State<EditRentalowners> {
                                             Text(
                                               '${filteredOwners[index].rentalOwnername} '
                                               '\n${filteredOwners[index].phoneNumber}',
-                                              style: TextStyle(
-                                                  fontSize:
-                                                      MediaQuery.of(context)
-                                                                  .size
-                                                                  .width <
-                                                              500
-                                                          ? 13
-                                                          : 18),
-                                            ),
-                                          ),
-                                          DataCell(
-                                            Text(
-                                              filteredOwners[index]
-                                                  .processorList
-                                                  .map((processor) =>
-                                                      processor.processorId)
-                                                  .join(
-                                                      '\n'), // Join processor IDs with newline
                                               style: TextStyle(
                                                   fontSize:
                                                       MediaQuery.of(context)
@@ -651,7 +619,7 @@ class _EditRentalownersState extends State<EditRentalowners> {
                                         width: 15,
                                       ),
                                       Text(
-                                        "Contact Name",
+                                        "Contact Name *",
                                         style: TextStyle(
                                             color: const Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold,
@@ -769,7 +737,7 @@ class _EditRentalownersState extends State<EditRentalowners> {
                                         width: 15,
                                       ),
                                       Text(
-                                        "Company Name",
+                                        "Company Name *",
                                         style: TextStyle(
                                             color: const Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold,
@@ -888,7 +856,7 @@ class _EditRentalownersState extends State<EditRentalowners> {
                                         width: 15,
                                       ),
                                       Text(
-                                        "Primary Email",
+                                        "Primary Email *",
                                         style: TextStyle(
                                             color: const Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold,
@@ -1127,7 +1095,7 @@ class _EditRentalownersState extends State<EditRentalowners> {
                                         width: 15,
                                       ),
                                       Text(
-                                        "Phone Numbers",
+                                        "Phone Numbers *",
                                         style: TextStyle(
                                             color: const Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold,
@@ -2232,6 +2200,135 @@ class _EditRentalownersState extends State<EditRentalowners> {
                       onTap: isSubmitting
                           ? null
                           : () async {
+                        if (firstname.text.trim().isEmpty) {
+                          setState(() {
+                            firstnameerror = true;
+                            firstnamemessage = "Please enter name";
+                          });
+                        } else {
+                          setState(() {
+                            firstnameerror = false;
+                          });
+                        }
+                        if (comname.text.trim().isEmpty) {
+                          setState(() {
+                            comnameerror = true;
+                            comnamemessage = "Please enter company name";
+                          });
+                        } else {
+                          setState(() {
+                            comnameerror = false;
+                          });
+                        }
+                        if (primaryemail.text.trim().isEmpty) {
+                          setState(() {
+                            primaryemailerror = true;
+                            primaryemailmessage = "Email is required";
+                          });
+                        } else if (!EmailValidator.validate(
+                            primaryemail.text)) {
+                          setState(() {
+                            primaryemailerror = true;
+                            primaryemailmessage = "Email is not valid";
+                          });
+                        } else {
+                          setState(() {
+                            primaryemailerror = false;
+                          });
+                        }
+                        if (alternativeemail.text.trim().isNotEmpty &&
+                            !EmailValidator.validate(alternativeemail.text)) {
+                          setState(() {
+                            alternativeerror = true;
+                            alternativemessage = "Email is not valid";
+                          });
+                        } else if (alternativeemail.text == primaryemail.text) {
+                          setState(() {
+                            alternativeerror = true;
+                            alternativemessage = " email cannot be the same";
+                          });
+                        } else {
+                          setState(() {
+                            alternativeerror = false;
+                            alternativemessage = "";
+                          });
+                        }
+
+                        String formattedPhoneNumber =
+                            phonenum.text.replaceAll(RegExp(r'\D'), '');
+                        if (formattedPhoneNumber.isEmpty) {
+                          setState(() {
+                            phonenumerror = true;
+                            phonenummessage = "Please enter phone number";
+                          });
+                        } else if (formattedPhoneNumber.length != 10) {
+                          setState(() {
+                            phonenumerror = true;
+                            phonenummessage = "Phone number must be 10 digits";
+                          });
+                        } else {
+                          setState(() {
+                            phonenumerror = false;
+                          });
+                        }
+                        String formattedhomeNumber =
+                            homenum.text.replaceAll(RegExp(r'\D'), '');
+                        if (formattedhomeNumber.isEmpty) {
+                          setState(() {
+                            homenumerror = false;
+                          });
+                        } else if (formattedhomeNumber.length != 10) {
+                          setState(() {
+                            homenumerror = true;
+                            homenummessage = "Phone number must be 10 digits";
+                          });
+                        } else if (formattedhomeNumber ==
+                            formattedPhoneNumber) {
+                          setState(() {
+                            homenumerror = true;
+                            homenummessage = " number cannot be the same";
+                          });
+                        } else {
+                          setState(() {
+                            homenumerror = false;
+                          });
+                        }
+                        String formattedofficeNumber =
+                            businessnum.text.replaceAll(RegExp(r'\D'), '');
+                        if (formattedofficeNumber.isEmpty) {
+                          setState(() {
+                            businessnumerror = false;
+                          });
+                        } else if (formattedofficeNumber.length != 10) {
+                          setState(() {
+                            businessnumerror = true;
+                            businessnummessage =
+                                "Phone number must be 10 digits";
+                          });
+                        } else if (formattedofficeNumber ==
+                            formattedhomeNumber) {
+                          setState(() {
+                            businessnumerror = true;
+                            businessnummessage = " number cannot be the same";
+                          });
+                        } else {
+                          setState(() {
+                            businessnumerror = false;
+                          });
+                        }
+                        if (firstnameerror ||
+                            comnameerror ||
+                            primaryemailerror ||
+                            phonenumerror ||
+                            homenumerror ||
+                            businessnumerror ||
+                            alternativeerror) {
+                          // Same checks as Add and web, always. The fields are
+                          // hidden while the owner list shows: open the form so
+                          // the red messages are visible.
+                          if (isChecked) setState(() => isChecked = false);
+                          return;
+                        }
                         setState(() {
                           isSubmitting = true;
                         });
@@ -2267,7 +2364,9 @@ class _EditRentalownersState extends State<EditRentalowners> {
                             .setOwnerDetails(Ownersdetails!);
 
                         Fluttertoast.showToast(
-                          msg: "Rental Owner Added Successfully!",
+                          msg: isChecked2 // web: picking a different owner reads as Add
+                              ? "Rental Owner Added Successfully!"
+                              : "Rental Owner Updated Successfully!",
                           toastLength: Toast.LENGTH_SHORT,
                           gravity: ToastGravity.TOP,
                           timeInSecForIosWeb: 1,
@@ -2321,9 +2420,9 @@ class _EditRentalownersState extends State<EditRentalowners> {
                                     color: Colors.white,
                                     size: 25.0,
                                   )
-                                : const Text(
-                                    "Add",
-                                    style: TextStyle(
+                                : Text(
+                                    isChecked2 ? "Add" : "Update", // web wording
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,

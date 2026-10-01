@@ -98,6 +98,9 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
   late Future<List<LeaseTenant>> futureLeasetenant;
   late Future<LeaseLedger?> _leaseLedgerFuture;
   late Future<LeaseCharges?> _leaseChargesFuture;
+  // Bumped after returning from Scheduled Charges so the Financial tab's
+  // ledger is re-created and reloads (charges may have been added there).
+  int _financialRefreshTick = 0;
   late Future<List<Map<String, dynamic>>> _lateFeesFuture;
   late Future<List<Map<String, dynamic>>> _leaseHistoryFuture;
   TabController? _tabController;
@@ -1150,7 +1153,9 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
               // ledger lands on the same 15pt edge as the cards above it.
               Padding(
                 padding: const EdgeInsets.only(left: 4, right: 4),
-                child: FinancialTable(
+                child: KeyedSubtree(
+                  key: ValueKey('financial_$_financialRefreshTick'),
+                  child: FinancialTable(
                 rentalUnit: snapshot.data?.rentalUnit,
                 rentalAddress: snapshot.data?.rentalAddress,
                 leaseId: widget.leaseId,
@@ -1158,6 +1163,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                         snapshot.data?.startDate, snapshot.data?.endDate)
                     .toString(),
                   tenantId: snapshot.data?.tenantId?.isNotEmpty == true ? snapshot.data!.tenantId!.first : '',
+                  onScheduledChargesClosed: _reloadBalanceOverview,
+                ),
                 ),
               ),
             ],
@@ -1836,6 +1843,30 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
     );
   }
 
+  // Charges can be added from the Scheduled Charges screen, so on return
+  // reload the Balance card (ledger + charges) and re-create the Financial
+  // ledger table — the same data a fresh open of the lease would load.
+  void _refreshAfterScheduledCharges() {
+    if (!mounted) return;
+    setState(() {
+      _leaseLedgerFuture =
+          LeaseRepository().fetchLeaseLedger(leaseId: widget.leaseId);
+      _leaseChargesFuture = LeaseRepository().fetchLeaseCharges(widget.leaseId);
+      _financialRefreshTick++;
+    });
+  }
+
+  // The Financial tab's pending-charges link reloads the ledger table itself;
+  // this keeps the Balance Overview card above it in step.
+  void _reloadBalanceOverview() {
+    if (!mounted) return;
+    setState(() {
+      _leaseLedgerFuture =
+          LeaseRepository().fetchLeaseLedger(leaseId: widget.leaseId);
+      _leaseChargesFuture = LeaseRepository().fetchLeaseCharges(widget.leaseId);
+    });
+  }
+
   /// Web parity (LeaseFinanceBlock): the lease quick actions render on
   /// BOTH the Summary and Financial tabs — web mounts the same shared
   /// component in each. The card shell lives here too, so the two tabs
@@ -2008,8 +2039,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8.0),
                         child: GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).push(
+                          onTap: () async {
+                            await Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) =>
                                     ScheduledChargeTable(
@@ -2019,6 +2050,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                 ),
                               ),
                             );
+                            _refreshAfterScheduledCharges();
                           },
                           child: Container(
                             height: 40,

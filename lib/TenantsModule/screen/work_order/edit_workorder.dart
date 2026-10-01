@@ -381,7 +381,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                           },
                         ),
                         const SizedBox(height: 10),
-                        _label('Property'),
+                        _label('Property *'),
                         _readOnlyField(
                           summery!.propertyData?.rentaladress ??
                               summery!.rentalAddressDisplay ??
@@ -393,11 +393,11 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                         // when the property actually has a unit, rather than
                         // showing a placeholder row on single-unit properties.
                         if (_unitDisplay.isNotEmpty) ...[
-                          _label('Unit'),
+                          _label('Unit *'),
                           _readOnlyField(_unitDisplay),
                           const SizedBox(height: 10),
                         ],
-                        _label('Category'),
+                        _label('Category *'), // same label as web (TAddWork.jsx:920)
                         DropdownButtonHideUnderline(
                           child: DropdownButton2<allcategories_model>(
                             isExpanded: true,

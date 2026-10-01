@@ -8616,16 +8616,13 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     String categoryName = categories.text.trim();
     String? token = prefs.getString('token');
 
+    // Same toast as Update/Delete (was a SnackBar, a different style).
     if (categoryName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a category name')),
-      );
+      Fluttertoast.showToast(msg: 'Please enter a category name');
       return;
     }
     if (adminId == null || adminId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Admin ID is missing')),
-      );
+      Fluttertoast.showToast(msg: 'Admin ID is missing');
       return;
     }
 
@@ -8645,18 +8642,14 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
 
     final responseData = jsonDecode(response.body);
     if (response.statusCode == 200 && responseData["statusCode"] == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Category added successfully')),
-      );
+      Fluttertoast.showToast(msg: 'Category added successfully');
       categories.clear();
       setState(() {
         futureCategories = accountRepository().fetchCategories();
       }); // Refresh UI and reload categories
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(responseData["message"] ?? 'Failed to add category')),
-      );
+      Fluttertoast.showToast(
+          msg: responseData["message"] ?? 'Failed to add category');
     }
   }
 
@@ -8700,8 +8693,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
 
     final responseData = jsonDecode(response.body);
     if (response.statusCode == 200 && responseData["statusCode"] == 200) {
-      Fluttertoast.showToast(
-          msg: responseData["message"] ?? 'Category updated successfully');
+      Fluttertoast.showToast(msg: 'Category updated'); // web wording
       categories.clear();
       setState(() {
         _editingCategoryId = null;
