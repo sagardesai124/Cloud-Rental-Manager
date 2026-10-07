@@ -13,12 +13,19 @@ class Recurring_Payments_Configuration_Services{
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? adminId = prefs.getString("adminId");
     String? token = prefs.getString('token');
+    String? staffId = prefs.getString("staff_id");
+    String? role = prefs.getString("role");
+    // `id` header = the logged-in user's own id (web parity); company id stays in the URL.
+    final String? idHeader =
+        (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
+            ? staffId
+            : adminId;
     try {
       final response = await apiGet(
           Uri.parse('$Api_url/api/recurring-cards/recurring-payment-configuration/$adminId'),
           headers: {
             "authorization": "CRM $token",
-            "id": "CRM $adminId",
+            "id": "CRM $idHeader",
           });
 
       if (response.statusCode == 200) {

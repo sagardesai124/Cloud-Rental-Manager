@@ -14,6 +14,8 @@ class NmiKeysService {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? adminId = prefs.getString("adminId");
     String? token = prefs.getString('token');
+    String? tenantId = prefs.getString("tenant_id");
+    String? role = prefs.getString("role");
 
     if (adminId == null || token == null) {
       throw Exception('Admin ID or token not found');
@@ -21,13 +23,19 @@ class NmiKeysService {
 
     final url = Uri.parse('$Api_url/api/nmi-keys/nmi-keys/$adminId');
 
-    // For admin-level APIs (like NMI keys), use adminId in the "id" header
-    // Even when called from tenant module, admin APIs need adminId
+    // `id` header = the logged-in user's own id (web parity): the server only
+    // honours adminId with an admin token. The company id stays in the URL,
+    // and a tenant gets the document back without its secret keys.
+    final String idHeader =
+        (role == "Tenant" && tenantId != null && tenantId.isNotEmpty)
+            ? tenantId
+            : adminId;
+
     final response = await apiGet(
       url,
       headers: {
         "authorization": "CRM $token",
-        "id": "CRM $adminId", // Use adminId for admin-level API
+        "id": "CRM $idHeader",
       },
     );
 
@@ -42,18 +50,6 @@ class NmiKeysService {
       } else {
         // Fallback: return the whole response if structure is different
         extractedData = data;
-      }
-
-      // Extract security_key (try different possible field names)
-      final securityKey = extractedData['security_key']?.toString() ??
-          extractedData['securityKey']?.toString() ??
-          extractedData['securitykey']?.toString();
-
-      // Extract merchant_id
-      final merchantId = extractedData['merchant_id']?.toString();
-
-      // Print NMI keys
-      if (securityKey != null && securityKey.isNotEmpty) {
       }
 
       return extractedData;

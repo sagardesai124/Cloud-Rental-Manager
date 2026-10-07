@@ -399,7 +399,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                           _readOnlyField(_unitDisplay),
                           const SizedBox(height: 10),
                         ],
-                        _label('Category'), // same label as staging web
+                        _label('Category *'), // same label as web (development 2.1 / 2.2)
                         DropdownButtonHideUnderline(
                           child: DropdownButton2<allcategories_model>(
                             isExpanded: true,

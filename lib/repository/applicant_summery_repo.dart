@@ -90,6 +90,14 @@ class ApplicantSummeryRepository {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? id = prefs.getString("adminId");
     String? token = prefs.getString('token');
+    String? staffId = prefs.getString("staff_id");
+    String? role = prefs.getString("role");
+    // `id` header = the logged-in user's own id (web parity). Staff's Save
+    // Applicant comes through this shared method.
+    final String? idHeader =
+        (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
+            ? staffId
+            : id;
 
     try {
       final response = await apiPost(
@@ -97,7 +105,7 @@ class ApplicantSummeryRepository {
         headers: {
           'Content-Type': 'application/json',
           "authorization": "CRM $token",
-          "id": "CRM $id",
+          "id": "CRM $idHeader",
         },
         body: jsonEncode(data.toJson()),
       );

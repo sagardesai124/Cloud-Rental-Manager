@@ -26,12 +26,20 @@ class ApplianceNoteService {
       };
 
 
+      String? staffId = prefs.getString('staff_id');
+      String? role = prefs.getString('role');
+      // `id` header = the logged-in user's own id (web parity); admin_id stays in the body.
+      final String idHeader =
+          (role == 'Staffmember' && staffId != null && staffId.isNotEmpty)
+              ? staffId
+              : adminId;
+
       final response = await apiPost(
         Uri.parse('$Api_url/api/appliance/add_note'),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
           'authorization': 'CRM $token',
-          'id': 'CRM $adminId',
+          'id': 'CRM $idHeader',
         },
         body: json.encode(requestBody),
       );
@@ -63,11 +71,18 @@ class ApplianceNoteService {
         throw Exception('Authentication credentials not found');
       }
 
+      String? staffId = prefs.getString('staff_id');
+      String? role = prefs.getString('role');
+      final String idHeader =
+          (role == 'Staffmember' && staffId != null && staffId.isNotEmpty)
+              ? staffId
+              : adminId;
+
       final response = await apiDelete(
         Uri.parse('$Api_url/api/appliance/delete_note/$noteId'),
         headers: {
           'authorization': 'CRM $token',
-          'id': 'CRM $adminId',
+          'id': 'CRM $idHeader',
         },
       );
 
@@ -105,12 +120,19 @@ class ApplianceNoteService {
         'note_id': noteId,
       };
 
+      String? staffId = prefs.getString('staff_id');
+      String? role = prefs.getString('role');
+      final String idHeader =
+          (role == 'Staffmember' && staffId != null && staffId.isNotEmpty)
+              ? staffId
+              : adminId;
+
       final response = await apiPut(
         Uri.parse('$Api_url/api/appliance/update_note'),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
           'authorization': 'CRM $token',
-          'id': 'CRM $adminId',
+          'id': 'CRM $idHeader',
         },
         body: json.encode(requestBody),
       );

@@ -61,8 +61,16 @@ class VendorRepository {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? id = prefs.getString("adminId");
     String? token = prefs.getString('token');
+    String? staffId = prefs.getString("staff_id");
+    String? role = prefs.getString("role");
+    // `id` header = the logged-in user's own id (web parity); company id stays in
+    // the URL. Staff reaches this from the shared Settings screen.
+    final String? idHeader =
+        (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
+            ? staffId
+            : id;
     final url = Uri.parse('$Api_url/api/vendor/vendors/$id');
-    final response = await apiGet(url,  headers: {"authorization" : "CRM $token","id":"CRM $id",},);
+    final response = await apiGet(url,  headers: {"authorization" : "CRM $token","id":"CRM $idHeader",},);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body)["data"];

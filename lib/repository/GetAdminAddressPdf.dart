@@ -13,12 +13,19 @@ class GetAddressAdminPdfService {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? id = prefs.getString("adminId");
     String? token = prefs.getString('token');
+    String? staffId = prefs.getString("staff_id");
+    String? role = prefs.getString("role");
+    // `id` header = the logged-in user's own id (web parity); company id stays in the URL.
+    final String? idHeader =
+        (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
+            ? staffId
+            : id;
 
     final response = await apiGet(
       Uri.parse('$apiUrl$id'),
       headers: {
         "authorization": "CRM $token",
-        "id": "CRM $id",
+        "id": "CRM $idHeader",
       },
     );
     if (response.statusCode == 200) {

@@ -13,11 +13,18 @@ class Scheduled_Payment_repo {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
     String? id = prefs.getString("adminId");
+    String? staffId = prefs.getString("staff_id");
+    String? role = prefs.getString("role");
+    // `id` header = the logged-in user's own id (web parity); company id stays in the URL.
+    final String? idHeader =
+        (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
+            ? staffId
+            : id;
 
     final response = await http
         .get(Uri.parse('${Api_url}/api/payment/upcomingpayment/$id'), headers: {
       "authorization": "CRM $token",
-      "id": "CRM $id",
+      "id": "CRM $idHeader",
     });
     if (response.statusCode == 200) {
       List jsonResponse = json.decode(response.body)['data'];
@@ -37,12 +44,18 @@ class Scheduled_Payment_repo {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
     String? adminid = prefs.getString('adminId');
+    String? staffId = prefs.getString('staff_id');
+    String? role = prefs.getString('role');
+    final String? idHeader =
+        (role == 'Staffmember' && staffId != null && staffId.isNotEmpty)
+            ? staffId
+            : adminid;
     String? companyName = prefs.getString('companyName');
     final http.Response response =
         await apiDelete(Uri.parse('$apiUrl?company_name=$companyName'),
             headers: <String, String>{
               "authorization": "CRM $token",
-              "id": "CRM $adminid",
+              "id": "CRM $idHeader",
               'Content-Type': 'application/json; charset=UTF-8',
             },
             body: jsonEncode({"reason": reason}));

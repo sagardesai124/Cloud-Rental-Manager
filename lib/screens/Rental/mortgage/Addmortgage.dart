@@ -75,6 +75,20 @@ class AddMortgageScreen extends StatefulWidget {
 }
 
 class _AddMortgageScreenState extends State<AddMortgageScreen> {
+
+  /// `id` header = the logged-in user's own id (web parity: the axios
+  /// interceptor sends it for every request). The server only honours adminId
+  /// with an admin token, so Staff — who reach this shared screen too — send
+  /// staff_id. Keyed off the stored role, never a leftover staff_id. The
+  /// company id stays in the URL/body.
+  String? _ownIdHeader(SharedPreferences prefs) {
+    final staffId = prefs.getString('staff_id');
+    return (prefs.getString('role') == 'Staffmember' &&
+            staffId != null &&
+            staffId.isNotEmpty)
+        ? staffId
+        : prefs.getString('adminId');
+  }
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
 
@@ -475,13 +489,12 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-      String? id = prefs.getString('adminId');
       final response = await apiGet(
         Uri.parse('$Api_url/api/mortgage/'),
         headers: {
           'Content-Type': 'application/json',
           'authorization': 'CRM $token',
-          'id': 'CRM $id',
+          'id': 'CRM ${_ownIdHeader(prefs)}',
         },
       ).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return false;
@@ -536,15 +549,16 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
     });
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-    String? id = prefs.getString('adminId');
     try {
       final response = await apiGet(
-        Uri.parse(
-            'https://staging.cloudrentalmanager.com/api/mortgage/properties/list'),
+        // Same server as every other call (web: GET /mortgage/properties/list
+        // on its own API base). It was hardcoded to staging, so production
+        // builds sent their login to the wrong server.
+        Uri.parse('$Api_url/api/mortgage/properties/list'),
         headers: {
           'Content-Type': 'application/json',
           "authorization": "CRM $token",
-          "id": "CRM $id",
+          "id": "CRM ${_ownIdHeader(prefs)}",
           // Add your authentication headers here if needed
           // 'Authorization': 'Bearer $token',
         },
@@ -577,8 +591,6 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
             ),
           );
         }
-        // Load fallback properties for development/testing
-        _loadFallbackProperties();
       } else {
         // Handle other errors
         if (mounted) {
@@ -590,11 +602,6 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
             ),
           );
         }
-        // Load fallback properties for development/testing
-        _loadFallbackProperties();
-      }
-      if (widget.mortgageId != null) {
-        _loadMortgageData();
       }
     } catch (e) {
       if (mounted) {
@@ -605,50 +612,18 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
           ),
         );
       }
-      // Load fallback properties for development/testing
-      _loadFallbackProperties();
     } finally {
+      // Fill the edit form whether or not the property list loaded — web
+      // loads the mortgage independently of that list.
+      if (mounted && widget.mortgageId != null) {
+        _loadMortgageData();
+      }
       if (mounted) {
         setState(() {
           _isLoadingProperties = false;
         });
       }
     }
-  }
-
-  void _loadFallbackProperties() {
-    // Fallback properties for development/testing when API is not accessible
-    setState(() {
-      _propertyOptions = [
-        {
-          'rental_id': '1755846103111',
-          'address': '024 Evergreen Lane',
-          'city': 'Portland',
-          'state': 'Oregon',
-          'zipcode': '97205',
-          'subdivision': 'Riverbend Estates',
-          'full_address': '024 Evergreen Lane Portland Oregon 97205'
-        },
-        {
-          'rental_id': '1748925551064',
-          'address': '1200 Commerce Blvd',
-          'city': 'Denverr',
-          'state': 'CO',
-          'zipcode': '80202',
-          'subdivision': 'N/A',
-          'full_address': '1200 Commerce Blvd Denverr CO 80202'
-        },
-        {
-          'rental_id': '1748925551065',
-          'address': '123 Elm Street',
-          'city': 'Austin',
-          'state': 'Texas',
-          'zipcode': '73301',
-          'subdivision': 'Downtown District',
-          'full_address': '123 Elm Street Austin Texas 73301'
-        },
-      ];
-    });
   }
 
   Future<void> _loadMortgageData() async {
@@ -915,15 +890,21 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
         if (mortgageData['properties'] != null &&
             mortgageData['properties'] is List) {
           _selectedProperties.clear();
-          for (var propertyId in mortgageData['properties']) {
+          for (var raw in mortgageData['properties']) {
+            // The mortgage list sends rental ids; the details endpoint (Summary
+            // → Edit) sends property objects. Normalise both to the rental id.
+            final propertyId =
+                (raw is Map ? raw['rental_id'] : raw)?.toString() ?? '';
+            if (propertyId.isEmpty) continue;
             // Find the property in _propertyOptions by rental_id
             final property = _propertyOptions.firstWhere(
-              (p) => p['rental_id'] == propertyId,
+              (p) => p['rental_id']?.toString() == propertyId,
               orElse: () => <String, dynamic>{},
             );
-            if (property.isNotEmpty) {
-              _selectedProperties.add(property);
-            }
+            // Keep the link even when the property list didn't load (web
+            // keeps mortgage.properties as-is), so saving can't drop it.
+            _selectedProperties
+                .add(property.isNotEmpty ? property : {'rental_id': propertyId});
           }
         }
 
@@ -1264,7 +1245,6 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
       try {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         String? token = prefs.getString('token');
-        String? id = prefs.getString('adminId');
 
         // Prepare the data according to your API structure
         // If no properties selected but propertyId is available from context, use it
@@ -1371,7 +1351,7 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
                 headers: {
                   'Content-Type': 'application/json',
                   'authorization': 'CRM $token',
-                  'id': 'CRM $id',
+                  'id': 'CRM ${_ownIdHeader(prefs)}',
                 },
                 body: json.encode(mortgageData),
               )
@@ -1384,7 +1364,7 @@ class _AddMortgageScreenState extends State<AddMortgageScreen> {
                 headers: {
                   'Content-Type': 'application/json',
                   'authorization': 'CRM $token',
-                  'id': 'CRM $id',
+                  'id': 'CRM ${_ownIdHeader(prefs)}',
                 },
                 body: json.encode(mortgageData),
               )

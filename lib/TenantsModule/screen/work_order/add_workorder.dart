@@ -821,7 +821,7 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                           SizedBox(
                             height: 10,
                           ),
-                          Text('Category',
+                          Text('Category *',
                               style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,

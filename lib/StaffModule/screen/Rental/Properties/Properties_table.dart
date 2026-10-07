@@ -2327,43 +2327,186 @@ class _PropertiesTableState extends State<PropertiesTable>
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Enter Published Rent Amount'),
-          content: TextField(
-            controller: rentController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Rent Amount',
-              border: OutlineInputBorder(),
+        // Icon tile + title + close, divider, field, then Cancel/Submit —
+        // the app's redesigned dialog layout.
+        return Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: tintBg,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Text(
+                            '\$',
+                            style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w500,
+                                color: navyClr),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Text(
+                            'Enter Published Rent Amount',
+                            style: TextStyle(
+                                fontSize: 18,
+                                height: 1.25,
+                                fontWeight: FontWeight.w700,
+                                color: navyClr),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        InkWell(
+                          onTap: () => Navigator.of(context).pop(),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: pageBg,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.close,
+                                size: 20, color: mutedClr),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, thickness: 1, color: borderClr),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Rent Amount',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: navyClr),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: rentController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          style: const TextStyle(fontSize: 16, color: navyClr),
+                          cursorColor: navyClr,
+                          decoration: InputDecoration(
+                            // "$" stays visible before typing, like web.
+                            prefixIcon: const Padding(
+                              padding: EdgeInsets.only(left: 16, right: 8),
+                              child: Text(
+                                '\$',
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: navyClr),
+                              ),
+                            ),
+                            prefixIconConstraints:
+                                const BoxConstraints(minWidth: 0, minHeight: 0),
+                            hintText: 'Enter Rent Amount',
+                            hintStyle: const TextStyle(
+                                fontSize: 16, color: Color(0xFF8A95A8)),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 18),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: borderClr),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: navyClr, width: 1.2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: navyClr,
+                                  backgroundColor: Colors.white,
+                                  side: const BorderSide(
+                                      color: borderClr, width: 1.2),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Cancel',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: navyClr,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () async {
+                                  String rentAmount = rentController.text.trim();
+                                  if (rentAmount.isEmpty) {
+                                    Fluttertoast.showToast(msg: "Please enter a rent amount");
+                                    return;
+                                  }
+                                  if (double.tryParse(rentAmount) == null) {
+                                    Fluttertoast.showToast(
+                                        msg: "Please enter a valid rent amount");
+                                    return;
+                                  }
+                                  Navigator.of(context).pop();
+                                  await _publishRentAmount(rentalId, rentAmount);
+                                },
+                                child: const Text('Submit',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: blueColor,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                String rentAmount = rentController.text.trim();
-                if (rentAmount.isEmpty) {
-                  Fluttertoast.showToast(msg: "Please enter a rent amount");
-                  return;
-                }
-                if (double.tryParse(rentAmount) == null) {
-                  Fluttertoast.showToast(
-                      msg: "Please enter a valid rent amount");
-                  return;
-                }
-                Navigator.of(context).pop();
-                await _publishRentAmount(rentalId, rentAmount);
-              },
-              child: const Text('Submit'),
-            ),
-          ],
         );
       },
     );

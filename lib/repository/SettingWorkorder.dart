@@ -12,6 +12,14 @@ Future<Data> fetchWorkOrderSetting() async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
   String? token = prefs.getString('token');
   String? id = prefs.getString("adminId");
+  String? staffId = prefs.getString("staff_id");
+  String? role = prefs.getString("role");
+  // `id` header = the logged-in user's own id (web parity); company id stays in
+  // the URL. Staff reaches this from the shared Settings screen.
+  final String? idHeader =
+      (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
+          ? staffId
+          : id;
   String url = '${Api_url}/api/work-order/work-defaults/${id}';
 
   try {
@@ -19,7 +27,7 @@ Future<Data> fetchWorkOrderSetting() async {
       Uri.parse(url),
       headers: {
         "authorization": "CRM $token",
-        "id":"CRM $id",
+        "id":"CRM $idHeader",
         'Content-Type': 'application/json; charset=UTF-8',
       },
     );

@@ -46,6 +46,9 @@ class _send_emailState extends State<send_email> {
   bool subjectError = false;
   bool bodyError = false;
   bool eventError = false;
+  bool tenantError = false;
+  // Same wording as web's Send Mail check.
+  static const String _noTenantMessage = 'Please select at least one recipient.';
   String htmlName = ""; // Store HTML content
   String htmlBody = ""; // Store HTML content
   String htmlsubject = ""; // Store HTML content
@@ -152,6 +155,9 @@ class _send_emailState extends State<send_email> {
           subject.text = selectedTemplete.subject;
           htmlBody = selectedTemplete.body;
           eventError = false;
+          // The template filled these in, so their "required" no longer applies.
+          if (subject.text.trim().isNotEmpty) subjectError = false;
+          if (htmlBody.trim().isNotEmpty) bodyError = false;
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
               _htmlEditorController.setFocus();
@@ -250,6 +256,12 @@ class _send_emailState extends State<send_email> {
     ],
   };
   List<Template> templateList = [];
+  /// Dropdown key of the first template named [name]. Web looks templates up
+  /// by name, so same-named entries all resolve to the first one.
+  String? _templateKeyFor(String? name) {
+    final i = templateList.indexWhere((t) => t.name == name);
+    return i < 0 ? null : '$i';
+  }
   List<Map<String, String>> currentEventList = [];
   String hslToHex(String hsl) {
     // Remove spaces and extract numbers
@@ -324,6 +336,9 @@ class _send_emailState extends State<send_email> {
 
           htmlBody = data["template"]["body"]; // Get HTML content
           subject.text = data["template"]["subject"]; // Get HTML content
+          // The template filled these in, so their "required" no longer applies.
+          if (subject.text.trim().isNotEmpty) subjectError = false;
+          if (htmlBody.trim().isNotEmpty) bodyError = false;
           // _htmlEditorController
           //     .setText(replaceDollarWithAt(replaceSpanTags(htmlBody))); // Set editor content
 
@@ -615,7 +630,12 @@ class _send_emailState extends State<send_email> {
                                     return "${tenant['tenant_firstName']} ${tenant['tenant_lastName']}";
                                   })
                                       .join(', '),
-                                  style: const TextStyle(fontSize: 14, color: Colors.black),
+                                  // Hint grey matches the app's text fields; picked names stay black.
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      color: selectedTenantIds.isEmpty
+                                          ? const Color(0xFF8A95A8)
+                                          : Colors.black),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -798,6 +818,25 @@ class _send_emailState extends State<send_email> {
                         ),
                       ],
                     ),
+                    // Web blocks Send with no recipient; say why under the field.
+                    if (tenantError && selectedTenantIds.isEmpty) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              _noTenantMessage,
+                              style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize:
+                                      MediaQuery.of(context).size.width *
+                                          .035),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
                   Column(
@@ -832,6 +871,7 @@ class _send_emailState extends State<send_email> {
                                       isExpanded: true,
                                       hint: const Text(
                                         'Select Event',
+                                        style: TextStyle(fontSize: 15, color: Color(0xFF8A95A8)),
                                       ),
                                       value: _selectedEvent,
                                       items: currentEventList.map((method) {
@@ -973,22 +1013,28 @@ class _send_emailState extends State<send_email> {
                                           fontSize: 15, color: Colors.black),
                                       isExpanded: true,
                                       hint: const Text(
-                                        'Select Event',
+                                        'Select Template',
+                                        style: TextStyle(fontSize: 15, color: Color(0xFF8A95A8)),
                                       ),
-                                      value: selectedTemplateId,
-                                      items: templateList.map((method) {
+                                      value: _templateKeyFor(selectedTemplateId),
+                                      // Position keys keep same-named templates apart for the dropdown;
+                                      // picking still looks the template up by name, like web.
+                                      items: templateList.asMap().entries.map((entry) {
                                         return DropdownMenuItem<String>(
-                                          value: method.name,
-                                          child: Text(method.name),
+                                          value: '${entry.key}',
+                                          child: Text(entry.value.name),
                                         );
                                       }).toList(),
                                       onChanged: (String? newValue) {
                                         setState(() {
-                                          selectedTemplateId = newValue;
-                                         var selectedTemplete = templateList.firstWhere((template)=>template.name == newValue);
+                                          selectedTemplateId = templateList[int.parse(newValue!)].name;
+                                         var selectedTemplete = templateList.firstWhere((template)=>template.name == selectedTemplateId);
                                           subject.text = selectedTemplete.subject;
                                           htmlBody = selectedTemplete.body;
                                           eventError = false;
+                                          // The template filled these in, so their "required" no longer applies.
+                                          if (subject.text.trim().isNotEmpty) subjectError = false;
+                                          if (htmlBody.trim().isNotEmpty) bodyError = false;
                                           Future.delayed(const Duration(milliseconds: 500), () {
                                             if (mounted) {
                                               _htmlEditorController.setFocus();
@@ -1147,8 +1193,8 @@ class _send_emailState extends State<send_email> {
                                     },
                                     decoration: const InputDecoration(
                                       hintStyle: TextStyle(
-                                          fontSize: 13,
-                                          color: Color(0xFFb0b6c3)),
+                                          fontSize: 15,
+                                          color: Color(0xFF8A95A8)),
                                       border: InputBorder.none,
                                       hintText: "Enter subject",
                                     ),
@@ -1564,11 +1610,20 @@ class _send_emailState extends State<send_email> {
                             });
                           }
 
+                          // Web blocks Send without a recipient and says why.
+                          setState(() {
+                            tenantError = selectedTenantIds.isEmpty;
+                          });
+                          if (tenantError) {
+                            Fluttertoast.showToast(msg: _noTenantMessage);
+                          }
+
                           // Now, only proceed if all fields are filled and valid
                           if (!nameError &&
                               !subjectError &&
                               !eventError &&
-                              !bodyError) {
+                              !bodyError &&
+                              !tenantError) {
                             // Fixed the extra check
                             setState(() {
                               isLoading = true;

@@ -78,7 +78,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // NMI Keys
   String? _merchantId;
   String? _merchantName;
-  String? _securityKey;
 
   // Dynamic payment items
   late List<PaymentItem> _paymentItems;
@@ -132,33 +131,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final nmiKeysService = NmiKeysService();
       final keysData = await nmiKeysService.fetchNmiKeys();
 
-      // Extract merchant ID and security key from response
-      // API response structure: { "data": { "merchant_id": "...", "security_key": "...", ... } }
+      // Extract merchant ID from response — the only key checkout needs.
+      // API response structure: { "data": { "merchant_id": "...", ... } }
+      // (the server never sends a tenant the secret keys).
       // Note: Some admin accounts may not have merchant_id set up yet
       _merchantId = keysData['merchant_id']?.toString();
       _merchantName = keysData['merchant_name']?.toString() ??
           keysData['merchantName']?.toString() ??
           'Cloud Rental Manager';
-
-      // Extract security_key (try different possible field names)
-      _securityKey = keysData['security_key']?.toString() ??
-          keysData['securityKey']?.toString() ??
-          keysData['securitykey']?.toString();
-
-      // Print merchant ID and security key with detailed validation
-      if (_securityKey != null && _securityKey!.isNotEmpty) {
-
-        // Validate security key format
-        if (_securityKey!.length < 20) {
-        }
-        if (_securityKey!.contains(' ')) {
-        }
-        if (_securityKey!.contains('\n') || _securityKey!.contains('\r')) {
-        }
-
-        // Show first/last few characters for verification (don't log full key for security)
-      } else {
-      }
 
       // Check if merchant_id exists, if not, show helpful error
       if (_merchantId == null || _merchantId!.isEmpty) {

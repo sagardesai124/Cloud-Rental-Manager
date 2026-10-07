@@ -4381,6 +4381,10 @@ class _Login_ScreenState extends State<Login_Screen> {
   bool get _twoFALocked => requires2FA && _twoFAExpired;
 
   String OtpId = "";
+  // Who the 2FA challenge (205) is for — sent back on verify exactly as web
+  // does; a backup code is only accepted for this user's pending sign-in.
+  String? _twoFAUserId;
+  String? _twoFAUserType;
 
   String _email = '';
   bool _isEmailSubmitted = false;
@@ -5310,9 +5314,9 @@ class _Login_ScreenState extends State<Login_Screen> {
                             });
                             return;
                           }
-                          // Web requires the full 6 digits before verifying.
-                          if (!switchtoBackupcode &&
-                              twoFA.text.trim().length != 6) {
+                          // Web requires the full 6 digits before verifying —
+                          // backup codes are 6-digit numbers too.
+                          if (twoFA.text.trim().length != 6) {
                             setState(() {
                               required2FA = true;
                               required2FAmessage =
@@ -5936,9 +5940,9 @@ class _Login_ScreenState extends State<Login_Screen> {
                             });
                             return;
                           }
-                          // Web requires the full 6 digits before verifying.
-                          if (!switchtoBackupcode &&
-                              twoFA.text.trim().length != 6) {
+                          // Web requires the full 6 digits before verifying —
+                          // backup codes are 6-digit numbers too.
+                          if (twoFA.text.trim().length != 6) {
                             setState(() {
                               required2FA = true;
                               required2FAmessage =
@@ -6505,7 +6509,6 @@ class _Login_ScreenState extends State<Login_Screen> {
     };
     final response = await apiPost(Uri.parse('${Api_url}/api/auth/login'),
         body: _last2FALoginBody);
-    await backupcodeapicall();
     final jsonData = json.decode(response.body);
     if (jsonData["statusCode"] == 200) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -6530,10 +6533,10 @@ class _Login_ScreenState extends State<Login_Screen> {
       if (jsonData["statusCode"] == 205) {
         setState(() {
           requires2FA = true;
-          OtpId = jsonData["data"]["otp_id"];
+          _apply2FAChallenge(jsonData["data"]);
         });
         _start2FATimer();
-        await backupcodeapicall();
+        await _legacyBackupCodeLookupIfNeeded(jsonData["data"]);
       }
       setState(() {
         loading = false;
@@ -6589,10 +6592,10 @@ class _Login_ScreenState extends State<Login_Screen> {
       if (jsonData["statusCode"] == 205) {
         setState(() {
           requires2FA = true;
-          OtpId = jsonData["data"]["otp_id"];
+          _apply2FAChallenge(jsonData["data"]);
         });
         _start2FATimer();
-        await backupcodeapicall();
+        await _legacyBackupCodeLookupIfNeeded(jsonData["data"]);
       }
       setState(() {
         loading = false;
@@ -6613,9 +6616,12 @@ class _Login_ScreenState extends State<Login_Screen> {
       body: jsonEncode({
         "code": twoFA.text,
         "is_backup_code": switchtoBackupcode,
-        "otp_id": switchtoBackupcode ? null : OtpId,
-        "user_type": selectedrole,
-        "user_id": userId,
+        // A backup code is checked against the same pending sign-in, so
+        // otp_id goes in both modes, with the user id/type the challenge
+        // named (web parity).
+        "otp_id": OtpId,
+        "user_type": _twoFAUserType ?? selectedrole,
+        "user_id": _twoFAUserId ?? userId,
         "rememberMe": rememberMe,
       }),
     );
@@ -6664,38 +6670,44 @@ class _Login_ScreenState extends State<Login_Screen> {
     }
   }
 
-  Future<void> backupcodeapicall() async {
-    // setState(() {
-    //   loading = true;
-    // });
-
+  /// Reads the 2FA challenge (205) the way web does (Login.jsx): the pending
+  /// sign-in id, who it is for, and whether to offer "Use backup code
+  /// instead". That last answer used to come from a pre-login
+  /// GET /backup-codes/backup-codes/:user_id, which the server now refuses
+  /// without a session — so it travels with the challenge instead.
+  void _apply2FAChallenge(dynamic data) {
+    // The normalisation the old lookup applied as a side effect; the
+    // post-verify routing and the user_type fallback read it.
     selectedrole =
         selectedrole == "staffmember" ? "staff" : selectedrole.toLowerCase();
+    // A fresh challenge starts on the emailed/texted code, as on web.
+    switchtoBackupcode = false;
+    if (data is! Map) return;
+    if (data["otp_id"] != null) OtpId = data["otp_id"].toString();
+    _twoFAUserId = data["user_id"]?.toString();
+    _twoFAUserType = data["user_type"]?.toString();
+    backupcode = data["has_backup_codes"] == true;
+  }
 
-    final response = await apiGet(Uri.parse(
-        '${Api_url}/api/backup-codes/backup-codes/${userId}?user_type=$selectedrole'));
-    final jsonData = json.decode(response.body);
-    if (jsonData["statusCode"] == 200) {
-
-      //  await checkToken("token", "id");
-      // Navigator.push(
-      //     context, MaterialPageRoute(builder: (context) => Dashboard()));
-
-      setState(() {
-        backupcode = true;
-      });
-    } else {
-      //   Fluttertoast.showToast(msg: _formatErrorMessage(jsonData["message"]));
-      //   if (jsonData["statusCode"] == 205) {
-      //     print("2FA ON");
-      //     setState(() {
-      //       requires2FA = true;
-      //       OtpId = jsonData["data"]["otp_id"];
-      //     });
-      //   }
-      //   setState(() {
-      //     loading = false;
-      //   });
+  /// Servers older than the 2026-10-05 release (staging, as of 2026-10-07)
+  /// don't say in the challenge whether backup codes exist, but still answer
+  /// the old pre-login lookup without a session — so ask it only then, the
+  /// same way the app always did. Newer servers send has_backup_codes and
+  /// refuse that lookup, so it is never sent to them.
+  Future<void> _legacyBackupCodeLookupIfNeeded(dynamic data) async {
+    if (data is Map && data.containsKey("has_backup_codes")) return;
+    try {
+      final response = await apiGet(Uri.parse(
+          '$Api_url/api/backup-codes/backup-codes/$userId?user_type=$selectedrole'));
+      final jsonData = json.decode(response.body);
+      if (jsonData["statusCode"] == 200 && mounted) {
+        setState(() {
+          backupcode = true;
+        });
+      }
+    } catch (e) {
+      // No answer means no offer; the emailed/texted code still works.
+      logError(e);
     }
   }
 }

@@ -19,6 +19,13 @@ class EmailLogRepository {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? id = prefs.getString("adminId");
       String? token = prefs.getString('token');
+      String? staffId = prefs.getString("staff_id");
+      String? role = prefs.getString("role");
+      // `id` header = the logged-in user's own id (web parity).
+      final String? idHeader =
+          (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
+              ? staffId
+              : id;
 
       String? ApiUrl = isTenant ? '${Api_url}/api/email-logs/tenant-email/$lease_id?page=$page&limit=$limit' :'$apiUrl/$lease_id?page=$page&limit=$limit';
 
@@ -26,7 +33,7 @@ class EmailLogRepository {
         Uri.parse('$ApiUrl'),
         headers: {
           "authorization": "CRM $token",
-          "id": "CRM $id",
+          "id": "CRM $idHeader",
         },
       );
 

@@ -38,6 +38,20 @@ class MortgageSummary extends StatefulWidget {
 
 class _MortgageSummaryState extends State<MortgageSummary>
     with NetworkRetryState {
+
+  /// `id` header = the logged-in user's own id (web parity: the axios
+  /// interceptor sends it for every request). The server only honours adminId
+  /// with an admin token, so Staff — who reach this shared screen too — send
+  /// staff_id. Keyed off the stored role, never a leftover staff_id. The
+  /// company id stays in the URL/body.
+  String? _ownIdHeader(SharedPreferences prefs) {
+    final staffId = prefs.getString('staff_id');
+    return (prefs.getString('role') == 'Staffmember' &&
+            staffId != null &&
+            staffId.isNotEmpty)
+        ? staffId
+        : prefs.getString('adminId');
+  }
   Map<String, dynamic>? mortgageData;
   bool _isLoading = false;
   Set<int> _expandedPayoffIndices = {}; // Track which payoff rows are expanded
@@ -71,7 +85,6 @@ class _MortgageSummaryState extends State<MortgageSummary>
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-      String? id = prefs.getString('adminId');
 
       final response = await apiGet(
         Uri.parse(
@@ -79,7 +92,7 @@ class _MortgageSummaryState extends State<MortgageSummary>
         headers: {
           'Content-Type': 'application/json',
           'authorization': 'CRM $token',
-          'id': 'CRM ${prefs.getString("staff_id") ?? id}',
+          'id': 'CRM ${_ownIdHeader(prefs)}',
         },
       ).timeout(const Duration(seconds: 30));
 
@@ -1561,7 +1574,6 @@ class _MortgageSummaryState extends State<MortgageSummary>
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-      String? id = prefs.getString('adminId');
       final mortgageId = mortgageData!['_id'] ?? widget.mortgageData!['_id'];
 
       // Preserve existing payoffs + append new one
@@ -1583,7 +1595,7 @@ class _MortgageSummaryState extends State<MortgageSummary>
             headers: {
               'Content-Type': 'application/json',
               'authorization': 'CRM $token',
-              'id': 'CRM ${prefs.getString("staff_id") ?? id}',
+              'id': 'CRM ${_ownIdHeader(prefs)}',
             },
             body: json.encode({'payoffs': existing}),
           )
@@ -1641,7 +1653,6 @@ class _MortgageSummaryState extends State<MortgageSummary>
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-      String? id = prefs.getString('adminId');
       final mortgageId = mortgageData!['_id'] ?? widget.mortgageData!['_id'];
 
       final response = await http
@@ -1650,7 +1661,7 @@ class _MortgageSummaryState extends State<MortgageSummary>
             headers: {
               'Content-Type': 'application/json',
               'authorization': 'CRM $token',
-              'id': 'CRM ${prefs.getString("staff_id") ?? id}',
+              'id': 'CRM ${_ownIdHeader(prefs)}',
             },
             body: json.encode({'remaining_balance': newBalance}),
           )
@@ -2257,10 +2268,9 @@ class _MortgageSummaryState extends State<MortgageSummary>
   Future<http.Response> _fetchDocumentBytes(String url) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-    String? id = prefs.getString('adminId');
     return apiGet(Uri.parse(url), headers: {
       'authorization': 'CRM $token',
-      'id': 'CRM ${prefs.getString("staff_id") ?? id}',
+      'id': 'CRM ${_ownIdHeader(prefs)}',
     }).timeout(const Duration(seconds: 30));
   }
 
@@ -2292,7 +2302,6 @@ class _MortgageSummaryState extends State<MortgageSummary>
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-      String? id = prefs.getString('adminId');
 
       // Save to temp directory, then open native share/open sheet
       final tempDir = await getTemporaryDirectory();
@@ -2304,7 +2313,7 @@ class _MortgageSummaryState extends State<MortgageSummary>
         savePath,
         options: dio_pkg.Options(headers: {
           'authorization': 'CRM $token',
-          'id': 'CRM ${prefs.getString("staff_id") ?? id}',
+          'id': 'CRM ${_ownIdHeader(prefs)}',
         }),
       );
 
@@ -2419,7 +2428,6 @@ class _MortgageSummaryState extends State<MortgageSummary>
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-      String? id = prefs.getString('adminId');
       final mortgageId = mortgageData!['_id'] ?? widget.mortgageData!['_id'];
 
       final response = await apiDelete(
@@ -2427,7 +2435,7 @@ class _MortgageSummaryState extends State<MortgageSummary>
         headers: {
           'Content-Type': 'application/json',
           'authorization': 'CRM $token',
-          'id': 'CRM ${prefs.getString("staff_id") ?? id}',
+          'id': 'CRM ${_ownIdHeader(prefs)}',
         },
       ).timeout(const Duration(seconds: 30));
 
@@ -2714,7 +2722,6 @@ class _MortgageSummaryState extends State<MortgageSummary>
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-      String? id = prefs.getString('adminId');
       final mortgageId = mortgageData!['_id'] ?? widget.mortgageData!['_id'];
 
       final request = http.MultipartRequest(
@@ -2723,7 +2730,7 @@ class _MortgageSummaryState extends State<MortgageSummary>
       );
       request.headers.addAll({
         'authorization': 'CRM $token',
-        'id': 'CRM ${prefs.getString("staff_id") ?? id}',
+        'id': 'CRM ${_ownIdHeader(prefs)}',
       });
       // Match web exactly: is_web=true, user_active_recently=true
       request.fields['is_web'] = 'true';

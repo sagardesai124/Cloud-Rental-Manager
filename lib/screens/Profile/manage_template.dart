@@ -21,6 +21,20 @@ class manage_templates extends StatefulWidget {
 
 class _manage_templatesState extends State<manage_templates>
     with NetworkRetryState {
+
+  /// `id` header = the logged-in user's own id (web parity: the axios
+  /// interceptor sends it for every request). The server only honours adminId
+  /// with an admin token, so Staff — who reach this shared screen too — send
+  /// staff_id. Keyed off the stored role, never a leftover staff_id. The
+  /// company id stays in the URL/body.
+  String? _ownIdHeader(SharedPreferences prefs) {
+    final staffId = prefs.getString('staff_id');
+    return (prefs.getString('role') == 'Staffmember' &&
+            staffId != null &&
+            staffId.isNotEmpty)
+        ? staffId
+        : prefs.getString('adminId');
+  }
   List<Templates> dummyTemplateList = [
     Templates(
       type: "Reset password",
@@ -132,7 +146,7 @@ class _manage_templatesState extends State<manage_templates>
    // try {
       final response = await apiGet(Uri.parse("$Api_url/api/templates/settings/$id"), headers: {
       "authorization" : "CRM $token",
-      "id":"CRM $id",
+      "id":"CRM ${_ownIdHeader(prefs)}",
       },);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body)["templates"];
@@ -415,7 +429,6 @@ class _manage_templatesState extends State<manage_templates>
   Future<void> updateSelectedTemplates() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-    String? adminId = prefs.getString('adminId');
 
     for (var entry in selectedTemplates.entries) {
       final templateType = entry.key;
@@ -439,7 +452,7 @@ class _manage_templatesState extends State<manage_templates>
           url,
           headers: {
             'authorization': 'CRM $token',
-            'id': 'CRM $adminId',
+            'id': 'CRM ${_ownIdHeader(prefs)}',
             'Content-Type': 'application/json',
           },
           body: jsonEncode({'is_active': true}),
@@ -477,7 +490,7 @@ class _manage_templatesState extends State<manage_templates>
       url,
       headers: {
         'authorization': 'CRM $token',
-        'id': 'CRM $adminId',
+        'id': 'CRM ${_ownIdHeader(prefs)}',
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
