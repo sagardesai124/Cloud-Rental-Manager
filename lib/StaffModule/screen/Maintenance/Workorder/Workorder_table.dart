@@ -291,6 +291,8 @@ class _Workorder_tableState extends State<Workorder_table>
   ];
   String? selectedValue;
   String searchvalue = "";
+  // Lets _reloadAsFreshList() empty the search box too.
+  final TextEditingController _searchController = TextEditingController();
 
   Widget _mobileWorkOrderColumnHeader() {
     return Container(
@@ -378,6 +380,28 @@ class _Workorder_tableState extends State<Workorder_table>
     setState(() {
       paginationInfo = result['pagination'];
     });
+  }
+
+  /// Back from a work order's Summary. Web re-opens its list fresh there
+  /// (all statuses, page 1, 10 per page, empty search, billable off,
+  /// default sort, no card open), so reset the same way and reload.
+  void _reloadAsFreshList() {
+    _searchController.clear();
+    setState(() {
+      searchvalue = "";
+      selectedStatuses = ['All'];
+      isChecked = false;
+      currentPage = 0;
+      itemsPerPage = 10;
+      expandedIndex = null;
+      sorting1 = false;
+      sorting2 = false;
+      sorting3 = false;
+      ascending1 = false;
+      ascending2 = false;
+      ascending3 = false;
+    });
+    _loadWorkOrders();
   }
 
   /// Required by [NetworkRetryState]: re-issue this screen's own load.
@@ -553,6 +577,7 @@ class _Workorder_tableState extends State<Workorder_table>
   void dispose() {
     _deleteReasonController.dispose();
     _closeReasonController.dispose();
+    _searchController.dispose();
     _connectivitySub?.cancel();
     super.dispose();
   }
@@ -1142,6 +1167,7 @@ class _Workorder_tableState extends State<Workorder_table>
                                     //   });
                                     // },
                                     // controller: cvv,
+                                    controller: _searchController,
                                     onChanged: (value) {
                                       setState(() {
                                         searchvalue = value;
@@ -1742,8 +1768,8 @@ class _Workorder_tableState extends State<Workorder_table>
                                           workOrder
                                               .workOrderData!.workOrderId!);
                                     },
-                                    () {
-                                      Navigator.push(
+                                    () async {
+                                      await Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) =>
@@ -1753,6 +1779,9 @@ class _Workorder_tableState extends State<Workorder_table>
                                           ),
                                         ),
                                       );
+                                      // A status changed on the Summary must
+                                      // show here on return.
+                                      if (mounted) _reloadAsFreshList();
                                     },
                                     (workOrder.workOrderData?.status ?? '')
                                             .trim()

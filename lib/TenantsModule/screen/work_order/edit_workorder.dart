@@ -21,6 +21,7 @@ import '../../repository/workorder.dart';
 import '../../model/workorder_summery_model.dart';
 import '../../widgets/custom_drawer.dart';
 import '../../../screens/Maintenance/Vendor/add_vendor.dart';
+import '../../../screens/Rental/Tenants/add_tenants.dart' as admin_fields;
 
 class Edit_Workorder extends StatefulWidget {
   final String workorderId;
@@ -366,7 +367,8 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                       children: [
                         _label('Subject *'),
                         // const SizedBox(height: 10),
-                        CustomTextField(
+                        // Same text field as Admin, so its error matches the others.
+                        admin_fields.CustomTextField(
                           keyboardType: TextInputType.text,
                           hintText: 'Add subject',
                           controller: subject,
@@ -397,7 +399,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                           _readOnlyField(_unitDisplay),
                           const SizedBox(height: 10),
                         ],
-                        _label('Category *'), // same label as web (TAddWork.jsx:920)
+                        _label('Category'), // same label as staging web
                         DropdownButtonHideUnderline(
                           child: DropdownButton2<allcategories_model>(
                             isExpanded: true,
@@ -454,7 +456,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                 'Enter Other Category', other),
                           ),
                         const SizedBox(height: 10),
-                        _label('Entry allowed'),
+                        _label('Entry Allowed'),
                         DropdownButtonHideUnderline(
                           child: DropdownButton2<String>(
                             isExpanded: true,

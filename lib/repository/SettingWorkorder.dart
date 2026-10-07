@@ -67,3 +67,25 @@ Future<Data> fetchWorkOrderSettingstaff() async {
     throw Exception('Error work order setting');
   }
 }
+
+/// Tenant portal: the account's Work Defaults (web TAddWork.jsx
+/// fetchWorkDefaults). The `id` header carries the tenant's own id.
+Future<Data> fetchWorkOrderSettingTenant() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? token = prefs.getString('token');
+  String? adminid = prefs.getString("adminId");
+  String? id = prefs.getString("tenant_id");
+  final response = await apiGet(
+    Uri.parse('${Api_url}/api/work-order/work-defaults/${adminid}'),
+    headers: {
+      "authorization": "CRM $token",
+      "id": "CRM $id",
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+  );
+  if (response.statusCode == 200) {
+    final Map<String, dynamic>? jsonData = json.decode(response.body);
+    return Data.fromJson(jsonData!["data"]);
+  }
+  throw Exception('Failed to load work defaults');
+}

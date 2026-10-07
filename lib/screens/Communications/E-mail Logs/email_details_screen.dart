@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:three_zero_two_property/widgets/email_html_tables.dart';
 import 'package:provider/provider.dart';
 import 'package:three_zero_two_property/widgets/appbar.dart';
 import 'package:three_zero_two_property/widgets/titleBar.dart';
@@ -139,9 +140,12 @@ class EmailDetailsScreen extends StatelessWidget {
                         border: Border.all(color: const Color(0xFFE8E8E8)),
                       ),
                       child: Html(
+                        // Receipts/digests lay out with <table>s; see
+                        // email_html_tables.dart for why both are needed.
                         data: (email.body ?? '').trim().isNotEmpty
-                            ? email.body!
+                            ? prepareEmailHtml(email.body!)
                             : "<p style='color:#999;font-style:italic;'>No content available</p>",
+                        extensions: emailHtmlExtensions(),
                         // The 2FA/login-code email template sizes its navy
                         // title band for a 600px desktop inbox (24px h1, 30px
                         // padding); on a phone-width screen "Two-Factor

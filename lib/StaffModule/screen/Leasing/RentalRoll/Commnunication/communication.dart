@@ -22,6 +22,7 @@ import '../../../../../constant/constant.dart';
 import '../../../../../provider/dateProvider.dart';
 import '../../../../../repository/Communication/lease_communication_repo.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
+import 'package:three_zero_two_property/widgets/email_html_tables.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
 
 class lease_communication extends StatefulWidget {
@@ -452,7 +453,10 @@ class _lease_communicationState extends State<lease_communication>
               border: Border.all(color: Colors.grey.shade400),
             ),
             child: Html(
-              data: value,
+              // Receipts/digests lay out with <table>s; see
+              // email_html_tables.dart for why both are needed.
+              data: prepareEmailHtml(value),
+              extensions: emailHtmlExtensions(),
             ),
           ),
         ],

@@ -18,6 +18,7 @@ import 'package:three_zero_two_property/TenantsModule/widgets/drawer_tiles.dart'
 
 import '../../../constant/constant.dart';
 import '../../../screens/Maintenance/Vendor/add_vendor.dart';
+import '../../../screens/Rental/Tenants/add_tenants.dart' as admin_fields;
 import '../../../widgets/titleBar.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
@@ -30,6 +31,7 @@ import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import '../../../Model/All_categories_model.dart';
 import '../../../repository/fetch_allcategories.dart';
+import '../../../repository/SettingWorkorder.dart' as work_defaults;
 
 import '../../widgets/custom_drawer.dart';
 
@@ -430,11 +432,46 @@ class _Add_WorkorderState extends State<Add_Workorder> {
         _dropdownCategories = cats;
         _isLoadingCategories = false;
       });
+      _applyWorkDefaults();
     } catch (e) {
       logError('Error fetching categories in TenantsModule: ' + e.toString());
       setState(() {
         _isLoadingCategories = false;
       });
+    }
+  }
+
+  /// Web parity (TAddWork.jsx fetchWorkDefaults): a new work order starts with
+  /// the account's Work Defaults for Category and Entry Allowed. Fields the
+  /// tenant already picked are left alone; no defaults = fields stay empty.
+  Future<void> _applyWorkDefaults() async {
+    try {
+      final defaults = await work_defaults.fetchWorkOrderSettingTenant();
+      if (!mounted) return;
+      final String defaultId = defaults.workDefaults?.category ?? '';
+      final String defaultName = defaults.category?.name ?? '';
+      allcategories_model? match;
+      for (final cat in _dropdownCategories) {
+        if ((defaultId.isNotEmpty && cat.categoryId == defaultId) ||
+            (defaultId.isEmpty &&
+                defaultName.isNotEmpty &&
+                cat.name == defaultName)) {
+          match = cat;
+          break;
+        }
+      }
+      final bool? entry = defaults.workDefaults?.entryAllowed;
+      setState(() {
+        if (_selectedDropdownCategory == null && match != null) {
+          _selectedDropdownCategory = match;
+          _showTextField = match.name == 'Other';
+        }
+        if (_selectedEntry == null && entry != null) {
+          _selectedEntry = entry ? 'Yes' : 'No';
+        }
+      });
+    } catch (e) {
+      logError('Work defaults not applied (tenant): $e');
     }
   }
 
@@ -508,9 +545,10 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                                   fontWeight: FontWeight.bold,
                                   color: blueColor)),
                           SizedBox(
-                            height: 4,
+                            height: 10,
                           ),
-                          CustomTextField(
+                          // Same text field as Admin, so its error matches the others.
+                          admin_fields.CustomTextField(
                             keyboardType: TextInputType.text,
                             hintText: 'Add subject',
                             controller: subject,
@@ -536,10 +574,18 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const SizedBox(height: 10),
+                              FormField<String>(
+                                // Same error layout as Subject and Category: red 11px, 4px
+                                // under the box (was the dropdown's own error area).
+                                validator: (_) => (_selectedPropertyId ?? '').isEmpty
+                                    ? 'Please select an option'
+                                    : null,
+                                builder: (FormFieldState<String> state) => Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                               DropdownButtonHideUnderline(
-                                child: DropdownButtonFormField2<String>(
-                                  decoration:
-                                  InputDecoration(border: InputBorder.none),
+                                child: DropdownButton2<String>(
                                   isExpanded: true,
                                   hint: const Row(
                                     children: [
@@ -595,10 +641,10 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                                         'Your lease for this property has expired. The work order will appear only on the admin/staff dashboard.';
                                       }
                                     });
+                                    state.reset();
                                   },
                                   buttonStyleData: ButtonStyleData(
                                     height: 50,
-                                    width: 160,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 12),
                                     decoration: BoxDecoration(
@@ -634,14 +680,21 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                                     padding:
                                     EdgeInsets.only(left: 14, right: 14),
                                   ),
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please select an option';
-                                    }
-                                    return null;
-                                  },
                                 ),
                               ),
+                                    if (state.hasError)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          state.errorText!,
+                                          style: const TextStyle(
+                                              color: Colors.red, fontSize: 11),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (units.isNotEmpty) const SizedBox(height: 10),
                               units.isNotEmpty
                                   ? Text('Unit *',
                                   style: TextStyle(
@@ -649,12 +702,19 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                                       fontWeight: FontWeight.bold,
                                       color: blueColor))
                                   : Container(),
-                              const SizedBox(height: 0),
+                              SizedBox(height: units.isNotEmpty ? 10 : 0),
                               units.isNotEmpty
-                                  ? DropdownButtonHideUnderline(
-                                child: DropdownButtonFormField2<String>(
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none),
+                                  ? FormField<String>(
+                                // Same error layout as Subject and Category: red 11px, 4px
+                                // under the box (was the dropdown's own error area).
+                                validator: (_) => (_selectedUnitId ?? '').isEmpty
+                                    ? 'Please select an option'
+                                    : null,
+                                builder: (FormFieldState<String> state) => Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                              DropdownButtonHideUnderline(
+                                child: DropdownButton2<String>(
                                   isExpanded: true,
                                   hint: const Row(
                                     children: [
@@ -694,10 +754,10 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                                       value]; // Store selected rental_unit
 
                                     });
+                                    state.reset();
                                   },
                                   buttonStyleData: ButtonStyleData(
                                     height: 50,
-                                    width: 160,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 12),
                                     decoration: BoxDecoration(
@@ -741,21 +801,27 @@ class _Add_WorkorderState extends State<Add_Workorder> {
                                     padding: EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 12),
                                   ),
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please select an option';
-                                    }
-                                    return null;
-                                  },
+                                ),
+                              ),
+                                    if (state.hasError)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          state.errorText!,
+                                          style: const TextStyle(
+                                              color: Colors.red, fontSize: 11),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               )
                                   : Container(),
                             ],
                           ),
                           SizedBox(
-                            height: 4,
+                            height: 10,
                           ),
-                          Text('Category *',
+                          Text('Category',
                               style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,

@@ -4783,8 +4783,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
       );
     }
 
-    Navigator.push(
-      context,
+    final updateRoute =
       MaterialPageRoute(
         builder: (BuildContext context) {
           return StatefulBuilder(
@@ -5701,10 +5700,12 @@ class _Workorder_summeryState extends State<Workorder_summery>
           },
         );
       },
-      ),
-    ).then((_) {
-      // The update form is a pushed route, so its fields live until it
-      // closes; release them once it has.
+      );
+    Navigator.push(context, updateRoute);
+    // push() resolves as soon as the form starts closing, while its fields
+    // still rebuild during the exit animation; release them only once the
+    // route is fully gone, or they throw "used after being disposed".
+    updateRoute.completed.then((_) {
       message.dispose();
       privateNotes.dispose();
       selectedDate.dispose();
