@@ -140,11 +140,12 @@ class _Add_property_TaxState extends State<Add_property_Tax> {
 
   void _generateYearOptions() {
     int currentYear = DateTime.now().year;
+    // Same range as web (TaxesInsuranceTab.jsx): current year back to 2020,
+    // most recent first.
     _yearOptions = List.generate(
-      currentYear - 1999, // 2000 to current year
-      (index) => (2000 + index).toString(),
+      currentYear - 2019,
+      (index) => (currentYear - index).toString(),
     );
-    _yearOptions = _yearOptions.reversed.toList(); // Most recent first
   }
 
   Future<void> _selectDate(BuildContext context,

@@ -43,6 +43,19 @@ int _leaseJsonInt(dynamic v, [int fallback = 0]) {
   return fallback;
 }
 
+/// The `id` header must be the signed-in user's own id. The server only
+/// honours adminId with an admin token, so Staff — who reach the shared Add
+/// Lease screen from an applicant — send staff_id. Keyed off the stored role,
+/// never a leftover staff_id. The company id stays in the URL/body.
+String? _ownIdHeader(SharedPreferences prefs) {
+  final staffId = prefs.getString('staff_id');
+  return (prefs.getString('role') == 'Staffmember' &&
+          staffId != null &&
+          staffId.isNotEmpty)
+      ? staffId
+      : prefs.getString('adminId');
+}
+
 class LeaseRepository {
   String baseUrl = '$Api_url/api/payment/charges_payments';
   // Future<void> postLease(Lease lease) async {
@@ -66,7 +79,7 @@ class LeaseRepository {
     log(jsonEncode(lease.toJson()));
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-    String? id = prefs.getString('adminId');
+    String? id = _ownIdHeader(prefs);
     try {
       final response = await apiPost(
         url,
@@ -146,7 +159,7 @@ class LeaseRepository {
       String applicantId, List<String> applicantIds) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-    String? id = prefs.getString('adminId');
+    String? id = _ownIdHeader(prefs);
     final String url = '$Api_url/api/applicant/applicant-movein';
     final Map<String, dynamic> body = {
       'ids': applicantIds.isNotEmpty ? applicantIds : applicantIds,
@@ -442,7 +455,8 @@ class LeaseRepository {
   Future<Map<String, dynamic>> deleteLease(
       {required String leaseId,
       required String companyName,
-      String? reason}) async {
+      String? reason,
+      bool override = false}) async {
     try {
       final Uri uri = Uri.parse('$Api_url/api/leases/leases/$leaseId')
           .replace(queryParameters: {
@@ -457,7 +471,12 @@ class LeaseRepository {
             "id": "CRM $id",
             'Content-Type': 'application/json; charset=UTF-8',
           },
-          body: jsonEncode({"reason": reason}));
+          // A started lease is deleted as a recorded admin override (web
+          // sends `override: true` only then; the server requires it).
+          body: jsonEncode({
+            "reason": reason,
+            if (override) "override": true,
+          }));
 
       var responseData = json.decode(response.body);
       if (response.statusCode == 200) {
@@ -619,7 +638,7 @@ class LeaseRepository {
       {String? applicantId}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-    String? id = prefs.getString('adminId');
+    String? id = _ownIdHeader(prefs);
     // Web parity: passing applicant_id makes the backend return the
     // enriched lease (default start/end dates, unit data, etc.).
     final String url = (applicantId != null && applicantId.isNotEmpty)

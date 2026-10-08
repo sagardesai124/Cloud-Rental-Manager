@@ -875,13 +875,17 @@ class _Tenants_tableState extends State<Tenants_table>
                         Expanded(
                           flex: 3,
                           child: Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
+                            // The gap only separates the title from + Add; without Add the title
+                            // runs to where the button ended.
+                            padding: EdgeInsets.only(right: permissions?.tenantAdd == true ? 8.0 : 0),
                             child: titleBar(
                               width: double.infinity,
                               title: 'Tenants',
                             ),
                           ),
                         ),
+                        // Web shows Add only with the Tenant Add permission.
+                        if (permissions?.tenantAdd == true)
                         Flexible(
                           flex: 1,
                           child: Padding(
@@ -1536,8 +1540,8 @@ class _Tenants_tableState extends State<Tenants_table>
                                                                 .end,
                                                         children: [
                                                            GestureDetector(
-                                                            onTap: () {
-                                                              Navigator.push(
+                                                            onTap: () async {
+                                                              await Navigator.push(
                                                                   context,
                                                                   MaterialPageRoute(
                                                                       builder: (context) => ResponsiveTenantSummary(
@@ -1545,6 +1549,8 @@ class _Tenants_tableState extends State<Tenants_table>
                                                                               tenants,
                                                                           tenantId:
                                                                               tenants.tenantId!)));
+                                                              // An edit made on the Summary must show here on return.
+                                                              if (mounted) _scheduleTenantsLoad();
                                                             },
                                                             child: Container(
                                                               height: 35,
@@ -1584,6 +1590,8 @@ class _Tenants_tableState extends State<Tenants_table>
                                                           const SizedBox(
                                                             width: 5,
                                                           ),
+                                                          // Web shows Edit only with the Tenant Edit permission.
+                                                          if (permissions?.tenantEdit == true) ...[
                                                           GestureDetector(
                                                             onTap: () async {
                                                               var check = await Navigator.push(
@@ -1633,6 +1641,10 @@ class _Tenants_tableState extends State<Tenants_table>
                                                           const SizedBox(
                                                             width: 5,
                                                           ),
+                                                          ],
+                                                          // Web hides the whole row-actions menu without Tenant Edit or Delete.
+                                                          if (permissions?.tenantEdit == true ||
+                                                              permissions?.tenantDelete == true) ...[
                                                           GestureDetector(
                                                             onTap: () => _handleResendSetupEmail(tenants),
                                                             child: Container(
@@ -1690,6 +1702,7 @@ class _Tenants_tableState extends State<Tenants_table>
                                                                 ),
                                                               ),
                                                             ),
+                                                          ],
                                                           ],
                                                           if (permissions?.tenantDelete == true) ...[
                                                           const SizedBox(

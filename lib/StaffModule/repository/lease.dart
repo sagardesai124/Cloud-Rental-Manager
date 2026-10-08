@@ -436,7 +436,8 @@ class LeaseRepository {
   Future<Map<String, dynamic>> deleteLease({
     required String leaseId,
     required String companyName,
-    String? reason
+    String? reason,
+    bool override = false,
   }) async {
     try {
       final Uri uri = Uri.parse('$Api_url/api/leases/leases/$leaseId')
@@ -454,8 +455,11 @@ class LeaseRepository {
           "id": "CRM $id",
           'Content-Type': 'application/json; charset=UTF-8',
         },
+          // A started lease is deleted as a recorded admin override (web
+          // sends `override: true` only then; the server requires it).
           body: jsonEncode({
-            "reason":reason
+            "reason": reason,
+            if (override) "override": true,
           })
       );
 

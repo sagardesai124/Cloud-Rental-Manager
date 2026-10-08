@@ -1068,14 +1068,17 @@ class _Workorder_tableState extends State<Workorder_table>
                   Expanded(
                     flex: 3,
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
+                      // The gap only separates the title from + Add; without Add the title
+                      // runs to where the button ended.
+                      padding: EdgeInsets.only(right: widget.showAddButton && permissions?.workorderAdd == true ? 8.0 : 0),
                       child: titleBar(
                         width: double.infinity,
                         title: 'Work Orders',
                       ),
                     ),
                   ),
-                  if (widget.showAddButton)
+                  // Web shows Add only with the Work Order Add permission.
+                  if (widget.showAddButton && permissions?.workorderAdd == true)
                     Flexible(
                       flex: 1,
                       child: Padding(
@@ -1337,8 +1340,8 @@ class _Workorder_tableState extends State<Workorder_table>
                             VoidCallback onExpandTap,
                             BuildContext context,
                             DateProvider dateProvider,
-                            VoidCallback onEdit,
-                            VoidCallback onDelete,
+                            VoidCallback? onEdit,
+                            VoidCallback? onDelete,
                             VoidCallback onViewSummary,
                             VoidCallback? onClose,
                           ) {
@@ -1619,6 +1622,7 @@ class _Workorder_tableState extends State<Workorder_table>
                                                   ),
                                                 ),
                                               ),
+                                              if (onEdit != null) ...[
                                               SizedBox(
                                                 width: 5,
                                               ),
@@ -1650,6 +1654,8 @@ class _Workorder_tableState extends State<Workorder_table>
                                                   ),
                                                 ),
                                               ),
+                                              ],
+                                              if (onDelete != null) ...[
                                               SizedBox(
                                                 width: 5,
                                               ),
@@ -1682,6 +1688,7 @@ class _Workorder_tableState extends State<Workorder_table>
                                                   ),
                                                 ),
                                               ),
+                                              ],
                                             if (onClose != null) ...[
                                                 const SizedBox(width: 5),
                                                 GestureDetector(
@@ -1747,7 +1754,10 @@ class _Workorder_tableState extends State<Workorder_table>
                                     },
                                     context,
                                     dateProvider,
-                                    () async {
+                                    // Web: Edit and Close need Work Order Edit; Delete needs Delete.
+                                    permissions?.workorderEdit != true
+                                        ? null
+                                        : () async {
                                       var check = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -1762,7 +1772,9 @@ class _Workorder_tableState extends State<Workorder_table>
                                         _loadWorkOrders();
                                       }
                                     },
-                                    () {
+                                    permissions?.workorderDelete != true
+                                        ? null
+                                        : () {
                                       _showAlert(
                                           context,
                                           workOrder
@@ -1783,10 +1795,11 @@ class _Workorder_tableState extends State<Workorder_table>
                                       // show here on return.
                                       if (mounted) _reloadAsFreshList();
                                     },
-                                    (workOrder.workOrderData?.status ?? '')
-                                            .trim()
-                                            .toLowerCase() ==
-                                        'closed'
+                                    permissions?.workorderEdit != true ||
+                                            (workOrder.workOrderData?.status ?? '')
+                                                    .trim()
+                                                    .toLowerCase() ==
+                                                'closed'
                                         ? null
                                         : () => handleClose(workOrder),
                                   );

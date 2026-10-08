@@ -1183,7 +1183,9 @@ class _StaffTableState extends State<StaffTable>
                                                           ),
                                                         ),
                                                         Text(
-                                                          ' ${staffmembers.staffmemberPhoneNumber}',
+                                                          // Like web: web-invited staff are often saved as plain digits;
+                                                          // show them formatted, and '-' when there is no phone.
+                                                          ' ${(staffmembers.staffmemberPhoneNumber ?? '').trim().isEmpty ? '-' : formatPhoneNumber(staffmembers.staffmemberPhoneNumber!)}',
                                                           style: TextStyle(
                                                             fontWeight:
                                                                 FontWeight.w700,

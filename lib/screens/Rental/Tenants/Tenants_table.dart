@@ -1527,8 +1527,8 @@ class _Tenants_tableState extends State<Tenants_table>
                                                                 .end,
                                                         children: [
                                                           GestureDetector(
-                                                            onTap: () {
-                                                              Navigator.push(
+                                                            onTap: () async {
+                                                              await Navigator.push(
                                                                   context,
                                                                   MaterialPageRoute(
                                                                       builder: (context) => ResponsiveTenantSummary(
@@ -1536,6 +1536,8 @@ class _Tenants_tableState extends State<Tenants_table>
                                                                               tenants,
                                                                           tenantId:
                                                                               tenants.tenantId!)));
+                                                              // An edit made on the Summary must show here on return.
+                                                              if (mounted) _scheduleTenantsLoad();
                                                             },
                                                             child: Container(
                                                               height: 35,

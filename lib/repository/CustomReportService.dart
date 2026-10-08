@@ -189,6 +189,7 @@ class CustomReportService {
     required bool includeHistory,
     Map<String, dynamic>? dynamicFieldConfigs,
     String? reportId,
+    bool isStaff = false,
   }) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -210,11 +211,13 @@ class CustomReportService {
         body['report_id'] = reportId;
       }
 
+      final headerId =
+          isStaff ? (prefs.getString('staff_id') ?? adminId) : adminId;
       final response = await apiPost(
         uri,
         headers: {
           "authorization": "CRM $token",
-          "id": "CRM $adminId",
+          "id": "CRM $headerId",
           "Content-Type": "application/json",
         },
         body: jsonEncode(body),
@@ -302,6 +305,7 @@ class CustomReportService {
     String? selectedEndDate,
     required bool includeHistory,
     Map<String, dynamic>? dynamicFieldConfigs,
+    bool isStaff = false,
   }) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -322,11 +326,13 @@ class CustomReportService {
         'dynamicFieldConfigs': dynamicFieldConfigs ?? {},
       };
 
+      final headerId =
+          isStaff ? (prefs.getString('staff_id') ?? adminId) : adminId;
       final response = await apiPut(
         uri,
         headers: {
           "authorization": "CRM $token",
-          "id": "CRM $adminId",
+          "id": "CRM $headerId",
           "Content-Type": "application/json",
         },
         body: jsonEncode(body),

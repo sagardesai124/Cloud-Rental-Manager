@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/repository/lease.dart';
+import 'package:three_zero_two_property/screens/Leasing/RentalRoll/lease_delete_rules.dart';
 import 'package:three_zero_two_property/screens/Leasing/RentalRoll/SummeryPageLease.dart';
 import 'package:three_zero_two_property/screens/Leasing/RentalRoll/edit_lease.dart';
 import 'package:three_zero_two_property/screens/Rental/Rentalowner/Edit_RentalOwners.dart';
@@ -104,37 +105,12 @@ class _Lease_tableState extends State<Lease_table>
     return s.contains('at will');
   }
 
+  /// Web parity (RentRoll.jsx deleteTenant): whether the lease has started
+  /// decides the dialog and the request; the server enforces the same rules.
   void _attemptDeleteLease(BuildContext context, Lease1 lease) {
-    final currentDate = DateTime.now();
-    final startDate = DateTime.parse(lease.startDate!);
-
-    if (_leaseEndIsAtWill(lease.endDate)) {
-      if (!currentDate.isBefore(startDate)) {
-        Fluttertoast.showToast(
-          backgroundColor: Colors.amberAccent.shade200,
-          msg: "Active lease cannot be deleted.",
-          toastLength: Toast.LENGTH_SHORT,
-          textColor: Colors.black,
-          gravity: ToastGravity.BOTTOM,
-        );
-      } else {
-        _showDeleteAlert(context, lease.leaseId!);
-      }
-      return;
-    }
-
-    final endDate = DateTime.parse(lease.endDate!);
-    if (currentDate.isAfter(startDate) && currentDate.isBefore(endDate)) {
-      Fluttertoast.showToast(
-        backgroundColor: Colors.amberAccent.shade200,
-        msg: "Active lease cannot be deleted.",
-        toastLength: Toast.LENGTH_SHORT,
-        textColor: Colors.black,
-        gravity: ToastGravity.BOTTOM,
-      );
-    } else {
-      _showDeleteAlert(context, lease.leaseId!);
-    }
+    final bool started = LeaseDeleteRules.hasStarted(lease.startDate);
+    // An admin may delete a started lease as a recorded override.
+    _showDeleteAlert(context, lease.leaseId!, started: started);
   }
 
   void sortData(List<Lease1> data) {
@@ -673,7 +649,8 @@ class _Lease_tableState extends State<Lease_table>
     }*/
   }
 
-  void _showDeleteAlert(BuildContext context, String id) {
+  void _showDeleteAlert(BuildContext context, String id,
+      {required bool started}) {
     TextEditingController reason = TextEditingController();
     // The Delete button stayed live while the request was in flight, so a
     // double tap fired two DELETE calls for the same record.
@@ -681,8 +658,8 @@ class _Lease_tableState extends State<Lease_table>
     Alert(
       context: context,
       type: AlertType.warning,
-      title: "Are you sure?",
-      desc: "Once deleted, you will not be able to recover this lease!",
+      title: LeaseDeleteRules.title(started),
+      desc: LeaseDeleteRules.description(started),
       content: Column(
         children: <Widget>[
           const SizedBox(
@@ -705,9 +682,15 @@ class _Lease_tableState extends State<Lease_table>
       ),
       buttons: [
         DialogButton(
-          child: const Text(
-            "Delete",
-            style: TextStyle(color: Colors.white, fontSize: 18),
+          // "Override and delete" is wider than the button; scale it down to
+          // fit on one line instead of clipping the last word.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              LeaseDeleteRules.confirmLabel(started),
+              maxLines: 1,
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            ),
           ),
           onPressed: () async {
             if (reason.text.isEmpty) {
@@ -723,7 +706,10 @@ class _Lease_tableState extends State<Lease_table>
             // the dialog either way; the message has already been shown.
             try {
               await LeaseRepository().deleteLease(
-                  leaseId: id, companyName: companyName, reason: reason.text);
+                  leaseId: id,
+                  companyName: companyName,
+                  reason: reason.text,
+                  override: started);
               if (!mounted) return;
               // Only refresh when the delete actually succeeded.
               _scheduleLeaseLoad();

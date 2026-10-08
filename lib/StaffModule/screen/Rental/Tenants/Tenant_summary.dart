@@ -26,6 +26,7 @@ import '../../../../StaffModule/screen/Rental/Tenants/Payments/Tenant_payments.d
 import '../../../../StaffModule/screen/Rental/Tenants/Commnunication/communication.dart';
 
 import '../../../../provider/dateProvider.dart';
+import '../../../repository/staffpermission_provider.dart';
 
 import '../../../repository/AdminTenantInsuranceService/adminTenantinsuranceService.dart';
 import '../../../repository/tenants.dart';
@@ -2842,6 +2843,11 @@ class _TenantSummaryMobileState extends State<TenantSummaryMobile>
                                     ),
                                   ),
                                 ),
+                                // Web hides Edit without the Tenant Edit permission.
+                                if (Provider.of<StaffPermissionProvider>(context)
+                                        .permissions
+                                        ?.tenantEdit ==
+                                    true) ...[
                                 const SizedBox(width: 8),
                                 GestureDetector(
                                   onTap: () async {
@@ -2885,6 +2891,7 @@ class _TenantSummaryMobileState extends State<TenantSummaryMobile>
                                     ),
                                   ),
                                 ),
+                                ],
                               ],
                             ),
                           ],

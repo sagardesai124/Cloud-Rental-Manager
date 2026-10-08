@@ -24,6 +24,7 @@ import 'package:three_zero_two_property/widgets/camera_capture_screen.dart';
 import 'package:three_zero_two_property/widgets/file_viewer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import '../../../repository/staffpermission_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
@@ -704,6 +705,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                     // like the Mortgage summary's header action
                     // (mortgage_summery.dart) so detail screens share one
                     // Back / Edit layout.
+                    if (_canEditWorkOrder)
                     ElevatedButton.icon(
                       onPressed: _openEditWorkOrder,
                       icon: const Icon(Icons.edit, size: 14, color: Colors.white),
@@ -1864,6 +1866,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Update History', style: TextStyle(fontSize: 16, color: blueColor, fontWeight: FontWeight.bold)),
+                            if (_canEditWorkOrder)
                             InkWell(
                               onTap: () { showUpdateDialog(context); },
                               child: Container(
@@ -2651,6 +2654,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          if (_canEditWorkOrder)
                           InkWell(
                             onTap: () {
                               showUpdateDialog(context);
@@ -5805,6 +5809,11 @@ class _Workorder_summeryState extends State<Workorder_summery>
   /// Opens the Edit Work Order screen for this work order and reloads the
   /// summary when the edit was saved. Same destination and argument the
   /// work order table uses (Workorder_table.dart), so behaviour matches.
+  // Web shows Edit and Update to Staff only with Work Order Edit.
+  bool get _canEditWorkOrder =>
+      Provider.of<StaffPermissionProvider>(context).permissions?.workorderEdit ==
+      true;
+
   Future<void> _openEditWorkOrder() async {
     final String? id = widget.workorder_id;
     if (id == null || id.isEmpty) return;

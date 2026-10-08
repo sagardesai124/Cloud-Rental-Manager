@@ -775,7 +775,10 @@ class _Edit_staff_memberState extends State<Edit_staff_member> {
                                 // Check if the user has made any changes
                                 bool hasChanges = name.text != initialname ||
                                     designation.text != initialdesignation ||
-                                    phonenumber.text != initialphonenumber ||
+                                    // The field shows the phone formatted but the saved value may be
+                                    // plain digits, so compare digits only.
+                                    phonenumber.text.replaceAll(RegExp(r'\D'), '') !=
+                                        (initialphonenumber ?? '').replaceAll(RegExp(r'\D'), '') ||
                                     email.text != initialemail ||
                                     password.text != initialpass ||
                                     conpassword.text != initialconpass;

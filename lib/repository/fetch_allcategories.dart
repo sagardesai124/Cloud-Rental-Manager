@@ -12,10 +12,19 @@ class FetchAllcategories {
     String? token = prefs.getString('token');
     String? adminId = prefs.getString('adminId');
     String? staffId = prefs.getString("staff_id");
+    String? tenantId = prefs.getString("tenant_id");
+    String? vendorId = prefs.getString("vendor_id");
     String? role = prefs.getString("role");
-    String? id = (role == "Staffmember" && staffId != null && staffId.isNotEmpty)
-        ? staffId
-        : adminId;
+    // The id header is the signed-in user's own id — the server only honours
+    // adminId with an admin token. Tenant and Vendor work-order screens load
+    // categories too. The company id stays in the URL.
+    String? ownId = switch (role) {
+      "Staffmember" => staffId,
+      "Tenant" => tenantId,
+      "Vendor" => vendorId,
+      _ => null,
+    };
+    String? id = (ownId != null && ownId.isNotEmpty) ? ownId : adminId;
 
     final response = await apiGet(
       Uri.parse('${Api_url}/api/settings/allCategories/$adminId'),

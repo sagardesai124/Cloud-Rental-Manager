@@ -18,10 +18,15 @@ class CreateCustomReportScreen extends StatefulWidget {
   final String adminId;
   final SavedReport? existingReport;
 
+  /// Staff open this shared screen too; their save/update must carry their
+  /// own staff_id in the `id` header (server 2.2 rule), like their list does.
+  final bool isStaff;
+
   const CreateCustomReportScreen({
     super.key,
     required this.adminId,
     this.existingReport,
+    this.isStaff = false,
   });
 
   @override
@@ -323,6 +328,7 @@ class _CreateCustomReportScreenState extends State<CreateCustomReportScreen> {
             includeHistory: _includeHistory,
             dynamicFieldConfigs:
                 configsToSend.isEmpty ? null : configsToSend,
+            isStaff: widget.isStaff,
           )
         : await service.saveReport(
             adminId: widget.adminId,
@@ -336,6 +342,7 @@ class _CreateCustomReportScreenState extends State<CreateCustomReportScreen> {
             dynamicFieldConfigs:
                 configsToSend.isEmpty ? null : configsToSend,
             reportId: null,
+            isStaff: widget.isStaff,
           );
     setState(() => _saving = false);
     if (!mounted) return;

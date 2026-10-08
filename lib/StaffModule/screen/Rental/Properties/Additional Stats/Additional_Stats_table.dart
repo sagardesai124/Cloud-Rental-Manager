@@ -5,7 +5,6 @@ import 'package:three_zero_two_property/constant/constant.dart';
 import 'package:three_zero_two_property/widgets/appbar.dart';
 import 'package:three_zero_two_property/widgets/custom_drawer.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'dart:convert';
@@ -168,7 +167,8 @@ class _Additional_Stats_tableState extends State<Additional_Stats_table> {
   }
 
   void _showDeleteAlert(BuildContext context, String id) {
-    TextEditingController reason = TextEditingController();
+    // One tap = one delete; the button stays live until the dialog closes.
+    var deleting = false;
     Alert(
       context: context,
       type: AlertType.warning,
@@ -178,22 +178,6 @@ class _Additional_Stats_tableState extends State<Additional_Stats_table> {
       style: const AlertStyle(
         backgroundColor: Colors.white,
       ),
-      content: Column(
-        children: <Widget>[
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 45,
-            child: TextField(
-              controller: reason,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Enter reason for deletion',
-                contentPadding: EdgeInsets.only(top: 8, left: 15),
-              ),
-            ),
-          ),
-        ],
-      ),
       buttons: [
         DialogButton(
           child: const Text(
@@ -201,12 +185,10 @@ class _Additional_Stats_tableState extends State<Additional_Stats_table> {
             style: TextStyle(color: Colors.white, fontSize: 18),
           ),
           onPressed: () async {
-            if (reason.text.isEmpty) {
-              Fluttertoast.showToast(msg: "Please enter a reason for deletion");
-            } else {
-              await _deleteStat(id);
-              Navigator.pop(context);
-            }
+            if (deleting) return;
+            deleting = true;
+            await _deleteStat(id);
+            if (mounted) Navigator.pop(context);
           },
           color: blueColor,
         ),

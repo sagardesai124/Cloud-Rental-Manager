@@ -151,7 +151,8 @@ class _CustomReportBuilderState extends State<CustomReportBuilder>
     final result = await Navigator.push<Object?>(
       context,
       MaterialPageRoute(
-        builder: (context) => CreateCustomReportScreen(adminId: _adminId ?? ''),
+        builder: (context) =>
+            CreateCustomReportScreen(adminId: _adminId ?? '', isStaff: true),
       ),
     );
     if (result != null) {
@@ -167,6 +168,7 @@ class _CustomReportBuilderState extends State<CustomReportBuilder>
         builder: (context) => CreateCustomReportScreen(
           adminId: _adminId ?? '',
           existingReport: report,
+          isStaff: true,
         ),
       ),
     );
