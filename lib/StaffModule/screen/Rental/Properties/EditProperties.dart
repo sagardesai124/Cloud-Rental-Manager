@@ -153,6 +153,15 @@ class _Edit_propertiesState extends State<Edit_properties> {
 
   // Insured Value Information
   TextEditingController datePlacedInService = TextEditingController();
+  DateTime? _placedInServiceDate; // saved/picked date behind the field above
+  /// Server value ("2024-05-10" or an ISO timestamp) -> that calendar date,
+  /// read from the date digits so a UTC midnight never shifts a day.
+  DateTime? _calendarDate(Object? v) {
+    final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch('${v ?? ''}'.trim());
+    return m == null
+        ? null
+        : DateTime(int.parse(m[1]!), int.parse(m[2]!), int.parse(m[3]!));
+  }
   List<HistoricalInsuredValue> historicalInsuredValues = [];
   bool datePlacedInServiceError = false;
   String datePlacedInServiceMessage = "";
@@ -765,6 +774,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
         state.text = fetchedDetails.rentalState!;
         postalcode.text = fetchedDetails.rentalPostcode!;
         datePlacedInService.text = dateProvider.formatCurrentDate(fetchedDetails.placedInService!);
+        _placedInServiceDate = _calendarDate(fetchedDetails.placedInService);
         // country.text = fetchedDetails.rentalCountry!;
         country.text = fetchedDetails.rentalCountry ?? 'N/A';
         selectedProperty = fetchedDetails.propertyTypeData!.propertySubType;
@@ -872,6 +882,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
               // the unit dates shown a few fields below.
               datePlacedInService.text = dateProvider
                   .formatCurrentDate(placedInServiceValue.toString());
+              _placedInServiceDate = _calendarDate(placedInServiceValue);
             } catch (e) {
               logError('Error loading placed_in_service date: $e');
             }
@@ -950,7 +961,13 @@ class _Edit_propertiesState extends State<Edit_properties> {
   Future<void> _selectDatePlacedInService() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      // Open on the saved/picked date, kept inside the picker's range.
+      initialDate: () {
+        final d = _placedInServiceDate ?? DateTime.now();
+        if (d.isBefore(DateTime(2000))) return DateTime(2000);
+        if (d.isAfter(DateTime(2101))) return DateTime(2101);
+        return d;
+      }(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
       builder: (context, child) {
@@ -967,6 +984,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
     );
     if (picked != null) {
       setState(() {
+        _placedInServiceDate = picked;
         final dateProvider = Provider.of<DateProvider>(context, listen: false);
         String apiFormatDate = DateFormat('yyyy-MM-dd').format(picked);
         datePlacedInService.text =
@@ -6481,7 +6499,13 @@ class _Edit_propertiesState extends State<Edit_properties> {
 
                           // Format placed_in_service date to yyyy-MM-dd
                           String? formattedPlacedInService;
-                          if (datePlacedInService.text.isNotEmpty) {
+                          if (_placedInServiceDate != null &&
+                              datePlacedInService.text.isNotEmpty) {
+                            // Send the real date, not a re-read of the displayed text: a custom
+                            // display format (e.g. dd/MM/yyyy) could be misread as MM/dd.
+                            formattedPlacedInService =
+                                DateFormat('yyyy-MM-dd').format(_placedInServiceDate!);
+                          } else if (datePlacedInService.text.isNotEmpty) {
                             try {
                               DateTime? parsedDate;
                               List<String> dateFormats = [

@@ -688,7 +688,7 @@ class _Scheduled_Payments_tableState extends State<Scheduled_Payments_table>
       appBar: widget_302_Staff.App_Bar(context: context),
       backgroundColor: Colors.white,
       drawer: CustomDrawerStaff(
-        currentpage: "Scheduled Payment",
+        currentpage: "Scheduled Payments",
         dropdown: true,
       ),
       body: !isOffline
@@ -710,7 +710,7 @@ class _Scheduled_Payments_tableState extends State<Scheduled_Payments_table>
                               MediaQuery.of(context).size.width > 500 ? 12 : 0),
                       child: titleBar(
                         width: double.infinity,
-                        title: 'Scheduled Payment',
+                        title: 'Scheduled Payments',
                       ),
                     ),
                   ),

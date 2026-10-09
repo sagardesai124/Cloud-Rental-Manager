@@ -677,8 +677,13 @@ class _Lease_tableState extends State<Lease_table>
           ),
         ],
       ),
-      style: const AlertStyle(
+      // The started-lease dialog's "Override and delete" is long: give the
+      // buttons a little more width so both labels fit at one equal size.
+      style: AlertStyle(
         backgroundColor: Colors.white,
+        buttonAreaPadding: started
+            ? const EdgeInsets.fromLTRB(14, 20, 14, 20)
+            : const EdgeInsets.all(20),
       ),
       buttons: [
         DialogButton(
@@ -689,7 +694,8 @@ class _Lease_tableState extends State<Lease_table>
             child: Text(
               LeaseDeleteRules.confirmLabel(started),
               maxLines: 1,
-              style: const TextStyle(color: Colors.white, fontSize: 18),
+              style: TextStyle(
+                  color: Colors.white, fontSize: started ? 13 : 18),
             ),
           ),
           onPressed: () async {
@@ -727,7 +733,9 @@ class _Lease_tableState extends State<Lease_table>
           child: Text(
             "Cancel",
             style: TextStyle(
-                color: blueColor, fontSize: 18, fontWeight: FontWeight.bold),
+                color: blueColor,
+                fontSize: started ? 13 : 18,
+                fontWeight: FontWeight.bold),
           ),
           onPressed: () => Navigator.pop(context),
           color: Colors.white,

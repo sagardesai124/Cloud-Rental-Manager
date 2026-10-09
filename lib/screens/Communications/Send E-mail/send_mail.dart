@@ -62,6 +62,8 @@ class _send_emailState extends State<send_email> {
   List<String> selectedTenantIds = [];
   final TextEditingController _tenantSearchController = TextEditingController();
   bool isLoading = false;
+  // Guards Send against a double tap (separate from the spinner flag).
+  bool _sending = false;
   String? _selectedEvent;
   List<String> events = [
     'Reset password',
@@ -1585,104 +1587,112 @@ class _send_emailState extends State<send_email> {
                     children: [
                       ElevatedButton(
                         onPressed: () async {
-                          // Validate name
+                          // One tap = one email: lock before anything is awaited.
+                          if (_sending) return;
+                          _sending = true;
+                          try {
+                            // Validate name
 
-                          // Validate designation
-                          if (subject.text.trim().isEmpty) {
-                            setState(() {
-                              subjectError = true;
-                              submessage = "required";
-                            });
-                          } else {
-                            setState(() {
-                              subjectError = false;
-                            });
-                          }
-                          if (_selectedEvent == null) {
-                            setState(() {
-                              eventError = true;
-                              eventmessage = "required";
-                            });
-                          } else {
-                            setState(() {
-                              eventError = false;
-                            });
-                          }
-                          String updatedHtmlBody =
-                              await _htmlEditorController.getText();
+                            // Validate designation
+                            if (subject.text.trim().isEmpty) {
+                              setState(() {
+                                subjectError = true;
+                                submessage = "required";
+                              });
+                            } else {
+                              setState(() {
+                                subjectError = false;
+                              });
+                            }
+                            if (_selectedEvent == null) {
+                              setState(() {
+                                eventError = true;
+                                eventmessage = "required";
+                              });
+                            } else {
+                              setState(() {
+                                eventError = false;
+                              });
+                            }
+                            String updatedHtmlBody =
+                                await _htmlEditorController.getText();
 
-                          if (updatedHtmlBody.trim().isEmpty) {
+                            if (updatedHtmlBody.trim().isEmpty) {
+                              setState(() {
+                                bodyError = true;
+                                bodymessage = "required";
+                              });
+                            } else {
+                              setState(() {
+                                bodyError = false;
+                              });
+                            }
+
+                            // Web blocks Send without a recipient and says why.
                             setState(() {
-                              bodyError = true;
-                              bodymessage = "required";
+                              tenantError = selectedTenantIds.isEmpty;
                             });
-                          } else {
-                            setState(() {
-                              bodyError = false;
-                            });
-                          }
+                            if (tenantError) {
+                              Fluttertoast.showToast(msg: _noTenantMessage);
+                            }
 
-                          // Web blocks Send without a recipient and says why.
-                          setState(() {
-                            tenantError = selectedTenantIds.isEmpty;
-                          });
-                          if (tenantError) {
-                            Fluttertoast.showToast(msg: _noTenantMessage);
-                          }
+                            // Now, only proceed if all fields are filled and valid
+                            if (!nameError &&
+                                !subjectError &&
+                                !eventError &&
+                                !bodyError &&
+                                !tenantError) {
+                              // Fixed the extra check
+                              setState(() {
+                                isLoading = true;
+                              });
 
-                          // Now, only proceed if all fields are filled and valid
-                          if (!nameError &&
-                              !subjectError &&
-                              !eventError &&
-                              !bodyError &&
-                              !tenantError) {
-                            // Fixed the extra check
-                            setState(() {
-                              isLoading = true;
-                            });
+                              SharedPreferences prefs =
+                                  await SharedPreferences.getInstance();
+                              String? adminId = prefs.getString("adminId");
 
-                            SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            String? adminId = prefs.getString("adminId");
-
-                            if (adminId != null) {
-                              try {
-                                await sendMail(
-                                    adminId: adminId,
-                                    name: name.text.trim(),
-                                    subject: subject.text.trim(),
-                                    body: replaceFontTags(updatedHtmlBody),
-                                    type: "E-mail",
-                                    mail_type: _selectedEvent,
-                                    leaseid: widget.leaseID);
-                                setState(() {
-                                  isLoading = false;
-                                });
-                                if (!mounted) return;
-                                // Opened from Communications menu (no lease
-                                // context) -> land on Email Logs so the user
-                                // sees the sent email, matching web. Contextual
-                                // sends (from Tenant/Lease Summary) keep
-                                // returning to their previous screen.
-                                if (widget.lease == null) {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => Send_Email_table(),
-                                      settings: const RouteSettings(
-                                          name: "E-mail Logs"),
-                                    ),
-                                  );
-                                } else {
-                                  Navigator.of(context).pop(true);
+                              if (adminId != null) {
+                                try {
+                                  await sendMail(
+                                      adminId: adminId,
+                                      name: name.text.trim(),
+                                      subject: subject.text.trim(),
+                                      body: replaceFontTags(updatedHtmlBody),
+                                      type: "E-mail",
+                                      mail_type: _selectedEvent,
+                                      leaseid: widget.leaseID);
+                                  setState(() {
+                                    isLoading = false;
+                                  });
+                                  if (!mounted) return;
+                                  // Opened from Communications menu (no lease
+                                  // context) -> land on Email Logs so the user
+                                  // sees the sent email, matching web. Contextual
+                                  // sends (from Tenant/Lease Summary) keep
+                                  // returning to their previous screen.
+                                  if (widget.lease == null) {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => Send_Email_table(),
+                                        settings: const RouteSettings(
+                                            name: "E-mail Logs"),
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.of(context).pop(true);
+                                  }
+                                } catch (e) {
+                                  setState(() {
+                                    isLoading = false;
+                                  });
+                                  // Handle error here
                                 }
-                              } catch (e) {
-                                setState(() {
-                                  isLoading = false;
-                                });
-                                // Handle error here
                               }
                             }
+                        
+                          } finally {
+                            _sending = false;
                           }
                         },
                         style: ElevatedButton.styleFrom(

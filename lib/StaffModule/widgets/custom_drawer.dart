@@ -203,9 +203,9 @@ class _CustomDrawerStaffState extends State<CustomDrawerStaff> {
                   [
                     if (permissions.leaseView == true) "Leases",
                     if (permissions.applicantView == true) "Applicants",
-                    "Upcoming Renewal",
-                    if (permissions.leaseView == true) "Pending Lease",
-                    "Scheduled Payment",
+                    "Upcoming Renewals",
+                    if (permissions.leaseView == true) "Pending Leases",
+                    "Scheduled Payments",
                     "Scheduled Charges",
                   ],
                   [
@@ -226,7 +226,7 @@ class _CustomDrawerStaffState extends State<CustomDrawerStaff> {
                             : blueColor,
                       ),
 
-                    widget.currentpage == "Upcoming Renewal"
+                    widget.currentpage == "Upcoming Renewals"
                         ? SvgPicture.asset(
                             "assets/images/upcoming white.svg",
                             fit: BoxFit.cover,
@@ -244,14 +244,14 @@ class _CustomDrawerStaffState extends State<CustomDrawerStaff> {
                       FaIcon(
                         FontAwesomeIcons.fileLines,
                         size: 20,
-                        color: widget.currentpage == "Pending Lease"
+                        color: widget.currentpage == "Pending Leases"
                             ? Colors.white
                             : blueColor,
                       ),
                     FaIcon(
                       FontAwesomeIcons.clock,
                       size: 20,
-                      color: widget.currentpage == "Scheduled Payment"
+                      color: widget.currentpage == "Scheduled Payments"
                           ? Colors.white
                           : blueColor,
                     ),

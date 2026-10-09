@@ -1,3 +1,4 @@
+import 'package:email_validator/email_validator.dart';
 import 'package:three_zero_two_property/services/app_log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1481,6 +1482,12 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
                         controller: _agentEmailController,
                         hint: 'Enter agent email',
                         keyboardType: TextInputType.emailAddress,
+                        // Optional, but must be a real address when filled (web parity).
+                        validator: (value) => (value != null &&
+                                value.trim().isNotEmpty &&
+                                !EmailValidator.validate(value.trim()))
+                            ? 'Agent email must be a valid email address'
+                            : null,
                       ),
                       _buildTextField(
                         label: 'Broker Name',

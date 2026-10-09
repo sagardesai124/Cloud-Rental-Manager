@@ -146,9 +146,9 @@ void navigateToOption(BuildContext context, String option, bool isActive) {
     "E-mail Logs": (context) => Send_Email_table(),
     "Send E-mail": (context) => send_email(), //Send_Email_table(),
     "Applicants": (context) => Applicants_table(),
-    "Upcoming Renewal": (context) => Upcomingrenewal(),
-    "Pending Lease": (context) => Pending_lease(),
-    "Scheduled Payment": (context) => Scheduled_Payments_table(),
+    "Upcoming Renewals": (context) => Upcomingrenewal(),
+    "Pending Leases": (context) => Pending_lease(),
+    "Scheduled Payments": (context) => Scheduled_Payments_table(),
     "Scheduled Charges": (context) => ScheduledChargeTable(),
     // "Mortgage": (context) => MortgageTable() // Commented out - not deleted
     // "Work Orders": (context) => Cardpayment(leaseId: '',),

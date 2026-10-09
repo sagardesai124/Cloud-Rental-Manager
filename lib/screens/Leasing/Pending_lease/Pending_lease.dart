@@ -823,11 +823,11 @@ class _Pending_leaseState extends State<Pending_lease>
       backgroundColor: Colors.white,
       drawer: widget.useStaffLayout
           ? CustomDrawerStaff(
-              currentpage: 'Pending Lease',
+              currentpage: 'Pending Leases',
               dropdown: true,
             )
           : CustomDrawer(
-              currentpage: 'Pending Lease',
+              currentpage: 'Pending Leases',
               dropdown: true,
             ),
       // A network failure gets the app's standard offline state; anything else

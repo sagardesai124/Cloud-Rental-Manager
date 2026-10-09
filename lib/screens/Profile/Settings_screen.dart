@@ -4729,9 +4729,13 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             s.header,
             s.items
                 .where((it) =>
-                    q.isEmpty ||
-                    it.title.toLowerCase().contains(q) ||
-                    it.subtitle.toLowerCase().contains(q))
+                    // Web shows Team & Access to Admin only; hidden until the
+                    // role is known so Staff never see it.
+                    (it.title != 'Team & Access' ||
+                        (_isInitialized && !_isStaff)) &&
+                    (q.isEmpty ||
+                        it.title.toLowerCase().contains(q) ||
+                        it.subtitle.toLowerCase().contains(q)))
                 .toList()))
         .where((s) => s.items.isNotEmpty)
         .toList();
@@ -5504,7 +5508,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                                             24),
                                   ],
                                 ),
-                              if (isteamaccess) _buildTeamAccessSection(),
+                              if (isteamaccess && _isInitialized && !_isStaff) _buildTeamAccessSection(),
                               if (iscompanyprofile)
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,

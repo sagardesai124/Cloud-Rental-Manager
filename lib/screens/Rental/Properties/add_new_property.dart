@@ -136,6 +136,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
 
   // Insured Value Information
   TextEditingController datePlacedInService = TextEditingController();
+  DateTime? _placedInServiceDate; // last date picked for the field above
   List<HistoricalInsuredValue> historicalInsuredValues = [];
   bool datePlacedInServiceError = false;
   String datePlacedInServiceMessage = "";
@@ -1513,9 +1514,11 @@ class _Add_new_propertyState extends State<Add_new_property> {
     final DateTime? picked = await showDatePicker(
       context: context,
       // initial date is select date or datetime.now()
+      // Reopen on the date actually picked: the field shows it in the user's
+      // date format, so re-parsing the text as MM/dd/yyyy threw.
       initialDate: datePlacedInService.text.isEmpty
           ? DateTime.now()
-          : DateFormat('MM/dd/yyyy').parse(datePlacedInService.text),
+          : (_placedInServiceDate ?? DateTime.now()),
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -1533,6 +1536,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
     if (picked != null) {
       setState(() {
         final dateProvider = Provider.of<DateProvider>(context, listen: false);
+        _placedInServiceDate = picked;
         String apiFormatDate = DateFormat('yyyy-MM-dd').format(picked);
         datePlacedInService.text =
             dateProvider.formatCurrentDate(apiFormatDate);
@@ -4602,7 +4606,13 @@ class _Add_new_propertyState extends State<Add_new_property> {
                               //  try {
                               // Format placed_in_service date to yyyy-MM-dd
                               String? formattedPlacedInService;
-                              if (datePlacedInService.text.isNotEmpty) {
+                              if (_placedInServiceDate != null &&
+                                  datePlacedInService.text.isNotEmpty) {
+                                // Send the real date, not a re-read of the displayed text: a custom
+                                // display format (e.g. dd/MM/yyyy) could be misread as MM/dd.
+                                formattedPlacedInService =
+                                    DateFormat('yyyy-MM-dd').format(_placedInServiceDate!);
+                              } else if (datePlacedInService.text.isNotEmpty) {
                                 try {
                                   // Parse the displayed date back to DateTime
                                   DateTime? parsedDate;

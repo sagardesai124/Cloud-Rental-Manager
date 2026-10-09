@@ -535,7 +535,7 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
     }
   }
 
-  /// "2026-07-10T22:07:44.000Z" -> "Jul 10, 10:07 PM". Falls back to the raw
+  /// "2026-07-10T22:07:44.000Z" -> "Jul 10, 2026, 10:07 PM" (with the year, like web). Falls back to the raw
   /// value if it is not parseable, and to an em dash when absent.
   String _formatWhen(String iso) {
     if (iso.isEmpty) return '—';
@@ -550,7 +550,7 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
     final int h12 = h24 % 12 == 0 ? 12 : h24 % 12;
     final String mm = local.minute.toString().padLeft(2, '0');
     final String ampm = h24 < 12 ? 'AM' : 'PM';
-    return '${months[local.month - 1]} ${local.day}, $h12:$mm $ampm';
+    return '${months[local.month - 1]} ${local.day}, ${local.year}, $h12:$mm $ampm';
   }
 
   Widget _buildActivityTab() {
