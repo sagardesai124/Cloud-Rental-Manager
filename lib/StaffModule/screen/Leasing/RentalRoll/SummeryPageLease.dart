@@ -47,6 +47,9 @@ import '../../../../repository/properties_summery.dart';
 import '../../../../widgets/drawer_tiles.dart';
 import '../../../../model/LeaseSummary.dart';
 import '../../Rental/Properties/moveout/repository.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/lease_end_decision.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/lease_end_decision_box.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/moveout_form_ui.dart';
 import 'Financial.dart';
 import '../../../widgets/custom_drawer.dart';
 import '../RentalRoll/RenewLease.dart';
@@ -617,6 +620,60 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
   }
 
   String? moveOutDate;
+  LeaseEndAnswer _leaseEnd = const LeaseEndAnswer();
+
+  // Web (LeaseTenantsTab.jsx): tenants who moved out (or were evicted) are
+  // listed after the current ones, in a grey card headed "Moved out <date>",
+  // with the notice date in the company's date format.
+  static const Color _movedOutCardBg = Color(0xFFEDEFF2);
+
+  bool _tenantInactive(LeaseTenant t) =>
+      (t.moveoutDate ?? '').isNotEmpty || t.isEvicted == true;
+
+  /// Current tenants first, then the others, each group in its own order.
+  void _orderTenants(List<LeaseTenant> tenants) {
+    final current = tenants.where((t) => !_tenantInactive(t)).toList();
+    final past = tenants.where(_tenantInactive).toList();
+    tenants
+      ..clear()
+      ..addAll([...current, ...past]);
+  }
+
+  List<Widget> _movedOutHeader(LeaseTenant t) {
+    final dateProvider = Provider.of<DateProvider>(context, listen: false);
+    return [
+      Text(
+        (t.moveoutDate ?? '').isNotEmpty
+            ? 'Moved out ${dateProvider.formatCurrentDate(t.moveoutDate!)}'
+            : 'Evicted',
+        style: const TextStyle(
+            fontSize: 15, fontWeight: FontWeight.w700, color: mutedClr),
+      ),
+      const SizedBox(height: 12),
+    ];
+  }
+
+  Widget _noticeDateRow(LeaseTenant t) {
+    final dateProvider = Provider.of<DateProvider>(context, listen: false);
+    return Row(
+      children: [
+        const Text('Notice date:  ',
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF3A4A57))),
+        Text(dateProvider.formatCurrentDate(t.moveoutNoticeGivenDate ?? ''),
+            style: const TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w500, color: mutedClr)),
+      ],
+    );
+  }
+
+  bool _moveControls(LeaseTenant t) => showMoveControls(
+        leaseStartDate: t.startDate,
+        leaseEndDate: t.endDate,
+        isEvicted: t.isEvicted,
+      );
 //  String moveOutDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
   bool isLoading = false;
   bool isMovedOut = false;
@@ -4993,6 +5050,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
               return const Center(child: Text('No data found.'));
             } else {
               final leasetenant = snapshot.data!;
+              _orderTenants(snapshot.data!);
               // print(status);
               return isTablet
                   ? SingleChildScrollView(
@@ -5020,10 +5078,14 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                       (ln.isNotEmpty ? ln[0] : ''))
                                   .toUpperCase();
                               return Container(
-                                height: 245,
+                                height: _tenantInactive(snapshot.data![index])
+                                    ? 280
+                                    : 245,
                                 width: MediaQuery.of(context).size.width * .44,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: _tenantInactive(snapshot.data![index])
+                                      ? _movedOutCardBg
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(color: borderClr),
                                 ),
@@ -5033,6 +5095,9 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      if (_tenantInactive(snapshot.data![index]))
+                                        ..._movedOutHeader(
+                                            snapshot.data![index]),
                                       Row(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.center,
@@ -5076,6 +5141,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                             ),
                                           ),
                                           const SizedBox(width: 8),
+                                          if (_moveControls(snapshot.data![index]) &&
+                                              !hasMoveOutNotice(snapshot
+                                                  .data![index]
+                                                  .moveoutNoticeGivenDate))
                                           InkWell(
                                             onTap: () {
                                               showDialog(
@@ -5090,14 +5159,14 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                         StateSetter setState) {
                                                       return Dialog(
                                                         backgroundColor:
-                                                            Colors.white,
+                                                            MoveoutColors.pageBg,
                                                         surfaceTintColor:
-                                                            Colors.white,
+                                                            MoveoutColors.pageBg,
                                                         shape: RoundedRectangleBorder(
                                                             borderRadius:
                                                                 BorderRadius
                                                                     .circular(
-                                                                        10.0)),
+                                                                        20.0)),
                                                         child: Padding(
                                                           padding:
                                                               const EdgeInsets
@@ -5111,7 +5180,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                               width: 900,
                                                               child: buildMoveout(
                                                                   snapshot.data![
-                                                                      index])),
+                                                                      index],
+                                                                  tenants:
+                                                                      snapshot
+                                                                          .data)),
                                                         ),
                                                       );
                                                     },
@@ -5141,6 +5213,62 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                               ],
                                             ),
                                           ),
+                                          if (_moveControls(snapshot.data![index]) &&
+                                              hasMoveOutNotice(snapshot
+                                                  .data![index]
+                                                  .moveoutNoticeGivenDate))
+                                            InkWell(
+                                              onTap: () async {
+                                                SharedPreferences prefs =
+                                                    await SharedPreferences
+                                                        .getInstance();
+                                                String? id =
+                                                    prefs.getString("adminId");
+                                                LeaseMoveoutRepository()
+                                                    .addMoveInTenant(
+                                                  adminId: id!,
+                                                  tenantId: snapshot
+                                                      .data![index].tenantId,
+                                                  leaseId: snapshot
+                                                      .data![index].leaseId,
+                                                )
+                                                    .then((value) {
+                                                  setState(() {
+                                                    futureLeasetenant =
+                                                        LeaseRepository
+                                                            .fetchLeaseTenants(
+                                                                widget.leaseId);
+                                                    isLoading = false;
+                                                  });
+                                                  Navigator.pop(context, true);
+                                                }).catchError((e) {
+                                                  setState(() {
+                                                    isLoading = false;
+                                                  });
+                                                });
+                                              },
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  FaIcon(
+                                                    FontAwesomeIcons
+                                                        .circleArrowLeft,
+                                                    size: 16,
+                                                    color: blueColor,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    "Move In",
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: blueColor,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           _leaseTenantActionsMenu(
                                               snapshot.data![index]),
                                         ],
@@ -5244,7 +5372,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                 ),
                                 child: Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: _tenantInactive(
+                                              snapshot.data![index])
+                                          ? _movedOutCardBg
+                                          : Colors.white,
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(color: borderClr),
                                     ),
@@ -5254,6 +5385,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
+                                          if (_tenantInactive(
+                                              snapshot.data![index]))
+                                            ..._movedOutHeader(
+                                                snapshot.data![index]),
                                           Row(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.center,
@@ -5298,9 +5433,12 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
-                                              if (snapshot.data![index]
-                                                      .moveoutDate ==
-                                                  "")
+                                              // Web: no Move out / Move In once the lease
+                                              // expired or was evicted; Move In after a notice.
+                                              if (_moveControls(snapshot.data![index]) &&
+                                                  !hasMoveOutNotice(snapshot
+                                                      .data![index]
+                                                      .moveoutNoticeGivenDate))
                                                 InkWell(
                                                   onTap: () async {
                                                     // showDialog(
@@ -5398,9 +5536,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                               _leaseTenantActionsMenu(
                                                   snapshot.data![index]),
                                               //   if(isMovedOut || status == 'Expired')
-                                              if (snapshot.data![index]
-                                                      .moveoutDate !=
-                                                  "")
+                                              if (_moveControls(snapshot.data![index]) &&
+                                                  hasMoveOutNotice(snapshot
+                                                      .data![index]
+                                                      .moveoutNoticeGivenDate))
                                                 InkWell(
                                                   onTap: () async {
                                                     String? tenantId = snapshot
@@ -5521,76 +5660,13 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                               ),
                                             ],
                                           ),
-                                          if (snapshot
-                                                  .data![index].moveoutDate !=
-                                              "")
-                                            const SizedBox(height: 15),
-                                          if (snapshot
-                                                  .data![index].moveoutDate !=
-                                              "")
-                                            Row(
-                                              children: [
-                                                const SizedBox(width: 65),
-                                                Text(
-                                                  'Notice Date : ',
-                                                  maxLines:
-                                                      3, // Set maximum number of lines
-                                                  overflow: TextOverflow
-                                                      .ellipsis, // Handle overflow with ellipsis
-                                                  style: TextStyle(
-                                                      fontSize: 15,
-                                                      color: blueColor,
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                                ),
-                                                const SizedBox(
-                                                  width: 5,
-                                                ),
-                                                Text(
-                                                  '${snapshot.data![index].moveoutNoticeGivenDate}',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: blueColor,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          if (snapshot
-                                                  .data![index].moveoutDate !=
-                                              "")
-                                            const SizedBox(height: 15),
-                                          if (snapshot
-                                                  .data![index].moveoutDate !=
-                                              "")
-                                            Row(
-                                              children: [
-                                                const SizedBox(width: 65),
-                                                Text(
-                                                  'Move out : ',
-                                                  maxLines:
-                                                      3, // Set maximum number of lines
-                                                  overflow: TextOverflow
-                                                      .ellipsis, // Handle overflow with ellipsis
-                                                  style: TextStyle(
-                                                      fontSize: 15,
-                                                      color: blueColor,
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                                ),
-                                                const SizedBox(
-                                                  width: 5,
-                                                ),
-                                                Text(
-                                                  '${snapshot.data![index].moveoutDate}',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: blueColor,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                          if (hasMoveOutNotice(snapshot
+                                              .data![index]
+                                              .moveoutNoticeGivenDate)) ...[
+                                            const SizedBox(height: 14),
+                                            _noticeDateRow(
+                                                snapshot.data![index]),
+                                          ],
                                           const SizedBox(height: 8),
                                         ],
                                       ),
@@ -5917,358 +5993,148 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
     );
   }
 
-  Widget buildMoveout(LeaseTenant tenant) {
+  Widget buildMoveout(LeaseTenant tenant, {List<LeaseTenant>? tenants}) {
     // moveOutDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
-    if (widget.enddate != null) moveOutDate = formatDate(widget.enddate!);
+    // The tenant's own lease end, like web and the Admin dialog; the page's
+    // enddate can be blank or, from some lists, not the lease end at all.
+    moveOutDate = formatDate(tenant.endDate);
     //startdateController.text = moveOutDate;
     startdateController.text = DateFormat('dd-MM-yyyy').format(DateTime.now());
+
+    // Web 2.2: a move-out that leaves nobody on a fixed-term lease asks
+    // whether the lease ends (lease_end_decision.dart). This dialog moves out
+    // one tenant on the lease end date shown.
+    _leaseEnd = const LeaseEndAnswer();
+    final List<String> selectedMoveOutDates = [
+      reverseFormatDate(moveOutDate ?? '')
+    ];
+    final bool askLeaseEnd = shouldAskLeaseEnd(
+      leaseType: tenant.leaseType,
+      leaseEndDate: tenant.endDate,
+      activeTenantIds: (tenants ?? [tenant])
+          .where((t) =>
+              (t.moveoutDate ?? '').isEmpty &&
+              (t.moveoutNoticeGivenDate ?? '').isEmpty &&
+              t.isEvicted != true)
+          .map((t) => t.tenantId),
+      selectedTenantIds: [tenant.tenantId],
+      selectedMoveOutDates: selectedMoveOutDates,
+    );
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Move out Tenants",
-            style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: blueColor,
-                fontSize: MediaQuery.of(context).size.width < 500 ? 18 : 22),
+          const MoveoutHeader(),
+          const SizedBox(height: 14),
+          const MoveoutInfoBanner(),
+          const SizedBox(height: 14),
+          MoveoutPropertyDetails(
+            address: '${tenant.rentalAddress}',
+            leaseType: '${tenant.leaseType}',
+            startEnd:
+                '${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.startDate)} to ${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.endDate)}',
           ),
-          const SizedBox(height: 13),
-          Text(
-            "Select tenants to move out. If everyone is moving, the lease will end on the last move-out date. If some tenants are staying, you’ll need to renew the lease. Note: Renters insurance policies will be permanently deleted upon move-out.",
-            textAlign: TextAlign.justify,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: MediaQuery.of(context).size.width < 500 ? 14 : 18,
-              color: const Color(0xFF8A95A8),
-            ),
-          ),
-          const SizedBox(height: 15),
-          Column(
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'Property Details',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize:
-                            MediaQuery.of(context).size.width < 500 ? 16 : 20,
-                        color: blueColor),
-                  ),
-                ],
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(color: blueColor),
-                ),
-                child: Table(
-                  //border: TableBorder.all(color:blueColor),
-                  border: TableBorder(
-                    horizontalInside: BorderSide(
-                      color: blueColor,
-                      width: 1.0,
-                    ),
-                  ),
-                  columnWidths: {
-                    0: const FlexColumnWidth(2),
-                    1: const FlexColumnWidth(3),
-                  },
+          const SizedBox(height: 14),
+          MoveoutCard(
+            title: 'Tenant Details',
+            // This popup moves out the one tenant it was opened for, on the
+            // lease end date shown (no date picker, as before).
+            child: MoveoutTenantTile(
+              name: '${tenant.tenantFirstName} ${tenant.tenantLastName}',
+              selected: true,
+              onChanged: (_) {},
+              noticeField: buildDateField(startdateController),
+              moveOutField: Container(
+                height: 52,
+                padding: const EdgeInsets.only(left: 14, right: 14),
+                decoration: moveoutDateBoxDecoration(enabled: true),
+                child: Row(
                   children: [
-                    TableRow(
-                      children: [
-                        buildTableCell(Text(
-                          'Address/Unit',
-                          style: TextStyle(
-                            color: blueColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: MediaQuery.of(context).size.width < 500
-                                ? 15
-                                : 17,
-                          ),
-                        )),
-                        buildTableCell(Text('${tenant.rentalAddress}')),
-                      ],
+                    Expanded(
+                      child: Text(
+                        Provider.of<DateProvider>(context, listen: false)
+                            .formatCurrentDate(moveOutDate ?? ''),
+                        style: moveoutDateTextStyle(enabled: true),
+                      ),
                     ),
-                    TableRow(
-                      children: [
-                        buildTableCell(Text('Lease Type',
-                            style: TextStyle(
-                              color: blueColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: MediaQuery.of(context).size.width < 500
-                                  ? 15
-                                  : 17,
-                            ))),
-                        buildTableCell(Text('${tenant.leaseType}')),
-                      ],
-                    ),
-                    TableRow(
-                      children: [
-                        buildTableCell(Text('Start End',
-                            style: TextStyle(
-                              color: blueColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: MediaQuery.of(context).size.width < 500
-                                  ? 15
-                                  : 17,
-                            ))),
-                        buildTableCell(
-                            Text('${tenant.startDate} ${tenant.endDate}')),
-                      ],
-                    ),
+                    const Icon(Icons.calendar_today_outlined,
+                        size: 20, color: MoveoutColors.muted),
                   ],
                 ),
               ),
-              const SizedBox(
-                height: 10,
-              ),
-              Row(
-                children: [
-                  Text(
-                    'Tenant Details',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize:
-                            MediaQuery.of(context).size.width < 500 ? 16 : 20,
-                        color: blueColor),
-                  ),
-                ],
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Table(
-                border: TableBorder.all(color: blueColor),
-                columnWidths: {
-                  0: const FlexColumnWidth(2),
-                  1: const FlexColumnWidth(3),
-                },
-                children: [
-                  TableRow(
-                    children: [
-                      buildTableCell(Text('Tenants',
-                          style: TextStyle(
-                            color: blueColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: MediaQuery.of(context).size.width < 500
-                                ? 15
-                                : 17,
-                          ))),
-                      buildTableCell(Text(
-                          '${tenant.tenantFirstName} ${tenant.tenantLastName}')),
-                    ],
-                  ),
-                  TableRow(
-                    children: [
-                      buildTableCell(Text('Notice Given Date',
-                          style: TextStyle(
-                            color: blueColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: MediaQuery.of(context).size.width < 500
-                                ? 15
-                                : 17,
-                          ))),
-                      buildTableCell(buildDateField(startdateController)),
-                    ],
-                  ),
-                  TableRow(
-                    children: [
-                      buildTableCell(Text('Move-Out Date',
-                          style: TextStyle(
-                            color: blueColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: MediaQuery.of(context).size.width < 500
-                                ? 15
-                                : 17,
-                          ))),
-                      buildTableCell(
-                        Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Material(
-                                //   elevation: 2,
-                                //   borderRadius: BorderRadius.circular(8),
-                                //   child: Container(
-                                //     height: 40,
-                                //     width: 130,
-                                //     decoration: BoxDecoration(
-                                //       color: Colors.grey[300],
-                                //       borderRadius: BorderRadius.circular(8),
-                                //     ),
-                                //     child: Center(
-                                //       child: Text(
-                                //         moveOutDate,
-                                //         style: TextStyle(
-                                //           fontSize: MediaQuery.of(context)
-                                //                       .size
-                                //                       .width <
-                                //                   500
-                                //               ? 15
-                                //               : 17,
-                                //         ),
-                                //       ),
-                                //     ),
-                                //   ),
-                                // ),
-                                const SizedBox(
-                                  width: 4,
-                                ),
-                                Expanded(
-                                  child: Material(
-                                    elevation: 2,
-                                    borderRadius: BorderRadius.circular(5),
-                                    child: Container(
-                                      height: 45,
-                                      // width:130,
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[300],
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      child: Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            left: 5,
-                                          ),
-                                          child: TextField(
-                                            enabled: true,
-                                            // controller: displayDate,
-                                            decoration: InputDecoration(
-                                              border: InputBorder.none,
-                                              hintText: moveOutDate,
-                                              suffixIcon: IconButton(
-                                                icon: const Icon(
-                                                    Icons.calendar_today),
-                                                onPressed: () async {
-                                                  // DateTime? pickedDate = await showDatePicker(
-                                                  //   context: context,
-                                                  //   initialDate: DateTime.now(),
-                                                  //   firstDate: DateTime(2000),
-                                                  //   lastDate: DateTime(2101),
-                                                  // );
-                                                  // if (pickedDate != null) {
-                                                  //   setState(() {
-                                                  //    // controller.text = DateFormat('dd-MM-yyyy').format(pickedDate);
-                                                  //   });
-                                                  // }
-                                                },
-                                              ),
-                                            ),
-                                            readOnly: true,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(
-                                  width: 1,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
+          if (askLeaseEnd) ...[
+            const SizedBox(height: 14),
+            // The page's setState does not rebuild this dialog.
+            StatefulBuilder(
+              builder: (context, setBoxState) => LeaseEndDecisionBox(
+                value: _leaseEnd,
+                onChanged: (next) => setBoxState(() => _leaseEnd = next),
+                leaseStartDate: tenant.startDate,
+                leaseEndDate: tenant.endDate,
+                selectedMoveOutDates: selectedMoveOutDates,
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                },
-                child: Material(
-                  elevation: 3,
-                  borderRadius: const BorderRadius.all(Radius.circular(5)),
-                  child: Container(
-                    height: MediaQuery.of(context).size.width < 500 ? 40 : 50,
-                    width: 90,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.all(Radius.circular(5)),
-                    ),
-                    child: Center(
-                        child: Text(
-                      "Close",
-                      style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize:
-                              MediaQuery.of(context).size.width < 500 ? 15 : 18,
-                          color: blueColor),
-                    )),
-                  ),
+          MoveoutActions(
+            onCancel: () {
+              Navigator.pop(context);
+            },
+            onMoveOut: () async {
+              if (selectedMoveOutDates.first.isEmpty ||
+                  reverseFormatDate(startdateController.text).isEmpty) {
+                Fluttertoast.showToast(
+                    msg:
+                        '"Notice Given Date" and "Move-Out Date" are required for all selected tenants');
+                return;
+              }
+              final leaseEndError = leaseEndValidationError(
+                ask: askLeaseEnd,
+                answer: _leaseEnd,
+                leaseStartDate: tenant.startDate,
+                leaseEndDate: tenant.endDate,
+                selectedMoveOutDates: selectedMoveOutDates,
+              );
+              if (leaseEndError.isNotEmpty) {
+                Fluttertoast.showToast(msg: leaseEndError);
+                return;
+              }
+              String? tenantId =
+                  tenant.tenantId != null ? tenant.tenantId! : null;
+              SharedPreferences prefs =
+                  await SharedPreferences.getInstance();
+              String? id = prefs.getString("adminId");
+              LeaseMoveoutRepository()
+                  .addMoveoutTenant(
+                adminId: id!,
+                tenantId: tenantId,
+                leaseId: tenant.leaseId,
+                moveoutDate: moveOutDate,
+                moveoutNoticeGivenDate: startdateController.text,
+                leaseEnd: buildLeaseEndPayload(
+                  ask: askLeaseEnd,
+                  answer: _leaseEnd,
+                  selectedMoveOutDates: selectedMoveOutDates,
                 ),
-              ),
-              const SizedBox(width: 10),
-              InkWell(
-                onTap: () async {
-                  String? tenantId =
-                      tenant.tenantId != null ? tenant.tenantId! : null;
-                  SharedPreferences prefs =
-                      await SharedPreferences.getInstance();
-                  String? id = prefs.getString("adminId");
-                  LeaseMoveoutRepository()
-                      .addMoveoutTenant(
-                    adminId: id!,
-                    tenantId: tenantId,
-                    leaseId: tenant.leaseId,
-                    moveoutDate: moveOutDate,
-                    moveoutNoticeGivenDate: startdateController.text,
-                  )
-                      .then((value) {
-                    setState(() {
-                      futureLeasetenant =
-                          LeaseRepository.fetchLeaseTenants(widget.leaseId);
-                      isLoading = false;
-                      isMovedOut = true;
-                    });
+              )
+                  .then((value) {
+                setState(() {
+                  futureLeasetenant =
+                      LeaseRepository.fetchLeaseTenants(widget.leaseId);
+                  isLoading = false;
+                  isMovedOut = true;
+                });
 
-                    Navigator.pop(context, true);
-                  }).catchError((e) {
-                    setState(() {
-                      isLoading = false;
-                    });
-                  });
-                },
-                child: Material(
-                  elevation: 3,
-                  borderRadius: const BorderRadius.all(Radius.circular(5)),
-                  child: Container(
-                    height: MediaQuery.of(context).size.width < 500 ? 40 : 50,
-                    width: MediaQuery.of(context).size.width < 500 ? 100 : 130,
-                    decoration: BoxDecoration(
-                      color: blueColor,
-                      borderRadius: const BorderRadius.all(Radius.circular(5)),
-                    ),
-                    child: Center(
-                        child: Text(
-                      "Move Out",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize:
-                            MediaQuery.of(context).size.width < 500 ? 15 : 17,
-                      ),
-                    )),
-                  ),
-                ),
-              ),
-            ],
+                Navigator.pop(context, true);
+              }).catchError((e) {
+                setState(() {
+                  isLoading = false;
+                });
+              });
+            },
           ),
-          const SizedBox(height: 15),
         ],
       ),
     );
@@ -6285,22 +6151,21 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
 
   Widget buildDateField(TextEditingController controller) {
     return Padding(
-      padding: const EdgeInsets.only(left: 5, right: 2),
+      padding: EdgeInsets.zero,
       child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: BorderRadius.circular(5),
-        ),
+        decoration: moveoutDateBoxDecoration(enabled: true),
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.only(left: 5),
+            padding: const EdgeInsets.only(left: 14),
             child: TextField(
               controller: controller,
+              style: moveoutDateTextStyle(enabled: true),
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Select Date',
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.calendar_today),
+                  icon: const Icon(Icons.calendar_today_outlined,
+                      size: 20, color: MoveoutColors.muted),
                   onPressed: () async {
                     DateTime? pickedDate = await showDatePicker(
                       context: context,

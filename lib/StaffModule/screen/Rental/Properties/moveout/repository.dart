@@ -6,7 +6,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 
 class LeaseMoveoutRepository {
-  final String apiUrl = '${Api_url}/api/moveout/lease_moveout/';
+  // The server takes the caller's OWN id: staff_id for Staff, adminId
+  // otherwise. A staff_id left behind by an earlier Staff session must not
+  // be sent for an Admin (401).
+  String _idHeader(SharedPreferences prefs) {
+    final String? staffId = prefs.getString('staff_id');
+    return prefs.getString('role') == 'Staffmember' &&
+            staffId != null &&
+            staffId.isNotEmpty
+        ? staffId
+        : prefs.getString('adminId') ?? '';
+  }
 
 
   Future<Map<String, dynamic>> addMoveoutTenant({
@@ -15,27 +25,35 @@ class LeaseMoveoutRepository {
     required String? leaseId,
     required String? moveoutNoticeGivenDate,
     required String? moveoutDate,
+    // { ends_lease, ends_on, reason } — see lease_end_decision.dart.
+    Map<String, dynamic>? leaseEnd,
 
   }) async {
+    // Dates go as yyyy-MM-dd: the server reads "05-10-2026" as May 10.
     final Map<String, dynamic> data = {
       'admin_id': adminId,
       'tenant_id': tenantId,
       'lease_id': leaseId,
-      'moveout_notice_given_date': moveoutNoticeGivenDate,
-      'moveout_date': moveoutDate,
+      'moveout_notice_given_date':
+          reverseFormatDate(moveoutNoticeGivenDate ?? ''),
+      'moveout_date': reverseFormatDate(moveoutDate ?? ''),
     };
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
    // String?  id = prefs.getString('adminId');
-    String? id = prefs.getString("staff_id");
+    // lease_moveout was retired on the server (404); the Admin screens already
+    // use lease_multiplemoveout, which takes a list of tenants.
     final http.Response response = await apiPost(
-      Uri.parse('${Api_url}/api/moveout/lease_moveout/$leaseId'),
+      Uri.parse('${Api_url}/api/moveout/lease_multiplemoveout/$leaseId'),
       headers: <String, String>{
         "authorization": "CRM $token",
-        "id":"CRM ${prefs.getString('staff_id') ?? id}",
+        "id": "CRM ${_idHeader(prefs)}",
         'Content-Type': 'application/json; charset=UTF-8',
       },
-      body: jsonEncode(data),
+      body: jsonEncode({
+        "moveoutTenants": [data],
+        if (leaseEnd != null) "leaseEnd": leaseEnd,
+      }),
     );
     var responseData = json.decode(response.body);
     if (responseData["statusCode"] == 200) {
@@ -60,13 +78,12 @@ class LeaseMoveoutRepository {
     };
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
-    String? id = prefs.getString("staff_id");
 
     final http.Response response = await apiPut(
       Uri.parse('${Api_url}/api/moveout/lease_movein/$leaseId'),
       headers: <String, String>{
         "authorization": "CRM $token",
-        "id":"CRM ${prefs.getString('staff_id') ?? id}",
+        "id": "CRM ${_idHeader(prefs)}",
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(data),

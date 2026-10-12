@@ -202,6 +202,8 @@ class LeaseTenant {
   String rentalUnit;
   bool? isSelected;
   bool? recurring;
+  // Lease-level, repeated on every tenant (2.2 servers only).
+  bool? isEvicted;
 
   LeaseTenant({
     required this.leaseId,
@@ -222,6 +224,7 @@ class LeaseTenant {
     required this.rentalUnit,
     this.isSelected,
     this.recurring,
+    this.isEvicted,
   });
 
   factory LeaseTenant.fromJson(Map<String, dynamic> json) {
@@ -244,6 +247,7 @@ class LeaseTenant {
       rentalAddress: json['rental_adress'],
       rentalUnit: json['rental_unit'] ?? "",
       recurring: json['recurring'],
+      isEvicted: json['is_evicted'] == true,
     );
   }
 

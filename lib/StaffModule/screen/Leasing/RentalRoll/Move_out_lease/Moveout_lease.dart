@@ -2,12 +2,15 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/lease_end_decision.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/lease_end_decision_box.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/moveout_form_ui.dart';
 import 'package:three_zero_two_property/screens/Rental/Properties/moveout/repository.dart';
-import 'package:three_zero_two_property/widgets/titleBar.dart';
 
 import '../../../../../model/LeaseSummary.dart';
 import '../../../../../provider/dateProvider.dart';
@@ -38,10 +41,23 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
   TextEditingController startdateController = TextEditingController();
   TextEditingController enddateController = TextEditingController();
 
+  // Built once: a page rebuild (date picker, file description, keyboard)
+  // must keep the dates and tenants the user picked.
+  final Map<String, TextEditingController> startDateControllers = {};
+  final Map<String, TextEditingController> moveoutDateControllers = {};
+  bool _moveoutDefaultsSet = false;
+  LeaseEndAnswer _leaseEnd = const LeaseEndAnswer();
+
   @override
   void dispose() {
     startdateController.dispose();
     enddateController.dispose();
+    for (final c in startDateControllers.values) {
+      c.dispose();
+    }
+    for (final c in moveoutDateControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
   late Future<List<LeaseTenant>> futureLeasetenant;
@@ -58,29 +74,20 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: widget_302_Staff.App_Bar(context: context),
-      backgroundColor: Colors.white,
+      backgroundColor: MoveoutColors.pageBg,
       drawer: CustomDrawerStaff(
         currentpage: "Leases",
         dropdown: true,
       ),
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(
-              height: 25,
-            ),
-            titleBar(
-              width: MediaQuery.of(context).size.width * .95,
-              title: 'Move Out Tenants',
-            ),
-            Container(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                    left: 20, right: 20, top: 10, bottom: 10),
-                child: buildMoveout(widget.tenant, tenants: widget.tenants),
-              ),
-            ),
-          ],
+        child: Padding(
+          key: const Key('moveout-page'),
+          padding: EdgeInsets.fromLTRB(
+              MediaQuery.of(context).size.width < 500 ? 16 : 24,
+              16,
+              MediaQuery.of(context).size.width < 500 ? 16 : 24,
+              24),
+          child: buildMoveout(widget.tenant, tenants: widget.tenants),
         ),
       ),
     );
@@ -91,14 +98,13 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
     // moveOutDate = DateFormat('yyyy-MM-dd').format(DateTime.parse(widget.enddate!));
 
     // Convert to stateful list to track selection changes
-    Map<String, TextEditingController> startDateControllers = {};
-    Map<String, TextEditingController> moveoutDateControllers = {};
     Map<String, String> moveOutDates = {};
+    final LeaseTenant leaseTenant = tenant;
 
     List<LeaseTenant> selectedTenants =
         tenants!.where((t) => t.moveoutDate == "").toList();
 
-    for (var t in selectedTenants!) {
+    for (var t in _moveoutDefaultsSet ? <LeaseTenant>[] : selectedTenants) {
       if (!startDateControllers.containsKey(t.tenantId)) {
         startDateControllers[t.tenantId!] = TextEditingController();
       }
@@ -116,6 +122,28 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
       // Set default selection
       t!.isSelected = (t.tenantId == tenant.tenantId);
     }
+    _moveoutDefaultsSet = true;
+
+    // Web 2.2: a move-out that leaves nobody on a fixed-term lease asks
+    // whether the lease ends (lease_end_decision.dart).
+    List<String> selectedMoveOutDates() => selectedTenants
+        .where((t) => t.isSelected == true)
+        .map((t) => reverseFormatDate(moveoutDateControllers[t.tenantId]!.text))
+        .toList();
+    bool askLeaseEnd() => shouldAskLeaseEnd(
+          leaseType: leaseTenant.leaseType,
+          leaseEndDate: leaseTenant.endDate,
+          activeTenantIds: tenants
+              .where((t) =>
+                  (t.moveoutDate ?? '').isEmpty &&
+                  (t.moveoutNoticeGivenDate ?? '').isEmpty &&
+                  t.isEvicted != true)
+              .map((t) => t.tenantId),
+          selectedTenantIds: selectedTenants
+              .where((t) => t.isSelected == true)
+              .map((t) => t.tenantId),
+          selectedMoveOutDates: selectedMoveOutDates(),
+        );
 
     final dateProvider = Provider.of<DateProvider>(context, listen: false);
     widget.moveOutDate = dateProvider
@@ -128,439 +156,190 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Move out Tenants",
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: blueColor,
-                  fontSize: MediaQuery.of(context).size.width < 500 ? 18 : 22),
+            const MoveoutHeader(),
+            const SizedBox(height: 14),
+            const MoveoutInfoBanner(),
+            const SizedBox(height: 14),
+            MoveoutPropertyDetails(
+              address: '${tenant.rentalAddress}',
+              leaseType: '${tenant.leaseType}',
+              startEnd:
+                  '${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.startDate!)} to ${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.endDate!)}',
             ),
-            const SizedBox(height: 13),
-            Text(
-              "Select tenants to move out. If everyone is moving, the lease will end on the last move-out date. If some tenants are staying, you’ll need to renew the lease. Note: Renters insurance policies will be permanently deleted upon move-out.",
-              textAlign: TextAlign.justify,
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: MediaQuery.of(context).size.width < 500 ? 14 : 18,
-                color: const Color(0xFF8A95A8),
+            const SizedBox(height: 14),
+            MoveoutCard(
+              title: 'Tenant Details',
+              child: Column(
+                children: selectedTenants.map((tenant) {
+                  return MoveoutTenantTile(
+                    name: '${tenant.tenantFirstName} ${tenant.tenantLastName}',
+                    selected: tenant.isSelected ?? false,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        tenant.isSelected = value ?? false;
+                      });
+                    },
+                    noticeField: buildDateField(
+                      startDateControllers[tenant.tenantId]!,
+                      enabled: tenant.isSelected!,
+                    ),
+                    moveOutField: buildDateField(
+                      moveoutDateControllers[tenant.tenantId]!,
+                      enabled: tenant.isSelected!,
+                    ),
+                  );
+                }).toList(),
               ),
             ),
-            const SizedBox(height: 15),
-            Column(
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Property Details',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize:
-                              MediaQuery.of(context).size.width < 500 ? 16 : 20,
-                          color: blueColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: blueColor),
-                  ),
-                  child: Table(
-                    //border: TableBorder.all(color:blueColor),
-                    border: TableBorder(
-                      horizontalInside: BorderSide(
-                        color: blueColor,
-                        width: 1.0,
-                      ),
-                    ),
-                    columnWidths: {
-                      0: const FlexColumnWidth(2),
-                      1: const FlexColumnWidth(3),
-                    },
-                    children: [
-                      TableRow(
+            if (askLeaseEnd()) ...[
+              const SizedBox(height: 14),
+              LeaseEndDecisionBox(
+                value: _leaseEnd,
+                onChanged: (next) => setState(() => _leaseEnd = next),
+                leaseStartDate: leaseTenant.startDate,
+                leaseEndDate: leaseTenant.endDate,
+                selectedMoveOutDates: selectedMoveOutDates(),
+              ),
+            ],
+            const SizedBox(height: 14),
+            MoveoutUploadCard(
+              onTap: pickFiles,
+              // Picked-file list keeps working as before; its redesign is
+              // planned as its own task.
+              files: selectedFiles.isEmpty
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: SingleChildScrollView(
+                child: Column(
+                  children: selectedFiles.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    FileData fileData = entry.value;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          buildTableCell(Text(
-                            'Address/Unit',
-                            style: TextStyle(
-                              color: blueColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: MediaQuery.of(context).size.width < 500
-                                  ? 15
-                                  : 17,
-                            ),
-                          )),
-                          buildTableCell(Text('${tenant.rentalAddress}')),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          buildTableCell(Text('Lease Type',
-                              style: TextStyle(
-                                color: blueColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize:
-                                    MediaQuery.of(context).size.width < 500
-                                        ? 15
-                                        : 17,
-                              ))),
-                          buildTableCell(Text('${tenant.leaseType}')),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          buildTableCell(Text('Start End',
-                              style: TextStyle(
-                                color: blueColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize:
-                                    MediaQuery.of(context).size.width < 500
-                                        ? 15
-                                        : 17,
-                              ))),
-                          buildTableCell(Text(
-                              '${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.startDate!)} to ${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.endDate!)}')),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Row(
-                  children: [
-                    Text(
-                      'Tenant Details',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize:
-                              MediaQuery.of(context).size.width < 500 ? 16 : 20,
-                          color: blueColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Column(
-                  children: selectedTenants.map((tenant) {
-                    return Column(
-                      children: [
-                        Container(
-                          //color: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 0.0),
-                          child: Row(
+                          Row(
                             children: [
-                              SizedBox(
-                                width: 20.0,
-                                height: 20.0,
-                                child: Checkbox(
-                                  value: tenant!.isSelected ?? false,
-                                  onChanged: (bool? value) {
-                                    setState(() {
-                                      tenant!.isSelected = value ?? false;
-                                    });
-                                  },
-                                  activeColor: blueColor,
+                              Expanded(
+                                child: Text(
+                                  fileData.file.path.split('/').last,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "${tenant.tenantFirstName} ${tenant.tenantLastName}",
-                                style: TextStyle(
-                                    color: blueColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16),
+                              IconButton(
+                                icon: const Icon(Icons.close, color: Colors.grey),
+                                onPressed: () => removeFile(index),
                               ),
                             ],
                           ),
-                        ),
-                        // if (tenant!.isSelected!)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10, bottom: 10),
-                          child: Table(
-                            border: TableBorder.all(color: blueColor),
-                            columnWidths: {
-                              0: const FlexColumnWidth(2),
-                              1: const FlexColumnWidth(3),
-                            },
-                            children: [
-                              TableRow(
-                                children: [
-                                  buildTableCell(Text('Tenants',
-                                      style: TextStyle(
-                                        color: blueColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 15
-                                                : 17,
-                                      ))),
-                                  buildTableCell(Text(
-                                    '${tenant.tenantFirstName} ${tenant.tenantLastName}',
-                                    style: const TextStyle(),
-                                  )),
-                                ],
-                              ),
-                              TableRow(
-                                children: [
-                                  buildTableCell(Text('Notice Given Date',
-                                      style: TextStyle(
-                                        color: blueColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 15
-                                                : 17,
-                                      ))),
-                                  buildTableCell(buildDateField(
-                                    startDateControllers[tenant.tenantId]!,
-                                    enabled: tenant.isSelected!,
-                                  )),
-                                ],
-                              ),
-                              TableRow(
-                                children: [
-                                  buildTableCell(Text('Move-Out Date',
-                                      style: TextStyle(
-                                        color: blueColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    500
-                                                ? 15
-                                                : 17,
-                                      ))),
-                                  buildTableCell(buildDateField(
-                                    moveoutDateControllers[tenant.tenantId]!,
-                                    enabled: tenant.isSelected!,
-                                  )),
-                                ],
-                              ),
-                            ],
+                          const SizedBox(height: 6),
+                          TextField(
+                            decoration: const InputDecoration(
+                              hintText: 'Enter description',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                            ),
+                            onChanged: (value) =>
+                                updateDescription(index, value),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 10),
+                          const Divider(thickness: 1),
+                        ],
+                      ),
                     );
                   }).toList(),
                 ),
-              ],
+              ),
+                    ),
             ),
             const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.all(0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Upload Move-out Documents',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize:
-                            MediaQuery.of(context).size.width < 500 ? 16 : 20,
-                        color: blueColor),
-                  ),
-                  const SizedBox(height: 5),
-
-                  GestureDetector(
-                    onTap: pickFiles,
-                    child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: blueColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "Choose Files",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Scrollable area for file list
-                  SingleChildScrollView(
-                    child: Column(
-                      children: selectedFiles.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        FileData fileData = entry.value;
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      fileData.file.path.split('/').last,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, color: Colors.grey),
-                                    onPressed: () => removeFile(index),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              TextField(
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter description',
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                ),
-                                onChanged: (value) =>
-                                    updateDescription(index, value),
-                              ),
-                              const SizedBox(height: 10),
-                              const Divider(thickness: 1),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-
-                  // Optionally, add a submit button here
-                  // ElevatedButton(onPressed: submit, child: Text("Submit")),
-                ],
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                  child: Material(
-                    elevation: 3,
-                    borderRadius: const BorderRadius.all(Radius.circular(5)),
-                    child: Container(
-                      height: MediaQuery.of(context).size.width < 500 ? 40 : 50,
-                      width: 90,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.all(Radius.circular(5)),
-                      ),
-                      child: Center(
-                          child: Text(
-                        "Close",
-                        style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                            fontSize: MediaQuery.of(context).size.width < 500
-                                ? 15
-                                : 18,
-                            color: blueColor),
-                      )),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                InkWell(
-                  onTap: () async {
-                    String? tenantId =
-                        tenant.tenantId != null ? tenant.tenantId! : null;
-                    SharedPreferences prefs =
-                        await SharedPreferences.getInstance();
-                    String? id = prefs.getString("adminId");
-                    List<Map<String, dynamic>> multipletenant = [];
-                    List<String> descriptions =
-                        selectedFiles.map((file) => file.description).toList();
-                    for (tenant in selectedTenants) {
-                      if (tenant.isSelected!) {
-                        String moveoutNoticeGivenDate = reverseFormatDate(
-                            startDateControllers[tenant.tenantId!]!.text);
-                        String moveoutdate = reverseFormatDate(
-                            moveoutDateControllers[tenant.tenantId!]!.text);
-                        multipletenant.add({
-                          'admin_id': id,
-                          'tenant_id': tenant.tenantId!,
-                          'lease_id': tenant.leaseId,
-                          'moveout_notice_given_date': moveoutNoticeGivenDate!,
-                          'moveout_date': moveoutdate!,
-                        });
-                      }
-                    }
-                    List<File> selectfiles =
-                        selectedFiles.map((file) => file.file).toList();
-
-                    await LeaseMoveoutRepository()
-                        .addMoveoutTenantfromlease(
-                      adminId: id!,
-                      tenantId: tenantId,
-                      leaseId: tenant.leaseId,
-                      moveoutDate: reverseFormatDate(widget.moveOutDate),
-                      moveoutNoticeGivenDate:
-                          reverseFormatDate(startdateController.text),
-                      fileDescriptions: descriptions,
-                      selectedFiles: selectfiles,
-                      multitenantdata: multipletenant,
-                    )
-                        .then((value) {
-                      setState(() {
-                        futureLeasetenant =
-                            LeaseRepository.fetchLeaseTenants(widget.leaseId);
-
-                        isLoading = false;
-                        isMovedOut = true;
-                      });
-                      reload_screen();
-                      Navigator.pop(context, true);
-                    }).catchError((e) {
-                      setState(() {
-                        isLoading = false;
-                      });
+            MoveoutActions(
+              onCancel: () {
+                Navigator.pop(context);
+              },
+              onMoveOut: () async {
+                final askEnd = askLeaseEnd();
+                final leaseEndError = leaseEndValidationError(
+                  ask: askEnd,
+                  answer: _leaseEnd,
+                  leaseStartDate: leaseTenant.startDate,
+                  leaseEndDate: leaseTenant.endDate,
+                  selectedMoveOutDates: selectedMoveOutDates(),
+                );
+                if (leaseEndError.isNotEmpty) {
+                  setState(() {});
+                  Fluttertoast.showToast(msg: leaseEndError);
+                  return;
+                }
+                final leaseEndPayload = buildLeaseEndPayload(
+                  ask: askEnd,
+                  answer: _leaseEnd,
+                  selectedMoveOutDates: selectedMoveOutDates(),
+                );
+                String? tenantId =
+                    tenant.tenantId != null ? tenant.tenantId! : null;
+                SharedPreferences prefs =
+                    await SharedPreferences.getInstance();
+                String? id = prefs.getString("adminId");
+                List<Map<String, dynamic>> multipletenant = [];
+                List<String> descriptions =
+                    selectedFiles.map((file) => file.description).toList();
+                for (tenant in selectedTenants) {
+                  if (tenant.isSelected!) {
+                    String moveoutNoticeGivenDate = reverseFormatDate(
+                        startDateControllers[tenant.tenantId!]!.text);
+                    String moveoutdate = reverseFormatDate(
+                        moveoutDateControllers[tenant.tenantId!]!.text);
+                    multipletenant.add({
+                      'admin_id': id,
+                      'tenant_id': tenant.tenantId!,
+                      'lease_id': tenant.leaseId,
+                      'moveout_notice_given_date': moveoutNoticeGivenDate!,
+                      'moveout_date': moveoutdate!,
                     });
-                  },
-                  child: Material(
-                    elevation: 3,
-                    borderRadius: const BorderRadius.all(Radius.circular(5)),
-                    child: Container(
-                      height: MediaQuery.of(context).size.width < 500 ? 40 : 50,
-                      width:
-                          MediaQuery.of(context).size.width < 500 ? 100 : 130,
-                      decoration: BoxDecoration(
-                        color: blueColor,
-                        borderRadius: const BorderRadius.all(Radius.circular(5)),
-                      ),
-                      child: Center(
-                          child: Text(
-                        "Move Out",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize:
-                              MediaQuery.of(context).size.width < 500 ? 15 : 17,
-                        ),
-                      )),
-                    ),
-                  ),
-                ),
-              ],
+                  }
+                }
+                List<File> selectfiles =
+                    selectedFiles.map((file) => file.file).toList();
+
+                await LeaseMoveoutRepository()
+                    .addMoveoutTenantfromlease(
+                  adminId: id!,
+                  tenantId: tenantId,
+                  leaseId: tenant.leaseId,
+                  moveoutDate: reverseFormatDate(widget.moveOutDate),
+                  moveoutNoticeGivenDate:
+                      reverseFormatDate(startdateController.text),
+                  fileDescriptions: descriptions,
+                  selectedFiles: selectfiles,
+                  multitenantdata: multipletenant,
+                  leaseEnd: leaseEndPayload,
+                )
+                    .then((value) {
+                  setState(() {
+                    futureLeasetenant =
+                        LeaseRepository.fetchLeaseTenants(widget.leaseId);
+
+                    isLoading = false;
+                    isMovedOut = true;
+                  });
+                  reload_screen();
+                  Navigator.pop(context, true);
+                }).catchError((e) {
+                  setState(() {
+                    isLoading = false;
+                  });
+                });
+              },
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 8),
           ],
         ),
       );
@@ -630,26 +409,24 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
   Widget buildDateField(TextEditingController controller,
       {bool enabled = false}) {
     return Padding(
-      padding: const EdgeInsets.only(left: 5, right: 2),
+      padding: EdgeInsets.zero,
       child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: BorderRadius.circular(5),
-          // border: Border.all(color: grey),
-        ),
+        decoration: moveoutDateBoxDecoration(enabled: enabled),
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.only(left: 5),
+            padding: const EdgeInsets.only(left: 14),
             child: TextField(
               controller: controller,
               enabled: enabled,
+              style: moveoutDateTextStyle(enabled: enabled),
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: Provider.of<DateProvider>(context, listen: false)
                     .dateFormat
                     .toUpperCase(),
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.calendar_today),
+                  icon: const Icon(Icons.calendar_today_outlined,
+                      size: 20, color: MoveoutColors.muted),
                   onPressed: () async {
                     DateTime? pickedDate = await showDatePicker(
                       context: context,

@@ -123,6 +123,13 @@ class _Add_vendorState extends State<Add_vendor> {
                                 keyboardType: TextInputType.text,
                                 hintText: 'Enter vendor name',
                                 controller: firstName,
+                                // Web parity (AddVendor.jsx): letters and spaces only, as web.
+                                inputFormatters: [
+                                  TextInputFormatter.withFunction((oldValue, newValue) =>
+                                      RegExp(r'^[a-zA-Z\s]*$').hasMatch(newValue.text)
+                                          ? newValue
+                                          : oldValue),
+                                ],
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return 'please enter the vendor name';
@@ -560,6 +567,13 @@ class _Add_vendorState extends State<Add_vendor> {
                               keyboardType: TextInputType.text,
                               hintText: 'Enter vendor name',
                               controller: firstName,
+                              // Web parity (AddVendor.jsx): letters and spaces only, as web.
+                              inputFormatters: [
+                                TextInputFormatter.withFunction((oldValue, newValue) =>
+                                    RegExp(r'^[a-zA-Z\s]*$').hasMatch(newValue.text)
+                                        ? newValue
+                                        : oldValue),
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'please enter the vendor name';
