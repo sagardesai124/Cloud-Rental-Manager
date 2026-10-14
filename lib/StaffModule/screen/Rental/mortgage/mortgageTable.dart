@@ -153,8 +153,7 @@ class _MortgageTableState extends State<MortgageTable>
             ),
           );
         }
-        // Load fallback data for development/testing
-        _loadFallbackMortgages();
+        _clearMortgages();
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -164,8 +163,7 @@ class _MortgageTableState extends State<MortgageTable>
             ),
           );
         }
-        // Load fallback data for development/testing
-        _loadFallbackMortgages();
+        _clearMortgages();
       }
     } catch (e) {
       if (mounted) {
@@ -180,8 +178,7 @@ class _MortgageTableState extends State<MortgageTable>
           );
         }
       }
-      // Load fallback data for development/testing
-      _loadFallbackMortgages();
+      _clearMortgages();
     } finally {
       if (mounted) {
         setState(() {
@@ -191,50 +188,14 @@ class _MortgageTableState extends State<MortgageTable>
     }
   }
 
-  void _loadFallbackMortgages() {
-    // Fallback mortgages for development/testing when API is not accessible
+  /// Web parity (Mortgage.jsx): when the mortgages can't be loaded, web
+  /// shows an empty list next to the error. This used to fill the list with
+  /// made-up sample mortgages instead.
+  void _clearMortgages() {
+    if (!mounted) return;
     setState(() {
-      _mortgages = [
-        {
-          '_id': '85d15d7a-77dc-401b-9d48-cd88d5f1abf3',
-          'properties': ['1752748973359'],
-          'bank_name': 'Test Bank',
-          'mortgage_no': '11',
-          'loan_amount': 4500,
-          'interest_rate': 5,
-          'status': 'active',
-          'remaining_balance': 4500,
-          'start_date': '2025-09-02T00:00:00.000Z',
-          'end_date': '2025-09-24T00:00:00.000Z',
-          'last_payment_date': '2025-09-02T00:00:00.000Z',
-          'next_payment_date': '2025-09-16T00:00:00.000Z',
-          'borrower_first_name': 'John',
-          'borrower_last_name': 'Doe',
-        },
-        {
-          '_id': '1bf93e3c-da0c-42ce-b3d2-5f03c41c0bea',
-          'properties': ['1747127489859'],
-          'bank_name': 'City Bank',
-          'mortgage_no': '3322332',
-          'loan_amount': 33000,
-          'interest_rate': 3.3,
-          'status': 'active',
-          'remaining_balance': 33000,
-          'start_date': '2025-08-22T00:00:00.000Z',
-          'end_date': '2025-08-27T00:00:00.000Z',
-          'last_payment_date': null,
-          'next_payment_date': null,
-          'borrower_first_name': 'Jane',
-          'borrower_last_name': 'Smith',
-        },
-      ];
-      // Sort by mortgage number in descending order
-      _mortgages.sort((a, b) {
-        String mortgageA = (a['mortgage_no'] ?? '').toString();
-        String mortgageB = (b['mortgage_no'] ?? '').toString();
-        return mortgageB.compareTo(mortgageA);
-      });
-      _filteredMortgages = List.from(_mortgages);
+      _mortgages = [];
+      _filteredMortgages = [];
     });
   }
 

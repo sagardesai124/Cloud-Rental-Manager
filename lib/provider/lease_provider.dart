@@ -42,14 +42,12 @@ class SelectedTenantsProvider extends ChangeNotifier {
   //   notifyListeners();
   // }
 
-  void addTenant(Tenant tenant) {
-    for(var tenants  in _selectedTenants){
-
-    }
-
+  /// Adds [tenant] unless the same person is already on the lease; returns
+  /// whether it was added.
+  bool addTenant(Tenant tenant) {
 //    Check if the tenant is already in the selected tenants
-    if (_selectedTenants.any((existingTenant) => tenant.tenantId != null ?  existingTenant.tenantId == tenant.tenantId:existingTenant.applicantId == tenant.applicantId)) {
-      return; // Exit the method if the tenant is already added
+    if (isAdded(tenant)) {
+      return false; // Exit the method if the tenant is already added
     }
 
 
@@ -64,7 +62,36 @@ class SelectedTenantsProvider extends ChangeNotifier {
 
     _selectedTenants.add(tenant);
     notifyListeners();
+    return true;
   }
+
+  /// Whether the same person as [tenant] is already on the lease.
+  bool isAdded(Tenant tenant) =>
+      _selectedTenants.any((existing) => _sameTenant(existing, tenant));
+
+  // Saved tenants match by tenant id and applicants by applicant id. A tenant
+  // typed in on the form has neither yet, so when either side is such a
+  // tenant they match by email (the server refuses two tenants with the same
+  // email on one lease), whichever was added first. Two different new
+  // tenants, or a new tenant next to an existing one, can both be added.
+  bool _sameTenant(Tenant existing, Tenant tenant) {
+    String norm(String? v) => (v ?? '').trim();
+    if (norm(tenant.tenantId).isNotEmpty &&
+        existing.tenantId == tenant.tenantId) {
+      return true;
+    }
+    if (norm(tenant.applicantId).isNotEmpty &&
+        existing.applicantId == tenant.applicantId) {
+      return true;
+    }
+    bool typedIn(Tenant t) =>
+        norm(t.tenantId).isEmpty && norm(t.applicantId).isEmpty;
+    if (!typedIn(existing) && !typedIn(tenant)) return false;
+    final email = norm(tenant.tenantEmail).toLowerCase();
+    return email.isNotEmpty &&
+        norm(existing.tenantEmail).toLowerCase() == email;
+  }
+
   void AddEditTenant(){
     for(var i=0;i< _selectedTenants.length;i++){
     }
@@ -79,6 +106,9 @@ class SelectedTenantsProvider extends ChangeNotifier {
 
   void removeTenant(Tenant tenant) {
     int index = _selectedTenants.indexOf(tenant);
+    if (index == -1) {
+      index = _selectedTenants.indexWhere((t) => _sameTenant(t, tenant));
+    }
     if (index != -1) {
       _selectedTenants.removeAt(index);
       _rentShareControllers[index].dispose(); // Dispose the controller to avoid memory leaks

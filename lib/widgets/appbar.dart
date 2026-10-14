@@ -15,6 +15,10 @@ import 'package:badges/badges.dart' as badges;
 import 'package:package_info_plus/package_info_plus.dart';
 
 class widget_302 {
+  /// True for a Staff login. Staff reach this shared app bar from shared
+  /// screens (e.g. Settings); the permission matrix is Admin-only, as on web.
+  static bool _isStaffUser = false;
+
   static App_Bar({
     var suffixIcon,
     var leading,
@@ -259,6 +263,8 @@ class widget_302 {
                           }
                         },
                       ),
+                      // Admin only, like web: Staff can't change permissions.
+                      if (!_isStaffUser)
                       PopupMenuItem(
                         child: Row(
                           children: [
@@ -410,6 +416,8 @@ class widget_302 {
 
   static Future<String> _getNameFromSharedPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    _isStaffUser = prefs.getString('role') == 'Staffmember' ||
+        (prefs.getString('staff_id') ?? '').isNotEmpty;
     String? firstName = prefs.getString("first_name");
     String? lastName = prefs.getString("last_name");
     String combinationName = '';

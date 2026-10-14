@@ -122,8 +122,7 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
             ),
           );
         }
-        // Load fallback data for development/testing
-        _loadFallbackMortgages();
+        _clearTaxes();
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -133,8 +132,7 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
             ),
           );
         }
-        // Load fallback data for development/testing
-        _loadFallbackMortgages();
+        _clearTaxes();
       }
     } catch (e) {
       if (mounted) {
@@ -145,8 +143,7 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
           ),
         );
       }
-      // Load fallback data for development/testing
-      _loadFallbackMortgages();
+      _clearTaxes();
     } finally {
       if (mounted) {
         setState(() {
@@ -175,40 +172,14 @@ class _Property_tax_TableState extends State<Property_tax_Table> {
     });
   }
 
-  void _loadFallbackMortgages() {
-    // Fallback tax data for development/testing when API is not accessible
+  /// Web parity (PropDetails.jsx fetchTaxData): when the property taxes
+  /// can't be loaded, web shows an empty list. This used to fill the list
+  /// with made-up sample tax rows instead.
+  void _clearTaxes() {
+    if (!mounted) return;
     setState(() {
-      _taxes = [
-        {
-          '_id': '85d15d7a-77dc-401b-9d48-cd88d5f1abf3',
-          'properties': [widget.propertyId],
-          'tax_year': '2024',
-          'tax_amount': 2500.00,
-          'status': 'Paid',
-          'due_date': '2024-12-31T00:00:00.000Z',
-          'paid_date': '2024-12-15T00:00:00.000Z',
-        },
-        {
-          '_id': '1bf93e3c-da0c-42ce-b3d2-5f03c41c0bea',
-          'properties': [widget.propertyId],
-          'tax_year': '2023',
-          'tax_amount': 2300.00,
-          'status': 'Overdue',
-          'due_date': '2023-12-31T00:00:00.000Z',
-          'paid_date': null, // This will show as N/A
-        },
-        {
-          '_id': '2cf93e3c-da0c-42ce-b3d2-5f03c41c0bea',
-          'properties': [widget.propertyId],
-          'tax_year': '2025',
-          'tax_amount': 2700.00,
-          'status': 'Pending',
-          'due_date': '2025-12-31T00:00:00.000Z',
-          'paid_date': '', // This will also show as N/A
-        },
-      ];
-      _sortTaxes();
-      _filteredtax = List.from(_taxes);
+      _taxes = [];
+      _filteredtax = [];
     });
   }
 

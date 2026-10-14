@@ -87,6 +87,9 @@ class SummeryPageLease extends StatefulWidget {
 
 class _SummeryPageLeaseState extends State<SummeryPageLease>
     with SingleTickerProviderStateMixin, NetworkRetryState {
+  // Move In sends once: a second tap while it is being sent is ignored.
+  bool _moveInBusy = false;
+
   TextEditingController startdateController = TextEditingController();
   TextEditingController enddateController = TextEditingController();
   late Future<LeaseSummary> futureLeaseSummary;
@@ -5224,6 +5227,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                         .getInstance();
                                                 String? id =
                                                     prefs.getString("adminId");
+                                                if (_moveInBusy) return;
+                                                _moveInBusy = true;
                                                 LeaseMoveoutRepository()
                                                     .addMoveInTenant(
                                                   adminId: id!,
@@ -5245,7 +5250,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                   setState(() {
                                                     isLoading = false;
                                                   });
-                                                });
+                                                }).whenComplete(() => _moveInBusy = false);
                                               },
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
@@ -5554,6 +5559,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                             .getInstance();
                                                     String? id = prefs
                                                         .getString("adminId");
+                                                    if (_moveInBusy) return;
+                                                    _moveInBusy = true;
                                                     LeaseMoveoutRepository()
                                                         .addMoveInTenant(
                                                       adminId: id!,
@@ -5578,7 +5585,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                       setState(() {
                                                         isLoading = false;
                                                       });
-                                                    });
+                                                    }).whenComplete(() => _moveInBusy = false);
                                                   },
                                                   child: Row(
                                                     children: [
@@ -6020,7 +6027,11 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
       selectedTenantIds: [tenant.tenantId],
       selectedMoveOutDates: selectedMoveOutDates,
     );
-    return SingleChildScrollView(
+    // While a move-out is sending the popup stays open (outside tap and back
+    // are ignored), so its result always reaches this page.
+    return WillPopScope(
+      onWillPop: () async => !isLoading,
+      child: SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -6078,65 +6089,79 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
             ),
           ],
           const SizedBox(height: 20),
-          MoveoutActions(
-            onCancel: () {
-              Navigator.pop(context);
-            },
-            onMoveOut: () async {
-              if (selectedMoveOutDates.first.isEmpty ||
-                  reverseFormatDate(startdateController.text).isEmpty) {
-                Fluttertoast.showToast(
-                    msg:
-                        '"Notice Given Date" and "Move-Out Date" are required for all selected tenants');
-                return;
-              }
-              final leaseEndError = leaseEndValidationError(
-                ask: askLeaseEnd,
-                answer: _leaseEnd,
-                leaseStartDate: tenant.startDate,
-                leaseEndDate: tenant.endDate,
-                selectedMoveOutDates: selectedMoveOutDates,
-              );
-              if (leaseEndError.isNotEmpty) {
-                Fluttertoast.showToast(msg: leaseEndError);
-                return;
-              }
-              String? tenantId =
-                  tenant.tenantId != null ? tenant.tenantId! : null;
-              SharedPreferences prefs =
-                  await SharedPreferences.getInstance();
-              String? id = prefs.getString("adminId");
-              LeaseMoveoutRepository()
-                  .addMoveoutTenant(
-                adminId: id!,
-                tenantId: tenantId,
-                leaseId: tenant.leaseId,
-                moveoutDate: moveOutDate,
-                moveoutNoticeGivenDate: startdateController.text,
-                leaseEnd: buildLeaseEndPayload(
-                  ask: askLeaseEnd,
-                  answer: _leaseEnd,
-                  selectedMoveOutDates: selectedMoveOutDates,
-                ),
-              )
-                  .then((value) {
-                setState(() {
-                  futureLeasetenant =
-                      LeaseRepository.fetchLeaseTenants(widget.leaseId);
-                  isLoading = false;
-                  isMovedOut = true;
-                });
+          // The page's setState does not rebuild this dialog; this rebuilds
+          // the button so its spinner shows while sending.
+          StatefulBuilder(
+            builder: (buttonContext, setButtonState) =>
+                MoveoutActions(
+                  busy: isLoading,
+                  onCancel: () {
+                    if (isLoading) return;
+                    Navigator.pop(context);
+                  },
+                  onMoveOut: () async {
+                    if (isLoading) return;
+                    if (selectedMoveOutDates.first.isEmpty ||
+                        reverseFormatDate(startdateController.text).isEmpty) {
+                      Fluttertoast.showToast(
+                          msg:
+                              '"Notice Given Date" and "Move-Out Date" are required for all selected tenants');
+                      return;
+                    }
+                    final leaseEndError = leaseEndValidationError(
+                      ask: askLeaseEnd,
+                      answer: _leaseEnd,
+                      leaseStartDate: tenant.startDate,
+                      leaseEndDate: tenant.endDate,
+                      selectedMoveOutDates: selectedMoveOutDates,
+                    );
+                    if (leaseEndError.isNotEmpty) {
+                      Fluttertoast.showToast(msg: leaseEndError);
+                      return;
+                    }
+                    setState(() => isLoading = true);
+                    setButtonState(() {});
+                    String? tenantId =
+                        tenant.tenantId != null ? tenant.tenantId! : null;
+                    SharedPreferences prefs =
+                        await SharedPreferences.getInstance();
+                    String? id = prefs.getString("adminId");
+                    LeaseMoveoutRepository()
+                        .addMoveoutTenant(
+                      adminId: id!,
+                      tenantId: tenantId,
+                      leaseId: tenant.leaseId,
+                      moveoutDate: moveOutDate,
+                      moveoutNoticeGivenDate: startdateController.text,
+                      leaseEnd: buildLeaseEndPayload(
+                        ask: askLeaseEnd,
+                        answer: _leaseEnd,
+                        selectedMoveOutDates: selectedMoveOutDates,
+                      ),
+                    )
+                        .then((value) {
+                      if (!mounted) return;
+                      setState(() {
+                        futureLeasetenant =
+                            LeaseRepository.fetchLeaseTenants(widget.leaseId);
+                        isLoading = false;
+                        isMovedOut = true;
+                      });
 
-                Navigator.pop(context, true);
-              }).catchError((e) {
-                setState(() {
-                  isLoading = false;
-                });
-              });
-            },
+                      Navigator.pop(context, true);
+                    }).catchError((e) {
+                      if (!mounted) return;
+                      setState(() {
+                        isLoading = false;
+                      });
+                      if (buttonContext.mounted) setButtonState(() {});
+                    });
+                  },
+                ),
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -6169,7 +6194,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                   onPressed: () async {
                     DateTime? pickedDate = await showDatePicker(
                       context: context,
-                      initialDate: DateTime.now(),
+                      initialDate: moveoutPickerInitialDate(controller.text),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2101),
                       builder: (BuildContext context, Widget? child) {

@@ -4095,7 +4095,7 @@ class _Edit_leaseState extends State<Edit_lease>
                                       // provider.clearValidationMessage();
                                       if (rentShareControllers.length < 1) {
                                         setState(() {
-                                          _errorMessage = "required tenants";
+                                          _errorMessage = 'Please select at least one tenant';
                                           // _errorMessagetenants = 'Please select at least one tenant or cosigner.';
                                           // _errorMessage = null;
                                         });

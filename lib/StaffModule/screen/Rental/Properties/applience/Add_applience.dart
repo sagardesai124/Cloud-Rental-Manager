@@ -280,7 +280,9 @@ class _AddApplienceState extends State<AddApplience> {
   List<String> statusList = ['Working', 'Needs Repair', "Out of Service"];
 
   String? _selectedBrand;
-  String? _selectedStatus;
+  // Web parity (PropDetails.jsx): a new appliance starts as "Working" and
+  // Status is optional. Editing loads the saved status instead.
+  String? _selectedStatus = 'Working';
   String? _selectedSystemType;
   final List<String> systemTypeList = ['Major System', 'Appliance'];
   final List<String> _majorSystemCategories = [
@@ -817,7 +819,7 @@ class _AddApplienceState extends State<AddApplience> {
                   const Padding(
                     padding: EdgeInsets.only(left: 10),
                     child: Text(
-                      'Status *',
+                      'Status',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),

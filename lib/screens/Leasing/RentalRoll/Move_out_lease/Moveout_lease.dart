@@ -130,6 +130,15 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
         .where((t) => t.isSelected == true)
         .map((t) => reverseFormatDate(moveoutDateControllers[t.tenantId]!.text))
         .toList();
+    // Web's check before sending: a tenant is ticked and each ticked
+    // tenant has both dates.
+    bool moveOutDatesMissing() {
+      final ticked = selectedTenants.where((t) => t.isSelected == true).toList();
+      return moveoutDatesMissing(
+        ticked.map((t) => startDateControllers[t.tenantId]?.text ?? '').toList(),
+        ticked.map((t) => moveoutDateControllers[t.tenantId]?.text ?? '').toList(),
+      );
+    }
     bool askLeaseEnd() => shouldAskLeaseEnd(
           leaseType: leaseTenant.leaseType,
           leaseEndDate: leaseTenant.endDate,
@@ -204,68 +213,35 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
             const SizedBox(height: 14),
             MoveoutUploadCard(
               onTap: pickFiles,
-              // Picked-file list keeps working as before; its redesign is
-              // planned as its own task.
               files: selectedFiles.isEmpty
                   ? null
-                  : Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: SingleChildScrollView(
-                child: Column(
-                  children: selectedFiles.asMap().entries.map((entry) {
-                    int index = entry.key;
-                    FileData fileData = entry.value;
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  fileData.file.path.split('/').last,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.close, color: Colors.grey),
-                                onPressed: () => removeFile(index),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 6),
-                          TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Enter description',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                            ),
-                            onChanged: (value) =>
-                                updateDescription(index, value),
-                          ),
-                          const SizedBox(height: 10),
-                          Divider(thickness: 1),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
+                  : Column(
+                      children: selectedFiles.asMap().entries.map((entry) {
+                        final int index = entry.key;
+                        final FileData fileData = entry.value;
+                        return MoveoutPickedFileTile(
+                          key: ObjectKey(fileData),
+                          fileName: fileData.file.path.split('/').last,
+                          onRemove: () => removeFile(index),
+                          onDescriptionChanged: (value) =>
+                              updateDescription(index, value),
+                        );
+                      }).toList(),
                     ),
             ),
             const SizedBox(height: 20),
 
             MoveoutActions(
+              busy: isLoading,
               onCancel: () {
                 Navigator.pop(context);
               },
               onMoveOut: () async {
+                if (isLoading) return;
+                if (moveOutDatesMissing()) {
+                  Fluttertoast.showToast(msg: moveoutDatesRequiredMessage);
+                  return;
+                }
                 final askEnd = askLeaseEnd();
                 final leaseEndError = leaseEndValidationError(
                   ask: askEnd,
@@ -279,6 +255,7 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
                   Fluttertoast.showToast(msg: leaseEndError);
                   return;
                 }
+                setState(() => isLoading = true);
                 final leaseEndPayload = buildLeaseEndPayload(
                   ask: askEnd,
                   answer: _leaseEnd,
@@ -324,6 +301,7 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
                   leaseEnd: leaseEndPayload,
                 )
                     .then((value) {
+                  if (!mounted) return;
                   setState(() {
                     futureLeasetenant =
                         LeaseRepository.fetchLeaseTenants(widget.leaseId);
@@ -334,6 +312,7 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
                   reload_screen();
                   Navigator.pop(context, true);
                 }).catchError((e) {
+                  if (!mounted) return;
                   setState(() {
                     isLoading = false;
                   });
@@ -360,35 +339,36 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
 
   Future<void> pickFiles() async {
     if (selectedFiles.length >= 10) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Maximum 10 files allowed')));
+      Fluttertoast.showToast(msg: 'Maximum 10 files can be uploaded at once');
       return;
     }
 
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
-      withData: true,
-      type: FileType.any,
+      // Only the file path is used; reading every picked file into memory
+      // first would load even files the 5 MB rule then rejects.
+      withData: false,
+      type: FileType.custom,
+      allowedExtensions: moveoutDocumentExtensions,
     );
+    if (result == null) return;
 
-    if (result != null) {
-      for (var file in result.files) {
-        if (selectedFiles.length >= 10) break;
-
-        if (file.size > 5 * 1024 * 1024) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${file.name} exceeds 5MB limit')),
-          );
-          continue;
-        }
-
-        final fileObj = File(file.path!);
-
-        setState(() {
-          selectedFiles.add(FileData(file: fileObj));
-        });
-      }
+    // Same rules and messages as web (moveout_form_ui.dart).
+    final check = checkMoveoutDocuments(
+      existingNames:
+          selectedFiles.map((f) => f.file.path.split('/').last).toList(),
+      pickedNames: result.files.map((f) => f.name).toList(),
+      pickedSizes: result.files.map((f) => f.size).toList(),
+    );
+    if (check.errors.isNotEmpty) {
+      Fluttertoast.showToast(msg: check.errors.join('\n'));
     }
+    if (check.accepted.isEmpty) return;
+    setState(() {
+      for (final i in check.accepted) {
+        selectedFiles.add(FileData(file: File(result.files[i].path!)));
+      }
+    });
   }
 
   void removeFile(int index) {
@@ -431,7 +411,7 @@ class _MoveoutScreenState extends State<MoveoutScreen> {
                   onPressed: () async {
                     DateTime? pickedDate = await showDatePicker(
                       context: context,
-                      initialDate: DateTime.now(),
+                      initialDate: moveoutPickerInitialDate(controller.text),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2101),
                       builder: (BuildContext context, Widget? child) {

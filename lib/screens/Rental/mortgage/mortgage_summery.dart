@@ -104,25 +104,18 @@ class _MortgageSummaryState extends State<MortgageSummary>
         });
       }
     } catch (e) {
-      setState(() {
-        mortgageData = {
-          '_id': '85d15d7a-77dc-401b-9d48-cd88d5f1abf3',
-          'properties': ['1752748973359'],
-          'bank_name': 'Test Bank',
-          'mortgage_no': '11',
-          'loan_amount': 4500,
-          'interest_rate': 5,
-          'status': 'active',
-          'remaining_balance': 4500,
-          'start_date': '2025-09-02T00:00:00.000Z',
-          'end_date': '2025-09-24T00:00:00.000Z',
-          'last_payment_date': '2025-09-02T00:00:00.000Z',
-          'next_payment_date': '2025-09-16T00:00:00.000Z',
-          'borrower_first_name': 'John',
-          'borrower_last_name': 'Doe',
-          'monthly_payment': 4518.75,
-        };
-      });
+      // Web parity (MortgageDetails.jsx): a failed load shows an error and
+      // never invents a mortgage — this used to fill in a made-up sample
+      // mortgage. A network failure already switches the screen to its
+      // offline view, so no banner then.
+      if (mounted && !isNetworkError(e)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error loading mortgage details. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       logError(e);
     } finally {
       setState(() {

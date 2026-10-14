@@ -2855,7 +2855,8 @@ class _Lease_tableState extends State<Lease_table>
                       style: pw.TextStyle(
                           fontSize: 18, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
-                      'Active Leases as of ${dateProvider.formatCurrentDateTime(DateTime.now().toIso8601String())}',
+                      // The status picked in the filter, as on web.
+                      '$selectedStatus Leases as of ${dateProvider.formatCurrentDateTime(DateTime.now().toIso8601String())}',
                       style: pw.TextStyle(fontSize: 12)),
                 ],
               ),

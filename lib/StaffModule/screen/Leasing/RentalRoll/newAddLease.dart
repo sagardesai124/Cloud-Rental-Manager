@@ -3938,6 +3938,11 @@ class _addLease3State extends State<addLease3>
                                           borderRadius:
                                               BorderRadius.circular(8.0))),
                                   onPressed: () async {
+                                    // One save at a time: a second tap while the lease is being saved
+                                    // would send it twice (two leases, two copies of a new tenant).
+                                    if (_saveInFlight) return;
+                                    _saveInFlight = true;
+                                    try {
                                     if (_formKey.currentState?.validate() ??
                                         false) {
                                       setState(() {
@@ -3963,7 +3968,8 @@ class _addLease3State extends State<addLease3>
                                       //charges
                                       if (rentShareControllers.length < 1) {
                                         setState(() {
-                                          _errorMessage = "required tenants";
+                                          isLoading = false;
+                                          _errorMessage = 'Please select at least one tenant';
                                           // _errorMessagetenants = 'Please select at least one tenant or cosigner.';
                                           // _errorMessage = null;
                                         });
@@ -4228,11 +4234,24 @@ class _addLease3State extends State<addLease3>
                                         String jsonBody =
                                             jsonEncode(chargeData.toJson());
 
-                                        await addLeaseAndNavigate(lease);
-
-                                        setState(() {
-                                          isLoading = false; // Stop loading
-                                        });
+                                        final applicantId = widget.applicantId;
+                                        final saved =
+                                            await addLeaseAndNavigate(lease);
+                                        // Move the applicant in once the lease exists, even if the
+                                        // screen was left while saving, then close the screen once.
+                                        if (saved &&
+                                            applicantIds != null &&
+                                            applicantIds!.isNotEmpty) {
+                                          await ifApplicantMoveIn(applicantId!, applicantIds);
+                                        }
+                                        if (!mounted) return;
+                                        if (!saved) {
+                                          setState(() {
+                                            isLoading = false; // Stop loading
+                                          });
+                                          return;
+                                        }
+                                        Navigator.pop(context, true);
                                         // if (widget.applicantId != null &&
                                         //     widget.applicantId!.isNotEmpty) {
                                         //   print(
@@ -4242,12 +4261,6 @@ class _addLease3State extends State<addLease3>
                                         // } else {
                                         //   print('No applicant id provided');
                                         // }
-                                        if (applicantIds != null &&
-                                            applicantIds!.isNotEmpty) {
-                                          ifApplicantMoveIn(widget.applicantId!,
-                                              applicantIds);
-                                        } else {
-                                        }
                                       }
                                     } else {
                                       String leaseStartDate = reverseFormatDate(
@@ -4383,6 +4396,9 @@ class _addLease3State extends State<addLease3>
                                         );
                                       }).toList();
                                     }
+                                    } finally {
+                                      _saveInFlight = false;
+                                    }
                                   },
                                   child: Center(
                                       child: isLoading
@@ -4434,15 +4450,13 @@ class _addLease3State extends State<addLease3>
     );
   }
 
-  Future<void> addLeaseAndNavigate(Lease lease) async {
-    bool success = await LeaseRepository().postLease(lease);
+  // Guards the Create Lease button against a second tap while saving.
+  bool _saveInFlight = false;
 
-    if (success) {
-      Navigator.pop(context, true); // Replace with the actual navigation logic
-    } else {
-      // Handle the failure case, maybe show a message
-    }
-  }
+  /// Saves the lease; true once the server has saved it. The caller moves an
+  /// applicant in and closes the screen.
+  Future<bool> addLeaseAndNavigate(Lease lease) =>
+      LeaseRepository().postLease(lease);
 
   //
   // Future<void> ifApplicantMoveIn(String applicantId) async {
@@ -4458,14 +4472,7 @@ class _addLease3State extends State<addLease3>
 
   Future<void> ifApplicantMoveIn(
       String applicantId, List<String> apnt_Id) async {
-    bool success =
-        await LeaseRepository().ifApplicantMoveInTrue(applicantId, apnt_Id);
-
-    if (success) {
-      Navigator.pop(context); // Replace with the actual navigation logic
-    } else {
-      // Handle the failure case, maybe show a message
-    }
+    await LeaseRepository().ifApplicantMoveInTrue(applicantId, apnt_Id);
   }
 
   Future<void> addLease() async {

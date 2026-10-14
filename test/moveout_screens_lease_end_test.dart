@@ -365,7 +365,7 @@ void main() {
       await _run(server, () async {
         final tenants = [_leaseTenant('T-1', 'Pat'), _leaseTenant('T-2', 'Sam')];
         await _open(tester, () => page(tenants), (_) {});
-        // Tick Sam and pick the 15th of this month as his move-out date.
+        // Tick Sam and pick the 15th of his lease-end month as his move-out date.
         await _tap(tester, find.byType(Checkbox).at(1));
         expect(_checked(tester, 1), isTrue);
         await _tap(tester, find.byIcon(Icons.calendar_today_outlined).at(3));
@@ -373,8 +373,8 @@ void main() {
         await tester.pump();
         await tester.tap(find.text('OK'));
         await _settle(tester, 10);
-        final now = DateTime.now();
-        final picked = DateTime(now.year, now.month, 15);
+        // The calendar opens on the date the field shows (the lease end).
+        final picked = DateTime(2027, 9, 15);
         final pickedShown = DateFormat('MM/dd/yyyy').format(picked);
         expect(_dateFieldTexts(tester)[3], pickedShown);
 
@@ -596,8 +596,8 @@ void main() {
         await tester.pump();
         await tester.tap(find.text('OK'));
         await _settle(tester, 10);
-        final now = DateTime.now();
-        final picked = DateTime(now.year, now.month, 15);
+        // The calendar opens on the date the field shows (the lease end).
+        final picked = DateTime(2027, 9, 15);
 
         await _tap(tester, find.byKey(const Key('lease-end-yes')));
         expect(

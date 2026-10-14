@@ -20,6 +20,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -289,11 +290,6 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
     }
   }
 
-  bool _isSelected(Tenant t, List<Tenant> selected) {
-    return selected.any((s) =>
-        (t.tenantId != null && s.tenantId == t.tenantId) ||
-        (t.applicantId != null && s.applicantId == t.applicantId));
-  }
 
   // ------------------------------------------------------------------ save
 
@@ -348,8 +344,27 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
       pets: tenantSubdocPayload(_pets),
       vehicles: tenantSubdocPayload(_vehicles),
     );
-    Provider.of<SelectedTenantsProvider>(context, listen: false)
-        .addTenant(tenant);
+    final tenantsOnLease =
+        Provider.of<SelectedTenantsProvider>(context, listen: false);
+    if (!tenantsOnLease.addTenant(tenant)) {
+      // Same message as web (tenantEmailDuplicates.js onLeaseConflictMessage);
+      // the form stays open so the email can be corrected.
+      String norm(String? v) => (v ?? '').trim().toLowerCase();
+      final email = norm(tenant.tenantEmail);
+      final onLease = tenantsOnLease.selectedTenants
+          .where((t) => norm(t.tenantEmail) == email)
+          .firstOrNull;
+      final name = '${onLease?.tenantFirstName ?? ''} '
+              '${onLease?.tenantLastName ?? ''}'
+          .trim();
+      Fluttertoast.showToast(
+          msg: '$email is already used by '
+              '${name.isNotEmpty ? name : email} on this lease. '
+              'Tenant email is how renewal notices, late-fee letters, and '
+              'e-sign requests are routed, so two tenants on a lease cannot '
+              'share one address.');
+      return;
+    }
     Navigator.of(context).pop(true);
   }
 
@@ -554,8 +569,9 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
   // middle (Expanded), Done/Cancel pinned at the bottom — so a long list never
   // pushes the buttons off-screen.
   Widget _existingTenantView() {
-    final selected =
-        Provider.of<SelectedTenantsProvider>(context).selectedTenants;
+    // Same rule the lease's tenant list uses, so a tenant whose email was
+    // already typed in on this lease shows as ticked.
+    final tenantsOnLease = Provider.of<SelectedTenantsProvider>(context);
     final q = _search.text.trim().toLowerCase();
     final filtered = _allTenants.where((t) {
       final name =
@@ -612,7 +628,7 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
                         padding: EdgeInsets.zero,
                         itemCount: filtered.length,
                         itemBuilder: (_, i) => _tenantRow(
-                            filtered[i], _isSelected(filtered[i], selected)),
+                            filtered[i], tenantsOnLease.isAdded(filtered[i])),
                       ),
           ),
           const SizedBox(height: 12),

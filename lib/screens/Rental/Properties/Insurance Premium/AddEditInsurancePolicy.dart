@@ -1309,14 +1309,26 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
                         hint: 'Enter policy number',
                         required: true,
                         validator: (value) {
+                          // Same rules and messages as web (PropDetails.jsx).
                           if (_hasValidated &&
                               (value == null || value.trim().isEmpty)) {
-                            return 'Policy Number is required';
+                            return 'Policy number is required';
                           }
                           if (_hasValidated &&
                               value != null &&
                               value.trim().length < 2) {
-                            return 'Policy Number must be at least 2 characters';
+                            return 'Policy number must be at least 2 characters';
+                          }
+                          if (_hasValidated &&
+                              value != null &&
+                              value.trim().length > 50) {
+                            return 'Policy number cannot exceed 50 characters';
+                          }
+                          if (_hasValidated &&
+                              value != null &&
+                              !RegExp(r'^[A-Za-z0-9\-/]+$')
+                                  .hasMatch(value.trim())) {
+                            return 'Policy number can only contain letters, numbers, hyphens (-), and forward slashes (/)';
                           }
                           return null;
                         },

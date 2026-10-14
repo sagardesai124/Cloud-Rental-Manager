@@ -510,7 +510,11 @@ class _applicant_summeryState extends State<applicant_summery>
                                     leaseId: snapshot.data?.leaseData?.leaseId,
                                   ),
                                 ),
-                              );
+                              ).then((created) {
+                                // Show the lease and the applicant's moved-in status
+                                // straight away.
+                                if (created == true) reloadData();
+                              });
                             }
 
                             Widget actionButton({

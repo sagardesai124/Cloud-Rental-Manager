@@ -94,6 +94,9 @@ class SummeryPageLease extends StatefulWidget {
 
 class _SummeryPageLeaseState extends State<SummeryPageLease>
     with SingleTickerProviderStateMixin, NetworkRetryState {
+  // Move In sends once: a second tap while it is being sent is ignored.
+  bool _moveInBusy = false;
+
   TextEditingController startdateController = TextEditingController();
   TextEditingController enddateController = TextEditingController();
   late Future<LeaseSummary> futureLeaseSummary;
@@ -4934,6 +4937,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                         .getInstance();
                                                 String? id =
                                                     prefs.getString("adminId");
+                                                if (_moveInBusy) return;
+                                                _moveInBusy = true;
                                                 LeaseMoveoutRepository()
                                                     .addMoveInTenant(
                                                   adminId: id!,
@@ -4955,7 +4960,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                   setState(() {
                                                     isLoading = false;
                                                   });
-                                                });
+                                                }).whenComplete(() => _moveInBusy = false);
                                               },
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
@@ -5271,6 +5276,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                             .getInstance();
                                                     String? id = prefs
                                                         .getString("adminId");
+                                                    if (_moveInBusy) return;
+                                                    _moveInBusy = true;
                                                     LeaseMoveoutRepository()
                                                         .addMoveInTenant(
                                                       adminId: id!,
@@ -5295,7 +5302,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                       setState(() {
                                                         isLoading = false;
                                                       });
-                                                    });
+                                                    }).whenComplete(() => _moveInBusy = false);
                                                   },
                                                   child: Row(
                                                     children: [
@@ -5449,6 +5456,15 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
         .where((t) => t.isSelected == true)
         .map((t) => reverseFormatDate(moveoutDateControllers[t.tenantId]!.text))
         .toList();
+    // Web's check before sending: a tenant is ticked and each ticked
+    // tenant has both dates.
+    bool moveOutDatesMissing() {
+      final ticked = selectedTenants.where((t) => t.isSelected == true).toList();
+      return moveoutDatesMissing(
+        ticked.map((t) => startDateControllers[t.tenantId]?.text ?? '').toList(),
+        ticked.map((t) => moveoutDateControllers[t.tenantId]?.text ?? '').toList(),
+      );
+    }
     bool askLeaseEnd() => shouldAskLeaseEnd(
           leaseType: leaseTenant.leaseType,
           leaseEndDate: leaseTenant.endDate,
@@ -5463,7 +5479,11 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
               .map((t) => t.tenantId),
           selectedMoveOutDates: selectedMoveOutDates(),
         );
-    return StatefulBuilder(builder: (context, setState) {
+    // While a move-out is sending the popup stays open (outside tap and back
+    // are ignored), so its result always reaches this page.
+    return WillPopScope(
+      onWillPop: () async => !isLoading,
+      child: StatefulBuilder(builder: (context, setState) {
       return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -5517,10 +5537,17 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
             ],
             const SizedBox(height: 20),
             MoveoutActions(
+              busy: isLoading,
               onCancel: () {
+                if (isLoading) return;
                 Navigator.pop(context);
               },
               onMoveOut: () async {
+                if (isLoading) return;
+                if (moveOutDatesMissing()) {
+                  Fluttertoast.showToast(msg: moveoutDatesRequiredMessage);
+                  return;
+                }
                 final askEnd = askLeaseEnd();
                 final leaseEndError = leaseEndValidationError(
                   ask: askEnd,
@@ -5534,6 +5561,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                   Fluttertoast.showToast(msg: leaseEndError);
                   return;
                 }
+                setState(() => isLoading = true);
                 final leaseEndPayload = buildLeaseEndPayload(
                   ask: askEnd,
                   answer: _leaseEnd,
@@ -5573,6 +5601,9 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                         multitenantdata: multipletenant,
                         leaseEnd: leaseEndPayload)
                     .then((value) {
+                  isLoading = false;
+                  // The popup may have been closed while this was sending.
+                  if (!context.mounted) return;
                   setState(() {
                     futureLeasetenant =
                         LeaseRepository.fetchLeaseTenants(widget.leaseId);
@@ -5584,6 +5615,9 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                   reload_screen();
                   Navigator.pop(context, true);
                 }).catchError((e) {
+                  isLoading = false;
+                  // The popup may have been closed while this was sending.
+                  if (!context.mounted) return;
                   setState(() {
                     isLoading = false;
                   });
@@ -5593,7 +5627,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
           ],
         ),
       );
-    });
+    }),
+    );
   }
 
   Widget buildTableCell(Widget child) {
@@ -5631,7 +5666,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                   onPressed: () async {
                     DateTime? pickedDate = await showDatePicker(
                       context: context,
-                      initialDate: DateTime.now(),
+                      initialDate: moveoutPickerInitialDate(controller.text),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2101),
                       builder: (BuildContext context, Widget? child) {

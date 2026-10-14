@@ -138,6 +138,15 @@ class _Moveout_propertiesState extends State<Moveout_properties> {
         .where((t) => t.isSelected)
         .map((t) => reverseFormatDate(moveoutDateControllers[idOf(t)]!.text))
         .toList();
+    // Web's check before sending: a tenant is ticked and each ticked
+    // tenant has both dates.
+    bool moveOutDatesMissing() {
+      final ticked = selectedTenants.where((t) => t.isSelected).toList();
+      return moveoutDatesMissing(
+        ticked.map((t) => startDateControllers[idOf(t)]?.text ?? '').toList(),
+        ticked.map((t) => moveoutDateControllers[idOf(t)]?.text ?? '').toList(),
+      );
+    }
     bool askLeaseEnd() => shouldAskLeaseEnd(
           leaseType: leaseTenant.leaseType,
           leaseEndDate: leaseTenant.endDate,
@@ -207,10 +216,16 @@ class _Moveout_propertiesState extends State<Moveout_properties> {
               ],
               const SizedBox(height: 20),
               MoveoutActions(
+                busy: isLoading,
                 onCancel: () {
                   Navigator.pop(context);
                 },
                 onMoveOut: () async {
+                  if (isLoading) return;
+                  if (moveOutDatesMissing()) {
+                    Fluttertoast.showToast(msg: moveoutDatesRequiredMessage);
+                    return;
+                  }
                   final askEnd = askLeaseEnd();
                   final leaseEndError = leaseEndValidationError(
                     ask: askEnd,
@@ -224,6 +239,7 @@ class _Moveout_propertiesState extends State<Moveout_properties> {
                     Fluttertoast.showToast(msg: leaseEndError);
                     return;
                   }
+                  setState(() => isLoading = true);
                   final leaseEndPayload = buildLeaseEndPayload(
                     ask: askEnd,
                     answer: _leaseEnd,
@@ -269,6 +285,7 @@ class _Moveout_propertiesState extends State<Moveout_properties> {
                           multitenantdata: multipletenant,
                           leaseEnd: leaseEndPayload)
                       .then((value) {
+                    if (!mounted) return;
                     setState(() {
                       isLoading = false;
                       isMovedOut = true;
@@ -276,6 +293,7 @@ class _Moveout_propertiesState extends State<Moveout_properties> {
                     reload_Screen();
                     Navigator.pop(context, true);
                   }).catchError((e) {
+                    if (!mounted) return;
                     setState(() {
                       isLoading = false;
                     });
@@ -321,7 +339,7 @@ class _Moveout_propertiesState extends State<Moveout_properties> {
                   onPressed: () async {
                     DateTime? pickedDate = await showDatePicker(
                       context: context,
-                      initialDate: DateTime.now(),
+                      initialDate: moveoutPickerInitialDate(controller.text),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2101),
                       builder: (BuildContext context, Widget? child) {

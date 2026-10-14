@@ -95,6 +95,9 @@ class Summery_page extends StatefulWidget {
 
 class _Summery_pageState extends State<Summery_page>
     with TickerProviderStateMixin, NetworkRetryState {
+  // Move In sends once: a second tap while it is being sent is ignored.
+  bool _moveInBusy = false;
+
   // Arrays for bed and bath dropdowns
   static const List<String> roomsArray = [
     "1 Bed",
@@ -6693,6 +6696,8 @@ class _Summery_pageState extends State<Summery_page>
                   SharedPreferences prefs =
                       await SharedPreferences.getInstance();
                   String? id = prefs.getString("adminId");
+                  if (_moveInBusy) return;
+                  _moveInBusy = true;
                   LeaseMoveoutRepository()
                       .addMoveInTenant(
                     adminId: id!,
@@ -6712,7 +6717,7 @@ class _Summery_pageState extends State<Summery_page>
                     setState(() {
                       isLoading = false;
                     });
-                  });
+                  }).whenComplete(() => _moveInBusy = false);
                 },
                 child: Row(
                   children: [

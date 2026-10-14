@@ -555,10 +555,14 @@ class _OpenWorkOrdersState extends State<OpenWorkOrders>
 
   void sortData(List<WorkOrderReportData> data) {
     if (sorting1) {
+      // Date column = the work order's Due Date (same as Completed report).
       data.sort((a, b) {
-        String aValue = a.workSubject ?? '';
-        String bValue = b.workSubject ?? '';
-        return ascending1 ? aValue.compareTo(bValue) : bValue.compareTo(aValue);
+        DateTime? dateA = (a.date ?? '').isNotEmpty ? DateTime.tryParse(a.date!) : null;
+        DateTime? dateB = (b.date ?? '').isNotEmpty ? DateTime.tryParse(b.date!) : null;
+        if (dateA == null && dateB == null) return 0;
+        if (dateA == null) return 1;
+        if (dateB == null) return -1;
+        return ascending1 ? dateA.compareTo(dateB) : dateB.compareTo(dateA);
       });
     } else if (sorting2) {
       data.sort((a, b) {
@@ -718,8 +722,8 @@ class _OpenWorkOrdersState extends State<OpenWorkOrders>
             ],
             data: workOrderData.map((workOrder) {
               return [
-                workOrder.createdAt != null && workOrder.createdAt!.isNotEmpty
-                    ? dateProvider.formatCurrentDate(workOrder.createdAt!)
+                workOrder.date != null && workOrder.date!.isNotEmpty
+                    ? dateProvider.formatCurrentDate(workOrder.date!)
                     : '-',
                 (workOrder.rentalAddress == null ||
                         workOrder.rentalAddress!.isEmpty)
@@ -812,8 +816,8 @@ class _OpenWorkOrdersState extends State<OpenWorkOrders>
       // Safe date parsing with default/fallback value
       String formattedDate;
       try {
-        formattedDate = workOrder.createdAt != null && workOrder.createdAt!.isNotEmpty
-            ? dateProvider.formatCurrentDate(workOrder.createdAt!)
+        formattedDate = workOrder.date != null && workOrder.date!.isNotEmpty
+            ? dateProvider.formatCurrentDate(workOrder.date!)
             : '-';
       } catch (e) {
         formattedDate = '-';
@@ -871,8 +875,8 @@ class _OpenWorkOrdersState extends State<OpenWorkOrders>
 
     for (var workOrder in workOrderData) {
       rows.add([
-        workOrder.createdAt != null && workOrder.createdAt!.isNotEmpty
-            ? dateProvider.formatCurrentDate(workOrder.createdAt!)
+        workOrder.date != null && workOrder.date!.isNotEmpty
+            ? dateProvider.formatCurrentDate(workOrder.date!)
             : '-',
         (workOrder.rentalAddress == null || workOrder.rentalAddress!.isEmpty)
             ? '-'
@@ -2005,7 +2009,7 @@ class _OpenWorkOrdersState extends State<OpenWorkOrders>
                                                     ),
                                                     Expanded(
                                                       child: Text(
-                                                        '   ${workOrder.createdAt == null || workOrder.createdAt!.isEmpty ? '-' : dateProvider.formatCurrentDate(workOrder.createdAt!)} ',
+                                                        '   ${workOrder.date == null || workOrder.date!.isEmpty ? '-' : dateProvider.formatCurrentDate(workOrder.date!)} ',
                                                         style: TextStyle(
                                                           color: blueColor,
                                                           fontWeight:

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:three_zero_two_property/constant/constant.dart';
 
 /// Shared look of the Move Out Tenants form (lease and property move-out,
 /// Admin and Staff, full screen and popup). Visual only — every screen keeps
@@ -361,12 +363,40 @@ class MoveoutUploadCard extends StatelessWidget {
   }
 }
 
-/// Cancel / Move Out, side by side, as on web.
+/// Web's message when a move-out is sent without a ticked tenant or with a
+/// ticked tenant's date left empty (LeaseTenantsTab.jsx handleMoveout,
+/// PropDetails.jsx).
+const moveoutDatesRequiredMessage =
+    '"Notice Given Date" and "Move-Out Date" are required for all selected tenants';
+
+/// Web's check before a move-out is sent: at least one tenant is ticked and
+/// every ticked tenant has both dates. One entry per ticked tenant.
+bool moveoutDatesMissing(List<String> noticeDates, List<String> moveOutDates) =>
+    noticeDates.isEmpty ||
+    noticeDates.any((d) => d.trim().isEmpty) ||
+    moveOutDates.any((d) => d.trim().isEmpty);
+
+/// The date a move-out date field's calendar opens on: the date the field
+/// shows, or today when it is empty or unreadable.
+DateTime moveoutPickerInitialDate(String shown) {
+  final picked = DateTime.tryParse(reverseFormatDate(shown));
+  if (picked == null || picked.year < 2000 || picked.year > 2100) {
+    return DateTime.now();
+  }
+  return picked;
+}
+
+/// Cancel / Move Out, side by side, as on web. While [busy] (the move-out is
+/// being sent) Move Out shows a spinner and ignores taps.
 class MoveoutActions extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onMoveOut;
+  final bool busy;
   const MoveoutActions(
-      {super.key, required this.onCancel, required this.onMoveOut});
+      {super.key,
+      required this.onCancel,
+      required this.onMoveOut,
+      this.busy = false});
 
   @override
   Widget build(BuildContext context) {
@@ -392,22 +422,176 @@ class MoveoutActions extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: onMoveOut,
+            key: const Key('moveout-submit'),
+            onPressed: busy ? null : onMoveOut,
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
               backgroundColor: MoveoutColors.navy,
+              disabledBackgroundColor: MoveoutColors.navy,
               elevation: 0,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Move Out',
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white)),
+            child: busy
+                ? const SpinKitFadingCircle(color: Colors.white, size: 25.0)
+                : const Text('Move Out',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white)),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// File types the web accepts for move-out documents.
+const List<String> moveoutDocumentExtensions = [
+  'pdf',
+  'doc',
+  'docx',
+  'jpg',
+  'jpeg',
+  'png',
+];
+
+/// Result of [checkMoveoutDocuments]: which picked files to add (their
+/// positions in the picked list) and the messages to show.
+class MoveoutDocumentCheck {
+  final List<int> accepted;
+  final List<String> errors;
+  const MoveoutDocumentCheck(this.accepted, this.errors);
+}
+
+/// The web's rules for adding move-out documents (RentRollDetail.jsx
+/// handleMoveoutFileChange), with the same messages: at most 10 files in
+/// total, no file twice, only [moveoutDocumentExtensions], and at most 5 MB
+/// each. As on web, a file counts as already added when one with the same
+/// name is already picked.
+MoveoutDocumentCheck checkMoveoutDocuments({
+  required List<String> existingNames,
+  required List<String> pickedNames,
+  required List<int> pickedSizes,
+}) {
+  if (pickedNames.length + existingNames.length > 10) {
+    return const MoveoutDocumentCheck(
+        [], ['Maximum 10 files can be uploaded at once']);
+  }
+  final accepted = <int>[];
+  final errors = <String>[];
+  for (var i = 0; i < pickedNames.length; i++) {
+    final name = pickedNames[i];
+    if (existingNames.contains(name)) {
+      errors.add('File "$name" has already been added');
+      continue;
+    }
+    final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+    final validType = moveoutDocumentExtensions.contains(ext);
+    final validSize = pickedSizes[i] <= 5 * 1024 * 1024;
+    if (!validType) errors.add('Invalid file type: $name');
+    if (!validSize) errors.add('File too large (max 5MB): $name');
+    if (validType && validSize) accepted.add(i);
+  }
+  return MoveoutDocumentCheck(accepted, errors);
+}
+
+/// One picked document under the upload card: type icon, file name, remove
+/// button and its description.
+class MoveoutPickedFileTile extends StatelessWidget {
+  final String fileName;
+  final VoidCallback onRemove;
+  final ValueChanged<String> onDescriptionChanged;
+
+  const MoveoutPickedFileTile({
+    super.key,
+    required this.fileName,
+    required this.onRemove,
+    required this.onDescriptionChanged,
+  });
+
+  IconData get _icon {
+    final ext = fileName.split('.').last.toLowerCase();
+    if (ext == 'pdf') return Icons.picture_as_pdf_outlined;
+    if (ext == 'jpg' || ext == 'jpeg' || ext == 'png') {
+      return Icons.image_outlined;
+    }
+    if (ext == 'doc' || ext == 'docx') return Icons.description_outlined;
+    return Icons.insert_drive_file_outlined;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const fieldBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: MoveoutColors.border),
+    );
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 4, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MoveoutColors.border),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: MoveoutColors.tint,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(_icon, size: 20, color: MoveoutColors.blue),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: MoveoutColors.text),
+                ),
+              ),
+              IconButton(
+                key: const Key('moveout-file-remove'),
+                tooltip: 'Remove',
+                onPressed: onRemove,
+                icon: const Icon(Icons.close,
+                    size: 20, color: MoveoutColors.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextField(
+              key: const Key('moveout-file-description'),
+              onChanged: onDescriptionChanged,
+              style: const TextStyle(fontSize: 14, color: MoveoutColors.text),
+              decoration: const InputDecoration(
+                hintText: 'Enter description',
+                hintStyle: TextStyle(fontSize: 14, color: MoveoutColors.faint),
+                isDense: true,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: fieldBorder,
+                enabledBorder: fieldBorder,
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  borderSide: BorderSide(color: MoveoutColors.navy),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
