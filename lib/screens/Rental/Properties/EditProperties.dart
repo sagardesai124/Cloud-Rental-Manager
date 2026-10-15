@@ -78,6 +78,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
   TextEditingController city = TextEditingController();
   TextEditingController state = TextEditingController();
   TextEditingController country = TextEditingController();
+  TextEditingController subdivision = TextEditingController();
   TextEditingController postalcode = TextEditingController();
   TextEditingController address = TextEditingController();
   TextEditingController subtype = TextEditingController();
@@ -240,6 +241,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
   String? initialCity;
   String? initialState;
   String? initialCountry;
+  String? initialSubdivision;
   String? initialPostalCode;
   // Snapshot of the loaded service date, so supplying a missing one counts
   // as a change and is not swallowed by the "No changes detected" guard.
@@ -838,6 +840,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
         postalcode.text = fetchedDetails.rentalPostcode!;
         // country.text = fetchedDetails.rentalCountry!;
         country.text = fetchedDetails.rentalCountry ?? 'N/A';
+        subdivision.text = fetchedDetails.subdivision ?? '';
         selectedProperty = fetchedDetails.propertyTypeData!.propertySubType;
         Ownersdetails = RentalOwner(
             rentalOwnerId: fetchedDetails.rentalOwnerId,
@@ -906,6 +909,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
         initialState = fetchedDetails.rentalState!;
         initialPostalCode = fetchedDetails.rentalPostcode!;
         initialCountry = fetchedDetails.rentalCountry ?? 'N/A';
+        initialSubdivision = fetchedDetails.subdivision ?? '';
         initialFirstName = (fetchedDetails.rentalOwnerData?.rentalOwnerName ?? '');
         initialCompanyName =
             (fetchedDetails.rentalOwnerData?.rentalOwnerCompanyName ?? '');
@@ -3626,6 +3630,18 @@ class _Edit_propertiesState extends State<Edit_properties> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: 11),
+                          // Optional, as on web (Rentals.jsx): saved as `subdivision`.
+                          _pfFieldLabel('Subdivision'),
+                          TextField(
+                            keyboardType: TextInputType.text,
+                            controller: subdivision,
+                            style: _pfInputText,
+                            cursorColor: blueColor,
+                            decoration: _pfInputDecoration(
+                              hint: "Enter subdivision",
+                            ),
+                          ),
                         ],
                 ),
                 const SizedBox(height: 16),
@@ -6285,6 +6301,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
                             city.text != initialCity ||
                             state.text != initialState ||
                             country.text != initialCountry ||
+                            subdivision.text != initialSubdivision ||
                             postalcode.text != initialPostalCode ||
                             // Owner fields: the controllers above are filled
                             // with `?? ''`, while Ownersdetails keeps whatever
@@ -6776,6 +6793,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
                             rentalCity: city.text.trim(),
                             rentalState: state.text.trim(),
                             rentalCountry: country.text.trim(),
+                            subdivision: subdivision.text.trim(),
                             rentalPostcode: postalcode.text.trim(),
                             staffMemberId: selectedStaff,
                             processor_id: processorId,

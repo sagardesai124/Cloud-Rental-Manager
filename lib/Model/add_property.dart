@@ -79,6 +79,8 @@ class Rental {
   String? state;
   String? country;
   String? postcode;
+  // Optional, as on web (Rentals.jsx); sent "" when left empty.
+  String? subdivision;
   String? staffMemberId;
   String? processor_id;
   String? placedInService;
@@ -96,6 +98,7 @@ class Rental {
       this.state,
       this.country,
       this.postcode,
+      this.subdivision,
       this.staffMemberId,
       this.processor_id,
       this.placedInService,
@@ -112,6 +115,7 @@ class Rental {
         'rental_state': state,
         'rental_country': country,
         'rental_postcode': postcode,
+        if (subdivision != null) 'subdivision': subdivision,
         'staffmember_id': staffMemberId,
         if (placedInService != null && placedInService!.isNotEmpty)
           'placed_in_service': placedInService,

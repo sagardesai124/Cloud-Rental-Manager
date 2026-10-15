@@ -293,7 +293,23 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
 
   // ------------------------------------------------------------------ save
 
-  void _saveTenant() {
+  // One Add Tenant at a time while the account's records are checked.
+  bool _savingTenant = false;
+
+  /// The duplicate-tenant/cosigner messages are long, so they stay 4 seconds
+  /// (iOS default is 1) and use the plugin's own toast, which Android 12+
+  /// does not cut to two lines.
+  void _showDuplicateMessage(String msg) {
+    Fluttertoast.showToast(
+        msg: msg,
+        toastLength: Toast.LENGTH_LONG,
+        timeInSecForIosWeb: 4,
+        backgroundColor: Colors.black,
+        textColor: Colors.white);
+  }
+
+  Future<void> _saveTenant() async {
+    if (_savingTenant) return;
     // Same gap as Add Tenant: the override-fee message is listener-driven,
     // so Form.validate() never sees it. Re-run it here (covers a field that
     // was never typed in) and let it block the save.
@@ -346,7 +362,9 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
     );
     final tenantsOnLease =
         Provider.of<SelectedTenantsProvider>(context, listen: false);
-    if (!tenantsOnLease.addTenant(tenant)) {
+    // Web's order (RentRollLeasing.jsx): a tenant already on this lease
+    // first, then any other tenant or applicant in the account.
+    if (tenantsOnLease.isAdded(tenant)) {
       // Same message as web (tenantEmailDuplicates.js onLeaseConflictMessage);
       // the form stays open so the email can be corrected.
       String norm(String? v) => (v ?? '').trim().toLowerCase();
@@ -354,18 +372,33 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
       final onLease = tenantsOnLease.selectedTenants
           .where((t) => norm(t.tenantEmail) == email)
           .firstOrNull;
-      final name = '${onLease?.tenantFirstName ?? ''} '
-              '${onLease?.tenantLastName ?? ''}'
-          .trim();
-      Fluttertoast.showToast(
-          msg: '$email is already used by '
-              '${name.isNotEmpty ? name : email} on this lease. '
-              'Tenant email is how renewal notices, late-fee letters, and '
-              'e-sign requests are routed, so two tenants on a lease cannot '
-              'share one address.');
+      final name = tenantDisplayName(onLease);
+      _showDuplicateMessage('$email is already used by '
+          '${name.isNotEmpty ? name : email} on this lease. '
+          'Tenant email is how renewal notices, late-fee letters, and '
+          'e-sign requests are routed, so two tenants on a lease cannot '
+          'share one address.');
       return;
     }
-    Navigator.of(context).pop(true);
+    // Add Tenant shows a spinner while the account's records are checked.
+    setState(() => _savingTenant = true);
+    try {
+      // The same tenant + applicant list as "Choose an existing Tenant";
+      // loaded now if it isn't yet. If it can't load, the tenant is added,
+      // as on web.
+      if (_allTenants.isEmpty) await _fetchExistingTenants();
+      // The user may have left this screen while the list loaded.
+      if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+      final inUseBy = tenantEmailInUseBy(_allTenants, tenant.tenantEmail);
+      if (inUseBy != null) {
+        _showDuplicateMessage(tenantEmailInUseMessage(inUseBy));
+        return;
+      }
+      if (!tenantsOnLease.addTenant(tenant)) return;
+      Navigator.of(context).pop(true);
+    } finally {
+      if (mounted) setState(() => _savingTenant = false);
+    }
   }
 
   void _saveCosigner() {
@@ -387,6 +420,13 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
       country: _cCountry.text.trim(),
       postalCode: _cZip.text.trim(),
     );
+    final clash = cosignerDuplicateError(provider.cosigners, cosigner,
+        editIndex: widget.cosigner != null ? widget.cosignerIndex : null);
+    if (clash != null) {
+      // Same check and message as web; the form stays open to correct it.
+      _showDuplicateMessage(clash);
+      return;
+    }
     if (widget.cosigner != null && widget.cosignerIndex != null) {
       provider.updateCosigner(cosigner, widget.cosignerIndex!);
     } else {
@@ -539,7 +579,7 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
           const SizedBox(height: 16),
           _paymentSettingsCard(),
           const SizedBox(height: 20),
-          _actionButtons('Add Tenant', _saveTenant),
+          _actionButtons('Add Tenant', _saveTenant, busy: _savingTenant),
         ],
       ),
     );
@@ -1298,23 +1338,27 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
   }
 
   // Add (primary) on the left, Cancel on the right — matches the web dialog.
-  Widget _actionButtons(String primaryText, VoidCallback onPrimary) {
+  Widget _actionButtons(String primaryText, VoidCallback onPrimary,
+      {bool busy = false}) {
     return Row(
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: onPrimary,
+            onPressed: busy ? null : onPrimary,
             style: ElevatedButton.styleFrom(
               backgroundColor: navyClr,
+              disabledBackgroundColor: navyClr,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text(primaryText,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15)),
+            child: busy
+                ? const SpinKitFadingCircle(color: Colors.white, size: 20)
+                : Text(primaryText,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15)),
           ),
         ),
         const SizedBox(width: 12),

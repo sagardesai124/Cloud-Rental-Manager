@@ -1,8 +1,11 @@
 import 'dart:convert';
 
+import 'dart:async';
+
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -29,15 +32,38 @@ const _duplicateMessage =
 
 final List<String> _toasts = [];
 
-final _server = MockClient((request) async => http.Response(
-    jsonEncode(request.url.path == '/api/auth'
-        ? {
-            'statusCode': 200,
-            'themes': {'format': 'MM/DD/YYYY', 'timeFormat': '12'}
-          }
-        : {'statusCode': 200, 'data': []}),
-    200,
-    headers: {'content-type': 'application/json'}));
+/// The account's tenants and applicants returned by the tenant list
+/// (GET /api/tenant/tenants/:admin_id) that the screen checks against.
+Map<String, dynamic> _accountRecords = {'tenants': [], 'applicants': []};
+bool _accountListFails = false;
+
+/// When set, the account list waits for it before answering.
+Completer<void>? _accountListGate;
+
+final _server = MockClient((request) async {
+  final path = request.url.path;
+  if (path == '/api/auth') {
+    return _json({
+      'statusCode': 200,
+      'themes': {'format': 'MM/DD/YYYY', 'timeFormat': '12'}
+    });
+  }
+  if (path == '/api/tenant/tenants/ADMIN-1') {
+    if (_accountListGate != null) await _accountListGate!.future;
+    if (_accountListFails) return http.Response('error', 500);
+    return _json({'statusCode': 200, 'data': _accountRecords});
+  }
+  return _json({'statusCode': 200, 'data': []});
+});
+
+http.Response _json(Object body) => http.Response(jsonEncode(body), 200,
+    headers: {'content-type': 'application/json'});
+
+// Web's tenantEmailDuplicates.js existingRecordConflictMessage.
+String _inUseMessage(String name) =>
+    'This email address is already in use by $name. '
+    'Use "Choose an existing Tenant" to add that record, or enter a '
+    'different email address.';
 
 Finder _field(String hint) => find
     .byWidgetPredicate((w) => w is TextField && w.decoration?.hintText == hint)
@@ -58,7 +84,8 @@ Future<void> _type(WidgetTester tester, String hint, String text) async {
 /// Opens the screen from a launcher (as Add Lease pushes it) with [onLease]
 /// already on the lease, fills a new tenant with [email] and taps Add Tenant.
 Future<({SelectedTenantsProvider lease, List<Object?> pops})> _addTenant(
-    WidgetTester tester, List<Tenant> onLease, String email) async {
+    WidgetTester tester, List<Tenant> onLease, String email,
+    {bool settleAfterTap = true}) async {
   tester.view.physicalSize = const Size(430, 3200);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -109,7 +136,7 @@ Future<({SelectedTenantsProvider lease, List<Object?> pops})> _addTenant(
   await tester.ensureVisible(add);
   await tester.pump();
   await tester.tap(add);
-  await _settle(tester, 20);
+  if (settleAfterTap) await _settle(tester, 20);
   return (lease: lease, pops: pops);
 }
 
@@ -118,6 +145,9 @@ void main() {
 
   setUp(() {
     _toasts.clear();
+    _accountRecords = {'tenants': [], 'applicants': []};
+    _accountListFails = false;
+    _accountListGate = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
             const MethodChannel('PonnamKarthik/fluttertoast'), (call) async {
@@ -140,7 +170,8 @@ void main() {
     try {
       await http.runWithClient(body, () => _server);
       await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(seconds: 2));
+      // Lets the 4-second message timer finish.
+      await tester.pump(const Duration(seconds: 5));
     } finally {
       FlutterError.onError = original;
     }
@@ -171,6 +202,88 @@ void main() {
       expect(r.pops, [true], reason: 'screen closed once after adding');
       expect(r.lease.selectedTenants.map((t) => t.tenantFirstName),
           ['Pat', 'Ruth']);
+    });
+  });
+
+  testWidgets(
+      'an email used by another tenant in the account: web message, not added',
+      (tester) async {
+    _accountRecords = {
+      'tenants': [
+        {
+          'tenant_id': 'T-9',
+          'tenant_firstName': 'Ruth',
+          'tenant_lastName': 'Parker',
+          'tenant_email': 'ruth@example.com',
+        }
+      ],
+      'applicants': [],
+    };
+    await run(tester, () async {
+      final r = await _addTenant(tester, [], ' RUTH@Example.com ');
+      expect(_toasts, contains(_inUseMessage('Ruth Parker')));
+      expect(r.pops, isEmpty, reason: 'Add Tenant screen is still open');
+      expect(r.lease.selectedTenants, isEmpty);
+    });
+  });
+
+  testWidgets('an email used by an applicant in the account: same message',
+      (tester) async {
+    _accountRecords = {
+      'tenants': [],
+      'applicants': [
+        {
+          'applicant_id': 'A-1',
+          'applicant_firstName': 'Sam',
+          'applicant_lastName': 'Lee',
+          'applicant_email': 'ruth@example.com',
+        }
+      ],
+    };
+    await run(tester, () async {
+      final r = await _addTenant(tester, [], 'ruth@example.com');
+      expect(_toasts, contains(_inUseMessage('Sam Lee')));
+      expect(r.pops, isEmpty);
+      expect(r.lease.selectedTenants, isEmpty);
+    });
+  });
+
+  testWidgets('while the account is checked, Add Tenant shows a spinner',
+      (tester) async {
+    _accountRecords = {
+      'tenants': [
+        {
+          'tenant_id': 'T-9',
+          'tenant_firstName': 'Ruth',
+          'tenant_lastName': null,
+          'tenant_email': 'ruth@example.com',
+        }
+      ],
+      'applicants': [],
+    };
+    _accountListGate = Completer<void>();
+    await run(tester, () async {
+      final r = await _addTenant(tester, [], 'ruth@example.com',
+          settleAfterTap: false);
+      await tester.pump();
+      expect(find.byType(SpinKitFadingCircle), findsWidgets,
+          reason: 'spinner while the account list loads');
+      _accountListGate!.complete();
+      await _settle(tester, 20);
+      // A missing last name is left out of the message, not shown as "null".
+      expect(_toasts, contains(_inUseMessage('Ruth')));
+      expect(r.lease.selectedTenants, isEmpty);
+      expect(find.text('Add Tenant'), findsWidgets, reason: 'button back');
+    });
+  });
+
+  testWidgets('the account list cannot load: the tenant is added, as on web',
+      (tester) async {
+    _accountListFails = true;
+    await run(tester, () async {
+      final r = await _addTenant(tester, [], 'ruth@example.com');
+      expect(r.pops, [true]);
+      expect(r.lease.selectedTenants.map((t) => t.tenantFirstName), ['Ruth']);
     });
   });
 }

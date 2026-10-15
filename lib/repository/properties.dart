@@ -293,6 +293,9 @@ class PropertiesRepository {
       "rental_state": rentalRequest.rentalState,
       "rental_country": rentalRequest.rentalCountry,
       "rental_postcode": rentalRequest.rentalPostcode,
+      // Edit Property sends it ("" clears it, as on web); left out when unset.
+      if (rentalRequest.subdivision != null)
+        "subdivision": rentalRequest.subdivision,
       "staffmember_id": rentalRequest.staffMemberId,
       "processor_id": rentalRequest.processor_id,
     };

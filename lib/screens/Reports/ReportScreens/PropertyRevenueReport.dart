@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/Model/PropertyRevenueReportModel.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/repository/PropertyRevenueReportService.dart';
 import 'package:three_zero_two_property/widgets/report_header.dart';
@@ -1108,6 +1109,8 @@ class _PropertyRevenueReportState extends State<PropertyRevenueReport>
                         : null,
                     enabled: customDateRange,
                   ),
+                  if (_dateRangeError != null)
+                    ReportDateRangeErrorText(_dateRangeError!),
                   SizedBox(height: 24),
                   // Action Buttons
                   Row(
@@ -1140,12 +1143,15 @@ class _PropertyRevenueReportState extends State<PropertyRevenueReport>
                       SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _applyFilters();
-                          },
+                          onPressed: _dateRangeError == null
+                              ? () {
+                                  Navigator.pop(context);
+                                  _applyFilters();
+                                }
+                              : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: blueColor,
+                            disabledBackgroundColor: blueColor.withOpacity(0.6),
                             padding: EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -1180,7 +1186,12 @@ class _PropertyRevenueReportState extends State<PropertyRevenueReport>
     });
   }
 
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(fromDateController.text, toDateController.text);
+
   void _applyFilters() {
+    if (_dateRangeError != null) return;
     setState(() {
       isLoading = true;
       errorMessage = null;

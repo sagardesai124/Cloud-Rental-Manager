@@ -74,6 +74,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
   TextEditingController city = TextEditingController();
   TextEditingController state = TextEditingController();
   TextEditingController country = TextEditingController();
+  TextEditingController subdivision = TextEditingController();
   TextEditingController postalcode = TextEditingController();
   TextEditingController address = TextEditingController();
   TextEditingController subtype = TextEditingController();
@@ -2468,6 +2469,18 @@ class _Add_new_propertyState extends State<Add_new_property> {
                         ],
                       ),
                     ),
+                    _pfGap,
+                    // Optional, as on web (Rentals.jsx): saved as `subdivision`.
+                    _pfFieldLabel('Subdivision'),
+                    TextField(
+                      keyboardType: TextInputType.text,
+                      controller: subdivision,
+                      style: _pfInputStyle,
+                      cursorColor: blueColor,
+                      decoration: _pfInputDecoration(
+                        hint: "Enter subdivision",
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -4562,6 +4575,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                   city: city.text.trim(),
                                   state: state.text.trim(),
                                   country: country.text.trim(),
+                                  subdivision: subdivision.text.trim(),
                                   postcode: postalcode.text.trim(),
                                   staffMemberId: sid,
                                   processor_id: processorId,

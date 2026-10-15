@@ -2687,6 +2687,14 @@ class _Lease_tableState extends State<Lease_table>
     return formatMoneyAccounting(value);
   }
 
+  /// "as of" time in the export titles, the same as web's formatDateTime
+  /// (RentRoll.jsx): company date format, then hh:mm:ss AM/PM for the 12-hour
+  /// setting or HH:mm:ss otherwise.
+  String _exportTimestamp(DateProvider dateProvider) => DateFormat(
+          '${dateProvider.dateFormat} '
+          '${dateProvider.timeFormat == '12' ? 'hh:mm:ss a' : 'HH:mm:ss'}')
+      .format(DateTime.now());
+
   Future<void> _generatePdf(
       List<Lease1> leases, DateProvider dateProvider) async {
     try {
@@ -2717,7 +2725,7 @@ class _Lease_tableState extends State<Lease_table>
                           fontSize: 18, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
                       // The status picked in the filter, as on web.
-                      '$selectedStatus Leases as of ${dateProvider.formatCurrentDateTime(DateTime.now().toIso8601String())}',
+                      '$selectedStatus Leases as of ${_exportTimestamp(dateProvider)}',
                       style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
@@ -2847,51 +2855,65 @@ class _Lease_tableState extends State<Lease_table>
       final worksheet = workbook.worksheets[0];
       worksheet.name = 'Leases Report';
 
+      // Title rows as on web: report name, the picked status with the export
+      // time, a blank row, then the column headers.
+      final reportTitle = 'Leases Report';
+      final reportSubtitle =
+          '$selectedStatus Leases as of ${_exportTimestamp(dateProvider)}';
+      worksheet.getRangeByIndex(1, 1).setText(reportTitle);
+      worksheet.getRangeByIndex(1, 1).cellStyle.bold = true;
+      worksheet.getRangeByIndex(2, 1).setText(reportSubtitle);
+      const headerRow = 4;
+
       final headers = [
         'Rental Address',
         'Rental Owner',
         'Tenant Names',
-        'End Date',
+        'Lease End Date',
         'Rent Cycle',
         'Remaining Days',
         'Current Balance',
         'Rent',
       ];
       for (int i = 0; i < headers.length; i++) {
-        worksheet.getRangeByIndex(1, i + 1).setText(headers[i]);
-        worksheet.getRangeByIndex(1, i + 1).cellStyle.bold = true;
+        worksheet.getRangeByIndex(headerRow, i + 1).setText(headers[i]);
+        worksheet.getRangeByIndex(headerRow, i + 1).cellStyle.bold = true;
         if (i == 6 || i == 7) {
-          worksheet.getRangeByIndex(1, i + 1).cellStyle.hAlign =
+          worksheet.getRangeByIndex(headerRow, i + 1).cellStyle.hAlign =
               syncXlsx.HAlignType.right;
         }
       }
 
       for (int i = 0; i < leases.length; i++) {
         final lease = leases[i];
+        final row = headerRow + 1 + i;
         final balance = lease.totalBalance ?? 0.0;
         final balanceStr = _formatCurrencyForExport(balance);
         final endDateStr = _formatDateSafely(lease.endDate, dateProvider);
-        worksheet.getRangeByIndex(i + 2, 1).setText(lease.rentalAddress ?? '');
+        worksheet.getRangeByIndex(row, 1).setText(lease.rentalAddress ?? '');
         worksheet
-            .getRangeByIndex(i + 2, 2)
+            .getRangeByIndex(row, 2)
             .setText(lease.rentalOwnerName ?? '');
-        worksheet.getRangeByIndex(i + 2, 3).setText(lease.tenantNames ?? '');
-        worksheet.getRangeByIndex(i + 2, 4).setText(endDateStr);
-        worksheet.getRangeByIndex(i + 2, 5).setText(lease.rentCycle ?? '');
-        worksheet.getRangeByIndex(i + 2, 6).setText(lease.remainingDays ?? '');
-        worksheet.getRangeByIndex(i + 2, 7).setText(balanceStr);
+        worksheet.getRangeByIndex(row, 3).setText(lease.tenantNames ?? '');
+        worksheet.getRangeByIndex(row, 4).setText(endDateStr);
+        worksheet.getRangeByIndex(row, 5).setText(lease.rentCycle ?? '');
+        worksheet.getRangeByIndex(row, 6).setText(lease.remainingDays ?? '');
+        worksheet.getRangeByIndex(row, 7).setText(balanceStr);
         worksheet
-            .getRangeByIndex(i + 2, 8)
+            .getRangeByIndex(row, 8)
             .setText(_formatCurrencyForExport(lease.amount));
-        worksheet.getRangeByIndex(i + 2, 7).cellStyle.hAlign =
+        worksheet.getRangeByIndex(row, 7).cellStyle.hAlign =
             syncXlsx.HAlignType.right;
-        worksheet.getRangeByIndex(i + 2, 8).cellStyle.hAlign =
+        worksheet.getRangeByIndex(row, 8).cellStyle.hAlign =
             syncXlsx.HAlignType.right;
       }
 
-      for (int i = 1; i <= headers.length; i++) {
-        worksheet.autoFitColumn(i);
-      }
+      // Fit the columns to the table only, so the title rows don't widen
+      // the first column.
+      worksheet
+          .getRangeByIndex(
+              headerRow, 1, headerRow + leases.length, headers.length)
+          .autoFitColumns();
 
       final List<int> bytes = workbook.saveAsStream();
       workbook.dispose();
@@ -2924,13 +2946,19 @@ class _Lease_tableState extends State<Lease_table>
         'Rental Address',
         'Rental Owner',
         'Tenant Names',
-        'End Date',
+        'Lease End Date',
         'Rent Cycle',
         'Remaining Days',
         'Current Balance',
         'Rent',
       ];
       final csvBuffer = StringBuffer();
+      // Title rows as on web: report name, the picked status with the export
+      // time, a blank row, then the column headers.
+      csvBuffer.writeln('"Leases Report"');
+      csvBuffer.writeln(
+          '"$selectedStatus Leases as of ${_exportTimestamp(dateProvider)}"');
+      csvBuffer.writeln();
       csvBuffer.writeln(headers.join(','));
 
       for (final lease in leases) {
@@ -2942,10 +2970,10 @@ class _Lease_tableState extends State<Lease_table>
           '"${(lease.rentalOwnerName ?? '').replaceAll('"', '""')}"',
           '"${(lease.tenantNames ?? '').replaceAll('"', '""')}"',
           '"${endDateStr.replaceAll('"', '""')}"',
-          lease.rentCycle ?? '',
-          lease.remainingDays ?? '',
-          balanceStr,
-          rentStr,
+          '"${(lease.rentCycle ?? '').replaceAll('"', '""')}"',
+          '"${(lease.remainingDays ?? '').replaceAll('"', '""')}"',
+          '"${balanceStr.replaceAll('"', '""')}"',
+          '"${rentStr.replaceAll('"', '""')}"',
         ];
         csvBuffer.writeln(row.join(','));
       }

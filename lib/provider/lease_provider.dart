@@ -194,6 +194,78 @@ class SelectedTenantsProvider extends ChangeNotifier {
 
 
 
+/// Web's CRM-4803 check for a tenant typed in on the lease form
+/// (RentRollLeasing.jsx, tenantEmailDuplicates.js findEmailConflict): the
+/// first tenant or applicant in [records] whose email matches [email]
+/// (trimmed, any letter case), or null. Without it the server, on save,
+/// would attach that existing person to the lease instead of the one typed.
+Tenant? tenantEmailInUseBy(List<Tenant> records, String? email) {
+  String norm(String? v) => (v ?? '').trim().toLowerCase();
+  final typed = norm(email);
+  if (typed.isEmpty) return null;
+  for (final r in records) {
+    if (norm(r.tenantEmail) == typed) return r;
+  }
+  return null;
+}
+
+/// A tenant's "First Last" for messages. Missing parts are left out; the
+/// model can hold the text 'null' for a missing name (Tenant.fromJson).
+String tenantDisplayName(Tenant? t) {
+  String part(String? v) {
+    final s = (v ?? '').trim();
+    return s == 'null' ? '' : s;
+  }
+
+  return '${part(t?.tenantFirstName)} ${part(t?.tenantLastName)}'.trim();
+}
+
+/// Web's message for [tenantEmailInUseBy] (existingRecordConflictMessage);
+/// the name falls back to the email, then "another record", as on web.
+String tenantEmailInUseMessage(Tenant record) {
+  final name = tenantDisplayName(record);
+  final email = (record.tenantEmail ?? '').trim().toLowerCase();
+  final who = name.isNotEmpty
+      ? name
+      : (email.isNotEmpty ? email : 'another record');
+  return 'This email address is already in use by $who. '
+      'Use "Choose an existing Tenant" to add that record, or enter a '
+      'different email address.';
+}
+
+/// Web's check before a cosigner is added or edited on a lease
+/// (RentRollLeasing.jsx): no other cosigner on the lease may share the email
+/// (any letter case) or the phone number (digits only). The row being edited,
+/// at [editIndex] or with the same saved id, is not compared with itself.
+/// Returns web's message, or null when there is no clash.
+String? cosignerDuplicateError(List<Cosigner> onLease, Cosigner incoming,
+    {int? editIndex}) {
+  bool sameRow(Cosigner c, int i) =>
+      (editIndex != null && editIndex == i) ||
+      ((incoming.cosignerId ?? '').isNotEmpty &&
+          incoming.cosignerId == c.cosignerId);
+  final email = incoming.email.trim().toLowerCase();
+  if (email.isNotEmpty) {
+    for (var i = 0; i < onLease.length; i++) {
+      if (sameRow(onLease[i], i)) continue;
+      if (onLease[i].email.trim().toLowerCase() == email) {
+        return 'A cosigner with this email already exists on this lease.';
+      }
+    }
+  }
+  String digits(String v) => v.replaceAll(RegExp(r'\D'), '');
+  final phone = digits(incoming.phoneNumber);
+  if (phone.isNotEmpty) {
+    for (var i = 0; i < onLease.length; i++) {
+      if (sameRow(onLease[i], i)) continue;
+      if (digits(onLease[i].phoneNumber) == phone) {
+        return 'A cosigner with this phone number already exists on this lease.';
+      }
+    }
+  }
+  return null;
+}
+
 class SelectedCosignersProvider extends ChangeNotifier {
   List<Cosigner> _cosigners = [];
 

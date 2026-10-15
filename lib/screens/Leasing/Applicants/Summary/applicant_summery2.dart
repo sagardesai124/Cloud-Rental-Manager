@@ -182,10 +182,83 @@ class _applicant_summeryState extends State<applicant_summery>
       return (ok: false, message: null);
     }
   }
+
+  /// Rejects an application that is only saved as a draft, as web does; the
+  /// status call is for submitted applications. Like [updateApplicantStatus]
+  /// it shows no message itself.
+  Future<({bool ok, String? message})> rejectDraftApplicant(
+      String applicantId, String rentalId, String unitId,
+      {String rejectionReason = ''}) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? id = prefs.getString("adminId");
+    String? token = prefs.getString('token');
+
+    try {
+      final response = await apiPut(
+        Uri.parse(
+            '$Api_url/api/applicant/applicant/$applicantId/reject-draft'),
+        headers: {
+          'Content-Type': 'application/json',
+          "authorization": "CRM $token",
+          "id": "CRM ${prefs.getString('staff_id') ?? id}",
+        },
+        body: jsonEncode({
+          "rental_id": rentalId,
+          "unit_id": unitId,
+          "rejection_reason": rejectionReason,
+        }),
+      );
+
+      var responseData = jsonDecode(response.body);
+
+      final String? serverMessage = responseData['message'] as String?;
+      if (response.statusCode == 200 && responseData['statusCode'] == 200) {
+        return (ok: true, message: serverMessage);
+      }
+      return (ok: false, message: serverMessage);
+    } catch (error) {
+      logError('Exception occurred: $error');
+      return (ok: false, message: null);
+    }
+  }
+
+  /// Web's "Send Completion Reminder Email": asks the applicant to finish
+  /// their draft application. Shows no message itself.
+  Future<({bool ok, String? message})> sendCompletionReminder(
+      String applicantId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? id = prefs.getString("adminId");
+    String? token = prefs.getString('token');
+
+    try {
+      final response = await apiPost(
+        Uri.parse(
+            '$Api_url/api/applicant/applicant/completion-reminder/$applicantId'),
+        headers: {
+          'Content-Type': 'application/json',
+          "authorization": "CRM $token",
+          "id": "CRM ${prefs.getString('staff_id') ?? id}",
+        },
+      );
+
+      var responseData = jsonDecode(response.body);
+
+      final String? serverMessage = responseData['message'] as String?;
+      if (response.statusCode == 200 && responseData['statusCode'] == 200) {
+        return (ok: true, message: serverMessage);
+      }
+      return (ok: false, message: serverMessage);
+    } catch (error) {
+      logError('Exception occurred: $error');
+      return (ok: false, message: null);
+    }
+  }
   int _selectedIndex = 0; // To track the selected tab
   // Web parity: disable the status buttons + show a spinner while the
   // status-update API call is in flight (prevents double-fire).
   bool _statusUpdating = false;
+  // Send Completion Reminder Email is being sent.
+  bool _reminderSending = false;
   String _updatingStatusValue = '';
 
   final List<Widget> _tabViews = [
@@ -363,9 +436,21 @@ class _applicant_summeryState extends State<applicant_summery>
                                     : null;
                             final bool isMovedin =
                                 snapshot.data!.isMovedin ?? false;
+                            // Web parity (ApplicantSummary.jsx): Approve is
+                            // offered only once the rental application is
+                            // submitted; a draft can be reminded or rejected.
+                            final bool formSubmitted =
+                                snapshot.data!.formSubmitted ?? false;
+                            final bool draftSaved =
+                                (snapshot.data!.draftSaved ?? false) &&
+                                    !formSubmitted;
 
                             Future<void> changeStatus(String value,
                                 {String rejectionReason = ''}) async {
+                              // One status update at a time.
+                              if (_statusUpdating) return;
+                              // Web: a draft application can only be rejected.
+                              if (draftSaved && value != 'Rejected') return;
                               setState(() {
                                 _selectedValue = value;
                                 isapplicantupdate = true;
@@ -379,17 +464,30 @@ class _applicant_summeryState extends State<applicant_summery>
                               // Call the API to update the applicant status
                               // (web sends these empty when no lease data —
                               // never crash on a missing leaseData).
-                              final result = await updateApplicantStatus(
-                                  widget.applicant_id!,
-                                  value,
-                                  rentalId ?? '',
-                                  unitId ?? '',
-                                  rejectionReason: rejectionReason);
+                              // A draft is rejected the way web does it.
+                              final bool rejectDraft =
+                                  draftSaved && value == 'Rejected';
+                              final result = rejectDraft
+                                  ? await rejectDraftApplicant(
+                                      widget.applicant_id!,
+                                      rentalId ?? '',
+                                      unitId ?? '',
+                                      rejectionReason: rejectionReason)
+                                  : await updateApplicantStatus(
+                                      widget.applicant_id!,
+                                      value,
+                                      rentalId ?? '',
+                                      unitId ?? '',
+                                      rejectionReason: rejectionReason);
 
                               if (result.ok) {
                                 Fluttertoast.showToast(
-                                  msg:
-                                      'The Applicant Status has been changed to $value',
+                                  msg: rejectDraft
+                                      ? (result.message ??
+                                          'Draft Applicant Rejected Successfully')
+                                      : value == 'Rejected'
+                                          ? 'Applicant status changed to Rejected'
+                                          : 'The Applicant Status has been changed to $value',
                                   backgroundColor: Colors.green,
                                   textColor: Colors.white,
                                 );
@@ -406,7 +504,11 @@ class _applicant_summeryState extends State<applicant_summery>
                                 // a transport failure with no body.
                                 Fluttertoast.showToast(
                                   msg: result.message ??
-                                      'Failed to update applicant status',
+                                      (rejectDraft
+                                          ? 'Failed to reject draft applicant'
+                                          : value == 'Rejected'
+                                              ? 'Failed to reject applicant'
+                                              : 'Failed to update applicant status'),
                                   backgroundColor: Colors.red,
                                   textColor: Colors.white,
                                 );
@@ -424,6 +526,9 @@ class _applicant_summeryState extends State<applicant_summery>
                             void openRejectDialog() {
                               TextEditingController reasonController =
                                   TextEditingController();
+                              // Closes once: a second tap while the popup
+                              // closes would close the page too.
+                              bool sent = false;
                               Alert(
                                 context: context,
                                 type: AlertType.warning,
@@ -453,28 +558,6 @@ class _applicant_summeryState extends State<applicant_summery>
                                 ),
                                 buttons: [
                                   DialogButton(
-                                    child: const Text(
-                                      "Reject",
-                                      style: TextStyle(
-                                          color: Colors.white, fontSize: 18),
-                                    ),
-                                    onPressed: () {
-                                      if (reasonController.text
-                                          .trim()
-                                          .isEmpty) {
-                                        Fluttertoast.showToast(
-                                            msg:
-                                                "Please enter a reason for rejection");
-                                      } else {
-                                        Navigator.pop(context);
-                                        changeStatus('Rejected',
-                                            rejectionReason:
-                                                reasonController.text.trim());
-                                      }
-                                    },
-                                    color: const Color(0xFFDC3545),
-                                  ),
-                                  DialogButton(
                                     child: Text(
                                       "Cancel",
                                       style: TextStyle(
@@ -482,11 +565,60 @@ class _applicant_summeryState extends State<applicant_summery>
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold),
                                     ),
-                                    onPressed: () => Navigator.pop(context),
+                                    onPressed: () {
+                                      if (sent) return;
+                                      sent = true;
+                                      Navigator.pop(context);
+                                    },
                                     color: Colors.white,
                                     radius: BorderRadius.circular(8),
                                     border: Border.all(
                                         color: blueColor, width: 1.5),
+                                  ),
+                                  // Web: "Reject Applicant" stays disabled
+                                  // until a reason is typed.
+                                  DialogButton(
+                                    padding: EdgeInsets.zero,
+                                    color: Colors.transparent,
+                                    radius: BorderRadius.circular(8),
+                                    child: ValueListenableBuilder<
+                                        TextEditingValue>(
+                                      valueListenable: reasonController,
+                                      builder: (context, value, _) {
+                                        final bool ready =
+                                            value.text.trim().isNotEmpty;
+                                        return Container(
+                                          alignment: Alignment.center,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6),
+                                          decoration: BoxDecoration(
+                                            color: ready
+                                                ? const Color(0xFFDC3545)
+                                                : const Color(0x80DC3545),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              "Reject Applicant",
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 18),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    onPressed: () {
+                                      final reason =
+                                          reasonController.text.trim();
+                                      if (reason.isEmpty || sent) return;
+                                      sent = true;
+                                      Navigator.pop(context);
+                                      changeStatus('Rejected',
+                                          rejectionReason: reason);
+                                    },
                                   ),
                                 ],
                               ).show();
@@ -547,12 +679,120 @@ class _applicant_summeryState extends State<applicant_summery>
                               );
                             }
 
+                            Future<void> sendReminder() async {
+                              if (_reminderSending) return;
+                              setState(() => _reminderSending = true);
+                              final result = await sendCompletionReminder(
+                                  widget.applicant_id!);
+                              if (!mounted) return;
+                              Fluttertoast.showToast(
+                                msg: result.ok
+                                    ? 'Completion reminder email sent successfully'
+                                    : (result.message ??
+                                        'Failed to send completion reminder email'),
+                                backgroundColor:
+                                    result.ok ? Colors.green : Colors.red,
+                                textColor: Colors.white,
+                              );
+                              setState(() {
+                                _reminderSending = false;
+                                // Shows the reminder in the history.
+                                if (result.ok) {
+                                  futureLeaseSummary =
+                                      ApplicantSummeryRepository
+                                          .getApplicantSummary(
+                                              widget.applicant_id!);
+                                }
+                              });
+                            }
+
+                            Widget buttonSpinner(Color color) => SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: color,
+                                  ),
+                                );
+
+                            // Web: a draft application can not be accepted yet; the
+                            // applicant can be reminded or rejected (shown beside Create
+                            // Lease when the applicant is already approved).
+                            Widget draftBox() {
+                              final bool rejected = lastStatus == 'Rejected';
+                              return Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF3CD),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: const Color(0xFFFFC107)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  const Text(
+                                    'This application is incomplete and can not be accepted at this time.',
+                                    style: TextStyle(
+                                      color: Color(0xFF856404),
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  actionButton(
+                                    background: blueColor,
+                                    onTap: _reminderSending
+                                        ? null
+                                        : sendReminder,
+                                    child: _reminderSending
+                                        ? buttonSpinner(Colors.white)
+                                        : const Text(
+                                            'Send Completion Reminder Email',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  actionButton(
+                                    background: rejected
+                                        ? const Color(0xFFE9ECEF)
+                                        : const Color(0xFFDC3545),
+                                    onTap: (rejected ||
+                                            _statusUpdating)
+                                        ? null
+                                        : openRejectDialog,
+                                    child: (_statusUpdating &&
+                                            _updatingStatusValue ==
+                                                'Rejected')
+                                        ? buttonSpinner(Colors.white)
+                                        : Text(
+                                            'Reject Applicant',
+                                            style: TextStyle(
+                                              color: rejected
+                                                  ? const Color(0xFF6C757D)
+                                                  : Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            }
+
                             if (lastStatus == 'Approved') {
                               // Web parity: once the lease exists the web
                               // shows a green "Lease Created" badge instead
                               // of the action buttons.
                               if (isMovedin) {
-                                return Padding(
+                                final Widget leaseCreated = Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 12),
                                   child: Container(
@@ -583,8 +823,24 @@ class _applicant_summeryState extends State<applicant_summery>
                                     ),
                                   ),
                                 );
+                                // Web keeps the incomplete-application note (with the
+                                // reminder and Reject) when the application is back in
+                                // draft, even after the lease is created.
+                                if (draftSaved) {
+                                  return Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        child: draftBox(),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      leaseCreated,
+                                    ],
+                                  );
+                                }
+                                return leaseCreated;
                               }
-                              return Padding(
+                              final Widget createLeaseRow = Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 12),
                                 child: Row(
@@ -614,47 +870,66 @@ class _applicant_summeryState extends State<applicant_summery>
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: actionButton(
-                                        background: Colors.white,
-                                        borderColor: isMovedin
-                                            ? Colors.grey
-                                            : const Color(0xFFDC3545),
-                                        onTap: (isMovedin || _statusUpdating)
-                                            ? null
-                                            : openRejectDialog,
-                                        child: (_statusUpdating &&
-                                                _updatingStatusValue ==
-                                                    'Rejected')
-                                            ? const SizedBox(
-                                                height: 18,
-                                                width: 18,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: Color(0xFFDC3545),
+                                    // Web (Summary tab): Change to Reject once approved, unless
+                                    // the application is back in draft.
+                                    if (!draftSaved) ...[
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: actionButton(
+                                          background: Colors.white,
+                                          borderColor: isMovedin
+                                              ? Colors.grey
+                                              : const Color(0xFFDC3545),
+                                          onTap: (isMovedin || _statusUpdating)
+                                              ? null
+                                              : openRejectDialog,
+                                          child: (_statusUpdating &&
+                                                  _updatingStatusValue ==
+                                                      'Rejected')
+                                              ? const SizedBox(
+                                                  height: 18,
+                                                  width: 18,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: Color(0xFFDC3545),
+                                                  ),
+                                                )
+                                              : Text(
+                                                  'Change to Reject',
+                                                  style: TextStyle(
+                                                    color: isMovedin
+                                                        ? Colors.grey
+                                                        : const Color(
+                                                            0xFFDC3545),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 15,
+                                                  ),
                                                 ),
-                                              )
-                                            : Text(
-                                                'Change to Reject',
-                                                style: TextStyle(
-                                                  color: isMovedin
-                                                      ? Colors.grey
-                                                      : const Color(
-                                                          0xFFDC3545),
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 15,
-                                                ),
-                                              ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ],
                                 ),
                               );
+                              if (draftSaved) {
+                                return Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: draftBox(),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    createLeaseRow,
+                                  ],
+                                );
+                              }
+                              return createLeaseRow;
                             }
 
-                            if (lastStatus == 'Rejected') {
+                            // Web: an application that was never submitted
+                            // can not be approved, so no Approve for it.
+                            if (lastStatus == 'Rejected' && formSubmitted) {
                               return Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 12),
@@ -711,26 +986,19 @@ class _applicant_summeryState extends State<applicant_summery>
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
+                                      // Web: Reject Applicant, disabled
+                                      // as the applicant is already rejected.
                                       child: actionButton(
-                                        background: const Color(0xFFFDECEC),
-                                        borderColor: const Color(0xFFF1AEB5),
+                                        background: const Color(0xFFE9ECEF),
+                                        borderColor: const Color(0xFFCED4DA),
                                         onTap: null,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: const [
-                                            Icon(Icons.close,
-                                                color: Color(0xFFDC3545),
-                                                size: 20),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              'Rejected',
-                                              style: TextStyle(
-                                                color: Color(0xFFDC3545),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                          ],
+                                        child: const Text(
+                                          'Reject Applicant',
+                                          style: TextStyle(
+                                            color: Color(0xFF6C757D),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -739,8 +1007,100 @@ class _applicant_summeryState extends State<applicant_summery>
                               );
                             }
 
-                            // Undecided — no action buttons (Back button in
-                            // the header is the only action).
+                            // Web: a submitted application that is not yet
+                            // decided can be approved or rejected.
+                            if (formSubmitted) {
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: actionButton(
+                                        background: Colors.white,
+                                        borderColor: isMovedin
+                                            ? Colors.grey
+                                            : const Color(0xFF28A745),
+                                        onTap: (isMovedin || _statusUpdating)
+                                            ? null
+                                            : () => changeStatus('Approved'),
+                                        child: (_statusUpdating &&
+                                                _updatingStatusValue ==
+                                                    'Approved')
+                                            ? buttonSpinner(
+                                                const Color(0xFF28A745))
+                                            : Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.check,
+                                                    color: isMovedin
+                                                        ? Colors.grey
+                                                        : const Color(
+                                                            0xFF28A745),
+                                                    size: 20,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Approve Applicant',
+                                                    style: TextStyle(
+                                                      color: isMovedin
+                                                          ? Colors.grey
+                                                          : const Color(
+                                                              0xFF28A745),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: actionButton(
+                                        background: Colors.white,
+                                        borderColor: isMovedin
+                                            ? Colors.grey
+                                            : const Color(0xFFDC3545),
+                                        onTap: (isMovedin || _statusUpdating)
+                                            ? null
+                                            : openRejectDialog,
+                                        child: (_statusUpdating &&
+                                                _updatingStatusValue ==
+                                                    'Rejected')
+                                            ? buttonSpinner(
+                                                const Color(0xFFDC3545))
+                                            : Text(
+                                                'Reject Applicant',
+                                                style: TextStyle(
+                                                  color: isMovedin
+                                                      ? Colors.grey
+                                                      : const Color(
+                                                          0xFFDC3545),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            if (draftSaved) {
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: draftBox(),
+                              );
+                            }
+
+                            // Not submitted and not a draft — no action
+                            // buttons (Back button in the header is the only
+                            // action), as on web.
                             return const SizedBox.shrink();
                           },
                         ),

@@ -31,6 +31,8 @@ import 'package:three_zero_two_property/StaffModule/widgets/appbar.dart';
 import 'package:three_zero_two_property/StaffModule/widgets/staff_report_header.dart';
 import 'package:three_zero_two_property/widgets/pdf_report_header.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/provider/getAdminAddress.dart';
 import 'package:three_zero_two_property/repository/ExpiringLeaseTable.dart';
@@ -172,7 +174,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
         );
       },
     );
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null) {
       setState(() {
         _selectedDate = picked;
         final dateProvider = Provider.of<DateProvider>(context, listen: false);
@@ -204,7 +206,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
         );
       },
     );
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null) {
       setState(() {
         _selectedDate = picked;
         final dateProvider = Provider.of<DateProvider>(context, listen: false);
@@ -222,6 +224,10 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
       return dateStr; // Return the original if parsing fails
     }
   }
+
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(_fromDateController.text, _toDateController.text);
 
   void _fetchData({bool force = false}) {
     String currentFromDate = _fromDateController.text;
@@ -266,15 +272,9 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
     setState(() {});
   }
 
-  String formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      final formatter = DateFormat('dd-MM-yyyy');
-      return formatter.format(date);
-    } catch (e) {
-      return dateStr; // If the date is not valid, return the original string
-    }
-  }
+  /// The shown From/To date (company date format) as the yyyy-MM-dd the
+  /// server reads, like web. Used for Run and the exports.
+  String formatDate(String dateStr) => reverseFormatDate(dateStr);
 
   Future<void> generatePdf(List<RentersInsuranceData> leaseData) async {
     final dateProvider = Provider.of<DateProvider>(context, listen: false);
@@ -311,7 +311,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
                       pw.Text(
-                        'Expiring Insurance',
+                        "Expiring Renter's Insurance",
                         style: pw.TextStyle(
                           fontSize: 24,
                           fontWeight: pw.FontWeight.bold,
@@ -642,194 +642,165 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
   bool ascending1 = false;
   bool ascending2 = false;
   bool ascending3 = false;
+  // Column widths shared by the header and every row so they line up.
+  static const int _companyFlex = 1;
+  static const int _dateFlex = 1;
+  static const double _chevronWidth = 24;
+
+  Widget _headerCell(String text, int flex, VoidCallback onTap) {
+    return Expanded(
+      flex: flex,
+      child: InkWell(
+        onTap: onTap,
+        child: Text(
+          text,
+          style: TextStyle(
+            color: blueColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            height: 1.3,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The app's round page arrow: grey when it can't be used, navy when it can.
+  Widget _pageButton(IconData icon, VoidCallback? onTap) {
+    return InkWell(
+      customBorder: const CircleBorder(),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: FaIcon(
+          icon,
+          size: 26,
+          color: onTap == null ? const Color(0xFF9E9E9E) : blueColor,
+        ),
+      ),
+    );
+  }
+
+
+
   Widget _buildHeaders() {
-    var width = MediaQuery.of(context).size.width;
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
           color: const Color(0xFFF4F8FF),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFFDBE0E5))),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        // leading: Container(
-        //   child: Icon(
-        //     Icons.expand_less,
-        //     color: Colors.transparent,
-        //   ),
-        // ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Container(
-              child: Icon(
-                Icons.expand_less,
-                color: Colors.transparent,
-              ),
-            ),
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    if (sorting1 == true) {
-                      sorting2 = false;
-                      sorting3 = false;
-                      ascending1 = sorting1 ? !ascending1 : true;
-                      ascending2 = false;
-                      ascending3 = false;
-                    } else {
-                      sorting1 = !sorting1;
-                      sorting2 = false;
-                      sorting3 = false;
-                      ascending1 = sorting1 ? !ascending1 : true;
-                      ascending2 = false;
-                      ascending3 = false;
-                    }
-
-                    // Sorting logic here
-                  });
-                },
-                child: Row(
-                  children: [
-                    width < 400
-                        ? Text("  Insurance\n  Company",
-                            style: TextStyle(
-                                color: blueColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15))
-                        : Text("  Insurance\n  Company",
-                            style: TextStyle(
-                                color: blueColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15)),
-                    // Text("Property", style: TextStyle(color: Colors.white)),
-                    // SizedBox(width: 3),
-                    // ascending1
-                    //     ? Padding(
-                    //         padding: const EdgeInsets.only(top: 7, left: 2),
-                    //         child: FaIcon(
-                    //           FontAwesomeIcons.sortUp,
-                    //           size: 20,
-                    //           color: Colors.white,
-                    //         ),
-                    //       )
-                    //     : Padding(
-                    //         padding: const EdgeInsets.only(bottom: 7, left: 2),
-                    //         child: FaIcon(
-                    //           FontAwesomeIcons.sortDown,
-                    //           size: 20,
-                    //           color: Colors.white,
-                    //         ),
-                    //       ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    if (sorting2) {
-                      sorting1 = false;
-                      sorting2 = sorting2;
-                      sorting3 = false;
-                      ascending2 = sorting2 ? !ascending2 : true;
-                      ascending1 = false;
-                      ascending3 = false;
-                    } else {
-                      sorting1 = false;
-                      sorting2 = !sorting2;
-                      sorting3 = false;
-                      ascending2 = sorting2 ? !ascending2 : true;
-                      ascending1 = false;
-                      ascending3 = false;
-                    }
-                    // Sorting logic here
-                  });
-                },
-                child: Row(
-                  children: [
-                    Text("     Effective\n       Date",
-                        style: TextStyle(
-                            color: blueColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15)),
-                    // SizedBox(width: 5),
-                    // ascending2
-                    //     ? Padding(
-                    //         padding: const EdgeInsets.only(top: 7, left: 2),
-                    //         child: FaIcon(
-                    //           FontAwesomeIcons.sortUp,
-                    //           size: 20,
-                    //           color: Colors.white,
-                    //         ),
-                    //       )
-                    //     : Padding(
-                    //         padding: const EdgeInsets.only(bottom: 7, left: 2),
-                    //         child: FaIcon(
-                    //           FontAwesomeIcons.sortDown,
-                    //           size: 20,
-                    //           color: Colors.white,
-                    //         ),
-                    //       ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    if (sorting3) {
-                      sorting1 = false;
-                      sorting2 = false;
-                      sorting3 = sorting3;
-                      ascending3 = sorting3 ? !ascending3 : true;
-                      ascending2 = false;
-                      ascending1 = false;
-                    } else {
-                      sorting1 = false;
-                      sorting2 = false;
-                      sorting3 = !sorting3;
-                      ascending3 = sorting3 ? !ascending3 : true;
-                      ascending2 = false;
-                      ascending1 = false;
-                    }
-
-                    // Sorting logic here
-                  });
-                },
-                child: Row(
-                  children: [
-                    Text("      Expiration\n          Date",
-                        style: TextStyle(
-                            color: blueColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15)),
-                    SizedBox(width: 5),
-                    // ascending3
-                    //     ? Padding(
-                    //         padding: const EdgeInsets.only(top: 7, left: 2),
-                    //         child: FaIcon(
-                    //           FontAwesomeIcons.sortUp,
-                    //           size: 20,
-                    //           color: Colors.white,
-                    //         ),
-                    //       )
-                    //     : Padding(
-                    //         padding: const EdgeInsets.only(bottom: 7, left: 2),
-                    //         child: FaIcon(
-                    //           FontAwesomeIcons.sortDown,
-                    //           size: 20,
-                    //           color: Colors.white,
-                    //         ),
-                    //       ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const SizedBox(width: _chevronWidth),
+          _headerCell("Insurance\nCompany", _companyFlex, () {
+            setState(() {
+              if (sorting1 == true) {
+                sorting2 = false;
+                sorting3 = false;
+                ascending1 = sorting1 ? !ascending1 : true;
+                ascending2 = false;
+                ascending3 = false;
+              } else {
+                sorting1 = !sorting1;
+                sorting2 = false;
+                sorting3 = false;
+                ascending1 = sorting1 ? !ascending1 : true;
+                ascending2 = false;
+                ascending3 = false;
+              }
+            });
+          }),
+          _headerCell("Effective\nDate", _dateFlex, () {
+            setState(() {
+              if (sorting2) {
+                sorting1 = false;
+                sorting2 = sorting2;
+                sorting3 = false;
+                ascending2 = sorting2 ? !ascending2 : true;
+                ascending1 = false;
+                ascending3 = false;
+              } else {
+                sorting1 = false;
+                sorting2 = !sorting2;
+                sorting3 = false;
+                ascending2 = sorting2 ? !ascending2 : true;
+                ascending1 = false;
+                ascending3 = false;
+              }
+            });
+          }),
+          _headerCell("Expiration\nDate", _dateFlex, () {
+            setState(() {
+              if (sorting3) {
+                sorting1 = false;
+                sorting2 = false;
+                sorting3 = sorting3;
+                ascending3 = sorting3 ? !ascending3 : true;
+                ascending2 = false;
+                ascending1 = false;
+              } else {
+                sorting1 = false;
+                sorting2 = false;
+                sorting3 = !sorting3;
+                ascending3 = sorting3 ? !ascending3 : true;
+                ascending2 = false;
+                ascending1 = false;
+              }
+            });
+          }),
+        ],
       ),
+    );
+  }
+
+  /// Loading placeholder in the same layout as the table: the real header,
+  /// then rounded rows with soft grey bars, at the same edges as the filters.
+  Widget _loadingTable() {
+    Widget bar(double widthFactor) => FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: widthFactor,
+          child: Container(
+            height: 12,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        );
+    return Column(
+      children: [
+        const SizedBox(height: 6),
+        _buildHeaders(),
+        const SizedBox(height: 6),
+        Shimmer.fromColors(
+          baseColor: const Color(0xFFE3E7ED),
+          highlightColor: const Color(0xFFF4F6F9),
+          child: Column(
+            children: List.generate(5, (index) {
+              return Container(
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFDBE0E5)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: _chevronWidth),
+                    Expanded(flex: _companyFlex, child: bar(0.7)),
+                    Expanded(flex: _dateFlex, child: bar(0.75)),
+                    Expanded(flex: _dateFlex, child: bar(0.75)),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1003,7 +974,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
               child: Column(
                 children: [
                   StaffReportHeader(
-                    title: 'Expiring Insurance',
+                    title: "Expiring Renter's Insurance",
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(15.0, 4.0, 15.0, 15.0),
@@ -1019,10 +990,10 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 5.0),
                                   child: Container(
-                                    height: 42,
+                                    height: 48,
                                     decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(5),
-                                        border: Border.all(color: Colors.grey)),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFFCED4DA))),
                                     child: DropdownButtonHideUnderline(
                                     child: DropdownButton2<String>(
                                       isExpanded: true,
@@ -1047,7 +1018,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Today',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1059,7 +1030,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Yesterday',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1071,7 +1042,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Last 7 Days',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1083,7 +1054,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Last 14 Days',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1095,7 +1066,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Last 30 Days',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1107,7 +1078,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'This Week',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1119,7 +1090,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Last Week',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1131,7 +1102,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'This Month',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1143,7 +1114,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Last Month',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1155,7 +1126,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'This Quarter',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1167,7 +1138,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Last Quarter',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1179,7 +1150,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Year to Date',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1191,7 +1162,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Last Year',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1203,7 +1174,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                             'Custom Date',
                                             style: const TextStyle(
                                               fontSize: 14,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
                                             overflow: TextOverflow.ellipsis,
@@ -1410,12 +1381,12 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                         });
                                       },
                                       buttonStyleData: ButtonStyleData(
-                                        height: 42,
+                                        height: 46,
                                         padding: const EdgeInsets.only(
-                                            left: 14, right: 14),
+                                            left: 0, right: 4),
                                         decoration: BoxDecoration(
                                           borderRadius:
-                                              BorderRadius.circular(5),
+                                              BorderRadius.circular(10),
                                           color: Colors.white,
                                         ),
                                         elevation: 0,
@@ -1448,7 +1419,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           // From Date and To Date fields with theme
                           Padding(
                             padding:
@@ -1457,10 +1428,12 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                               children: [
                                 Expanded(
                                   child: Container(
+                                    height: 48,
+                                    alignment: Alignment.center,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: Color(0xFF8A95A8),
+                                        color: const Color(0xFFCED4DA),
                                         width: 1,
                                       ),
                                     ),
@@ -1490,7 +1463,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                         decoration: InputDecoration(
                                           contentPadding:
                                               const EdgeInsets.symmetric(
-                                                  vertical: 11, horizontal: 11),
+                                                  vertical: 11, horizontal: 14),
                                           isDense: true,
                                           hintText: "From",
                                           border: InputBorder.none,
@@ -1502,10 +1475,12 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                 SizedBox(width: 10),
                                 Expanded(
                                   child: Container(
+                                    height: 48,
+                                    alignment: Alignment.center,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: Color(0xFF8A95A8),
+                                        color: const Color(0xFFCED4DA),
                                         width: 1,
                                       ),
                                     ),
@@ -1535,7 +1510,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                         decoration: InputDecoration(
                                           contentPadding:
                                               const EdgeInsets.symmetric(
-                                                  vertical: 11, horizontal: 11),
+                                                  vertical: 11, horizontal: 14),
                                           isDense: true,
                                           hintText: "To",
                                           border: InputBorder.none,
@@ -1547,7 +1522,9 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                               ],
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          if (_dateRangeError != null)
+                            ReportDateRangeErrorText(_dateRangeError!),
+                          const SizedBox(height: 12),
                           // Run + Export buttons — web parity (side by side,
                           // next to the Date Range / From / To filters).
                           Padding(
@@ -1557,15 +1534,21 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                               children: [
                                 Expanded(
                                   child: SizedBox(
-                                    height: 46,
+                                    height: 48,
                                     child: ElevatedButton(
-                                      onPressed: () => _fetchData(force: true),
+                                      onPressed: _dateRangeError == null
+                                          ? () => _fetchData(force: true)
+                                          : null,
                                       style: ElevatedButton.styleFrom(
+                                        elevation: 0,
                                         backgroundColor: blueColor,
                                         foregroundColor: Colors.white,
+                                        disabledBackgroundColor:
+                                            blueColor.withOpacity(0.6),
+                                        disabledForegroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(8),
+                                              BorderRadius.circular(10),
                                         ),
                                       ),
                                       child: const Text('Run'),
@@ -1629,11 +1612,11 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                         ),
                                       ],
                                       child: Container(
-                                        height: 46,
+                                        height: 48,
                                         decoration: BoxDecoration(
                                           color: blueColor,
                                           borderRadius:
-                                              BorderRadius.circular(8),
+                                              BorderRadius.circular(10),
                                         ),
                                         child: const Row(
                                           mainAxisAlignment:
@@ -1790,18 +1773,15 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                   if (MediaQuery.of(context).size.width < 500)
                     Padding(
                       padding: const EdgeInsets.only(
-                        left: 10.0,
-                        right: 10.0,
+                        left: 20.0,
+                        right: 20.0,
                       ),
                       child: FutureBuilder<List<RentersInsuranceData>>(
                         future: _futureReport,
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
-                            return Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ColabShimmerLoadingWidget(),
-                            );
+                            return _loadingTable();
                           } else if (snapshot.hasError) {
                             return Container(
                               height: MediaQuery.of(context).size.height * .5,
@@ -1911,7 +1891,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                           return SingleChildScrollView(
                             child: Column(
                               children: [
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 6),
                                 _buildHeaders(),
                                 const SizedBox(height: 10),
                                 Container(
@@ -1940,66 +1920,60 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                         ),
                                         child: Column(
                                           children: <Widget>[
-                                            ListTile(
-                                              contentPadding: EdgeInsets.zero,
-                                              title: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(2.0),
+                                            InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              onTap: () {
+                                                setState(() {
+                                                  expandedIndex =
+                                                      expandedIndex == index
+                                                          ? null
+                                                          : index;
+                                                });
+                                              },
+                                              child: Padding(
+                                                padding: const EdgeInsets
+                                                    .symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 16),
                                                 child: Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.start,
                                                   crossAxisAlignment:
-                                                      CrossAxisAlignment.center,
+                                                      CrossAxisAlignment
+                                                          .center,
                                                   children: <Widget>[
-                                                    InkWell(
-                                                      onTap: () {
-                                                        setState(() {
-                                                          if (expandedIndex ==
-                                                              index) {
-                                                            expandedIndex =
-                                                                null;
-                                                          } else {
-                                                            expandedIndex =
-                                                                index;
-                                                          }
-                                                        });
-                                                      },
-                                                      child: Container(
-                                                        margin: const EdgeInsets
-                                                            .only(left: 5),
-                                                        padding: !isExpanded
-                                                            ? const EdgeInsets
-                                                                .only(
-                                                                bottom: 10)
-                                                            : const EdgeInsets
-                                                                .only(top: 10),
-                                                        child: FaIcon(
+                                                    SizedBox(
+                                                      width: _chevronWidth,
+                                                      child: Align(
+                                                        alignment: Alignment
+                                                            .centerLeft,
+                                                        child: Icon(
                                                           isExpanded
-                                                              ? FontAwesomeIcons
-                                                                  .sortUp
-                                                              : FontAwesomeIcons
-                                                                  .sortDown,
-                                                          size: 20,
+                                                              ? Icons
+                                                                  .arrow_drop_up
+                                                              : Icons
+                                                                  .arrow_drop_down,
+                                                          size: 24,
                                                           color: blueColor,
                                                         ),
                                                       ),
                                                     ),
-                                                    const SizedBox(width: 3),
                                                     Expanded(
-                                                      flex: 4,
+                                                      flex: _companyFlex,
                                                       child: Text(
-                                                        '${lease.insuranceCompany}',
+                                                        '${lease.insuranceCompany ?? 'N/A'}',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                         style: TextStyle(
                                                           color: blueColor,
                                                           fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 13,
+                                                              FontWeight.w500,
+                                                          fontSize: 14,
                                                         ),
                                                       ),
                                                     ),
-                                                    const SizedBox(width: 10),
                                                     Expanded(
-                                                      flex: 3,
+                                                      flex: _dateFlex,
                                                       child: Text(
                                                         lease.effectiveDate
                                                                     ?.isNotEmpty ==
@@ -2008,17 +1982,19 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                                                 .formatCurrentDate(
                                                                     '${lease?.effectiveDate?.split('T').first}')
                                                             : 'N/A',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                         style: TextStyle(
                                                           color: blueColor,
                                                           fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 13,
+                                                              FontWeight.w500,
+                                                          fontSize: 14,
                                                         ),
                                                       ),
                                                     ),
-                                                    const SizedBox(width: 25),
                                                     Expanded(
-                                                      flex: 3,
+                                                      flex: _dateFlex,
                                                       child: Text(
                                                         lease.expirationDate
                                                                     ?.isNotEmpty ==
@@ -2027,11 +2003,14 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                                                 .formatCurrentDate(
                                                                     '${lease?.expirationDate?.split('T').first}')
                                                             : 'N/A',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                         style: TextStyle(
                                                           color: blueColor,
                                                           fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 13,
+                                                              FontWeight.w500,
+                                                          fontSize: 14,
                                                         ),
                                                       ),
                                                     ),
@@ -2040,72 +2019,46 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                               ),
                                             ),
                                             if (isExpanded)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 8.0),
-                                                margin: const EdgeInsets.only(
-                                                    bottom: 20),
-                                                child: SingleChildScrollView(
-                                                  child: Column(
-                                                    children: [
-                                                      Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          FaIcon(
-                                                            isExpanded
-                                                                ? FontAwesomeIcons
-                                                                    .sortUp
-                                                                : FontAwesomeIcons
-                                                                    .sortDown,
-                                                            size: 20,
-                                                            color: Colors
-                                                                .transparent,
-                                                          ),
-                                                          Expanded(
-                                                            child: Column(
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .start,
-                                                              children: <Widget>[
-                                                                Text.rich(
-                                                                  TextSpan(
-                                                                    children: [
-                                                                      TextSpan(
-                                                                        text:
-                                                                            'Tenants : ',
-                                                                        style: TextStyle(
-                                                                            fontWeight:
-                                                                                FontWeight.bold,
-                                                                            color: blueColor), // Bold and black
-                                                                      ),
-                                                                      TextSpan(
-                                                                        text: lease.tenantDetails != null &&
-                                                                                lease.tenantDetails!.isNotEmpty
-                                                                            ? lease.tenantDetails!.map((tenant) => '${tenant.tenantFirstName ?? '-'} ${tenant.tenantLastName ?? '-'}').join(', ')
-                                                                            : 'N/A',
-                                                                        style: TextStyle(
-                                                                            fontWeight:
-                                                                                FontWeight.w700,
-                                                                            color: grey), // Light and grey
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          Container(
-                                                            width: 40,
-                                                            child: const Column(
-                                                              children: [],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    left: 12 + _chevronWidth,
+                                                    right: 12,
+                                                    bottom: 16),
+                                                child: Align(
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: Text.rich(
+                                                    TextSpan(
+                                                      children: [
+                                                        TextSpan(
+                                                          text: 'Tenants : ',
+                                                          style: TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color:
+                                                                  blueColor),
+                                                        ),
+                                                        TextSpan(
+                                                          text: lease.tenantDetails !=
+                                                                      null &&
+                                                                  lease
+                                                                      .tenantDetails!
+                                                                      .isNotEmpty
+                                                              ? lease
+                                                                  .tenantDetails!
+                                                                  .map((tenant) =>
+                                                                      '${tenant.tenantFirstName ?? '-'} ${tenant.tenantLastName ?? '-'}')
+                                                                  .join(', ')
+                                                              : 'N/A',
+                                                          style: TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                              color: grey),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -2115,85 +2068,78 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                     }).toList(),
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const SizedBox(width: 10),
-                                        Material(
-                                          elevation: 3,
-                                          child: Container(
-                                            height: 40,
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 12.0),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                  color: Colors.grey),
-                                            ),
-                                            child: DropdownButtonHideUnderline(
-                                              child: DropdownButton<int>(
-                                                value: itemsPerPage,
-                                                items: itemsPerPageOptions
-                                                    .map((int value) {
-                                                  return DropdownMenuItem<int>(
-                                                    value: value,
-                                                    child:
-                                                        Text(value.toString()),
-                                                  );
-                                                }).toList(),
-                                                onChanged: (newValue) {
-                                                  setState(() {
-                                                    itemsPerPage = newValue!;
-                                                    currentPage =
-                                                        0; // Reset to first page when items per page change
-                                                  });
-                                                },
-                                              ),
-                                            ),
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      top: 20, bottom: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Container(
+                                        height: 42,
+                                        padding: const EdgeInsets.only(
+                                            left: 14, right: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                              color: const Color(0xFFDBE0E5)),
+                                        ),
+                                        child: DropdownButtonHideUnderline(
+                                          child: DropdownButton<int>(
+                                            value: itemsPerPage,
+                                            icon: Icon(Icons.arrow_drop_down,
+                                                color: blueColor),
+                                            style: TextStyle(
+                                                color: blueColor,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w500),
+                                            items: itemsPerPageOptions
+                                                .map((int value) {
+                                              return DropdownMenuItem<int>(
+                                                value: value,
+                                                child: Text(value.toString()),
+                                              );
+                                            }).toList(),
+                                            onChanged: (newValue) {
+                                              setState(() {
+                                                itemsPerPage = newValue!;
+                                                currentPage = 0;
+                                              });
+                                            },
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: FaIcon(
-                                            FontAwesomeIcons.circleChevronLeft,
-                                            color: currentPage == 0
-                                                ? Colors.grey
-                                                : blueColor,
-                                          ),
-                                          onPressed: currentPage == 0
-                                              ? null
-                                              : () {
-                                                  setState(() {
-                                                    currentPage--;
-                                                  });
-                                                },
+                                      ),
+                                      const SizedBox(width: 16),
+                                      _pageButton(
+                                        FontAwesomeIcons.circleChevronLeft,
+                                        currentPage == 0
+                                            ? null
+                                            : () => setState(() {
+                                                  currentPage--;
+                                                }),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10),
+                                        child: Text(
+                                          'Page ${currentPage + 1} of $totalPages',
+                                          style: TextStyle(
+                                              color: blueColor,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500),
                                         ),
-                                        Text(
-                                            'Page ${currentPage + 1} of $totalPages'),
-                                        IconButton(
-                                          icon: FaIcon(
-                                            FontAwesomeIcons.circleChevronRight,
-                                            color: currentPage < totalPages - 1
-                                                ? blueColor
-                                                : Colors.grey,
-                                          ),
-                                          onPressed:
-                                              currentPage < totalPages - 1
-                                                  ? () {
-                                                      setState(() {
-                                                        currentPage++;
-                                                      });
-                                                    }
-                                                  : null,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                      _pageButton(
+                                        FontAwesomeIcons.circleChevronRight,
+                                        currentPage < totalPages - 1
+                                            ? () => setState(() {
+                                                  currentPage++;
+                                                })
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),

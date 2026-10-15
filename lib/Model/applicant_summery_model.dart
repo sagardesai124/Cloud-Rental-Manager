@@ -12,6 +12,10 @@ class applicant_summery_details {
   List? applicantChecklist;
   List? applicantCheckedChecklist;
   bool? isMovedin;
+  /// The rental application was submitted, or is only saved as a draft. Web
+  /// offers Approve only for a submitted application (ApplicantSummary.jsx).
+  bool? formSubmitted;
+  bool? draftSaved;
   String? createdAt;
   String? updatedAt;
   List<ApplicantNotesAndFile>? applicantNotesAndFile;
@@ -36,6 +40,8 @@ class applicant_summery_details {
       this.applicantChecklist,
       this.applicantCheckedChecklist,
       this.isMovedin,
+      this.formSubmitted,
+      this.draftSaved,
       this.createdAt,
       this.updatedAt,
       this.applicantNotesAndFile,
@@ -63,6 +69,8 @@ class applicant_summery_details {
     }
     applicantCheckedChecklist = json['applicant_checkedChecklist'];
     isMovedin = json['isMovedin'];
+    formSubmitted = json['form_submitted'] == true;
+    draftSaved = json['draft_saved'] == true;
     createdAt = json['createdAt']?.toString();
     updatedAt = json['updatedAt']?.toString();
     if (json['applicant_NotesAndFile'] != null) {
