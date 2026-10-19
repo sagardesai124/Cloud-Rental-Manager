@@ -37,6 +37,8 @@ class TeamAdmin {
   String? email;
   String? phoneNumber;
   bool? isPending;
+  /// "activate" / "deactivate" (server defaults to "activate").
+  String? status;
   String? invitedAt;
   String? invitedByAdminId;
   bool? isAdminDelete;
@@ -51,6 +53,7 @@ class TeamAdmin {
     this.email,
     this.phoneNumber,
     this.isPending,
+    this.status,
     this.invitedAt,
     this.invitedByAdminId,
     this.isAdminDelete,
@@ -66,6 +69,7 @@ class TeamAdmin {
     email = asStr(json['email']);
     phoneNumber = asStr(json['phone_number']);
     isPending = asBool(json['is_pending']);
+    status = asStr(json['status']);
     invitedAt = asStr(json['invited_at']);
     invitedByAdminId = asStr(json['invited_by_admin_id']);
     isAdminDelete = asBool(json['isAdmin_delete']);
@@ -81,6 +85,7 @@ class TeamAdmin {
         'email': email,
         'phone_number': phoneNumber,
         'is_pending': isPending,
+        'status': status,
         'invited_at': invitedAt,
         'invited_by_admin_id': invitedByAdminId,
         'isAdmin_delete': isAdminDelete,
@@ -90,6 +95,9 @@ class TeamAdmin {
 
   /// "Mark Due" — convenience for list rows.
   String get fullName => "${firstName ?? ''} ${lastName ?? ''}".trim();
+
+  /// Disabled by an admin (web: `status === "deactivate" && !is_pending`).
+  bool get isDeactivated => status == 'deactivate' && !(isPending ?? false);
 }
 
 class TeamStaff {
@@ -101,6 +109,8 @@ class TeamStaff {
   String? staffmemberPhoneNumber;
   String? staffmemberDesignation;
   bool? isPending;
+  /// "activate" / "deactivate" (server defaults to "activate").
+  String? status;
   String? invitedAt;
   String? invitedByAdminId;
   bool? isDelete;
@@ -116,6 +126,7 @@ class TeamStaff {
     this.staffmemberPhoneNumber,
     this.staffmemberDesignation,
     this.isPending,
+    this.status,
     this.invitedAt,
     this.invitedByAdminId,
     this.isDelete,
@@ -133,6 +144,7 @@ class TeamStaff {
     staffmemberPhoneNumber = asStr(json['staffmember_phoneNumber']);
     staffmemberDesignation = asStr(json['staffmember_designation']);
     isPending = asBool(json['is_pending']);
+    status = asStr(json['status']);
     invitedAt = asStr(json['invited_at']);
     invitedByAdminId = asStr(json['invited_by_admin_id']);
     isDelete = asBool(json['is_delete']);
@@ -149,12 +161,16 @@ class TeamStaff {
         'staffmember_phoneNumber': staffmemberPhoneNumber,
         'staffmember_designation': staffmemberDesignation,
         'is_pending': isPending,
+        'status': status,
         'invited_at': invitedAt,
         'invited_by_admin_id': invitedByAdminId,
         'is_delete': isDelete,
         'createdAt': createdAt,
         'updatedAt': updatedAt,
       };
+
+  /// Disabled by an admin (web: `status === "deactivate" && !is_pending`).
+  bool get isDeactivated => status == 'deactivate' && !(isPending ?? false);
 }
 
 /// One row of the Team & Access activity log.

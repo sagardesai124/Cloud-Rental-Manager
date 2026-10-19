@@ -27,6 +27,7 @@ import 'package:syncfusion_flutter_xlsio/xlsio.dart' as syncXlsx;
 import 'package:three_zero_two_property/Model/ReportExpiringLease.dart';
 import 'package:three_zero_two_property/Model/profile.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/provider/getAdminAddress.dart';
 import 'package:three_zero_two_property/repository/ExpiringLeaseTable.dart';
@@ -230,9 +231,14 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
     if (mounted) setState(() {});
   }
 
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(_fromDateController.text, _toDateController.text);
+
   bool get _canRun =>
       _fromDateController.text.trim().isNotEmpty &&
-      _toDateController.text.trim().isNotEmpty;
+      _toDateController.text.trim().isNotEmpty &&
+      _dateRangeError == null;
 
   /// Fills From/To from a preset, matching the ranges the Expiring Insurance
   /// report already uses so both screens agree. Presets only set the fields —
@@ -1324,6 +1330,8 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
                                       ),
                                     ],
                                   ),
+                                  if (_dateRangeError != null)
+                                    ReportDateRangeErrorText(_dateRangeError!),
                                 ],
                               ),
                             ),

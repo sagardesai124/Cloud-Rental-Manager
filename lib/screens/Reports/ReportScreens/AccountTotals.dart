@@ -25,6 +25,7 @@ import 'package:three_zero_two_property/Model/DelinquentTenantsModel.dart';
 import 'package:three_zero_two_property/Model/RentarsInsuranceModel.dart';
 import 'package:three_zero_two_property/Model/profile.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/provider/getAdminAddress.dart';
 import 'package:three_zero_two_property/repository/AccountTotalsReports.dart';
@@ -1221,6 +1222,9 @@ class _AccountTotalsReportsState extends State<AccountTotalsReports>
 
   TextEditingController fromDate = TextEditingController();
   TextEditingController toDate = TextEditingController();
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(fromDate.text, toDate.text);
   String? daterange;
   String? chargeType;
   String? selectedrenatalownerid;
@@ -3204,6 +3208,8 @@ class _AccountTotalsReportsState extends State<AccountTotalsReports>
               ],
             ),
           ),
+          if (_dateRangeError != null)
+            ReportDateRangeErrorText(_dateRangeError!),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0.0),
@@ -3225,9 +3231,12 @@ class _AccountTotalsReportsState extends State<AccountTotalsReports>
                       padding: const EdgeInsets.all(8.0),
                       icon: FaIcon(
                         FontAwesomeIcons.circlePlay,
-                        color: blueColor,
+                        // Greyed like the other reports' disabled Run.
+                        color: _dateRangeError != null
+                            ? blueColor.withOpacity(0.6)
+                            : blueColor,
                       ),
-                      onPressed: () {
+                      onPressed: _dateRangeError != null ? null : () {
                         // Validate dates before fetching
                         if (fromDate.text.isEmpty || toDate.text.isEmpty) {
                           return;

@@ -25,6 +25,7 @@ import 'package:three_zero_two_property/Model/profile.dart';
 import 'package:three_zero_two_property/StaffModule/widgets/staff_report_header.dart';
 import 'package:three_zero_two_property/widgets/pdf_report_header.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 import 'package:three_zero_two_property/provider/getAdminAddress.dart';
 import 'package:three_zero_two_property/repository/DelinquentTenantsService.dart';
@@ -1405,6 +1406,9 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
 
   TextEditingController fromDate = TextEditingController();
   TextEditingController toDate = TextEditingController();
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(fromDate.text, toDate.text);
   String? daterange;
   String? chargeType;
   String? selectedrenatalownerid;
@@ -3771,6 +3775,8 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
               ],
             ),
           ),
+          if (_dateRangeError != null)
+            ReportDateRangeErrorText(_dateRangeError!),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0.0),
@@ -3907,8 +3913,10 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: blueColor,
+                        disabledBackgroundColor: blueColor.withOpacity(0.6),
+                        disabledForegroundColor: Colors.white,
                       ),
-                      onPressed: () async {
+                      onPressed: _dateRangeError != null ? null : () async {
                         final dateProvider =
                             Provider.of<DateProvider>(context, listen: false);
                         setState(() {

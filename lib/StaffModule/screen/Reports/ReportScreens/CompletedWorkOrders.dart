@@ -15,6 +15,7 @@ import 'package:three_zero_two_property/Model/profile.dart';
 import 'package:three_zero_two_property/StaffModule/widgets/staff_report_header.dart';
 
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import '../../../repository/CompletedWorkData.dart';
 import '../../../repository/GetAdminAddressPdf.dart';
@@ -287,6 +288,9 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
   // Filter variables
   TextEditingController fromDate = TextEditingController();
   TextEditingController toDate = TextEditingController();
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(fromDate.text, toDate.text);
   String? daterange;
   String? statusType;
   bool customdate = false;
@@ -663,15 +667,9 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
     }
   }
 
-  String formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      final formatter = DateFormat('dd-MM-yyyy');
-      return formatter.format(date);
-    } catch (e) {
-      return dateStr; // If the date is not valid, return the original string
-    }
-  }
+  /// The shown From/To date (company date format) as the yyyy-MM-dd the
+  /// server compares against, like web. Used when Run builds the request.
+  String formatDate(String dateStr) => reverseFormatDate(dateStr);
 
   Future<void> generateWorkOrderPdf(
       List<CompletedWorkData> workOrderData) async {
@@ -1629,6 +1627,8 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
                             ],
                           ),
                         ),
+                        if (_dateRangeError != null)
+                          ReportDateRangeErrorText(_dateRangeError!),
                         const SizedBox(height: 10),
                         // Run Report Button
                         Padding(
@@ -1721,10 +1721,12 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: blueColor,
+                                    disabledBackgroundColor: blueColor.withOpacity(0.6),
+                                    disabledForegroundColor: Colors.white,
                                     padding:
                                         const EdgeInsets.symmetric(vertical: 8),
                                   ),
-                                  onPressed: () {
+                                  onPressed: _dateRangeError != null ? null : () {
                                     _runReport();
                                   },
                                   child: const Text(

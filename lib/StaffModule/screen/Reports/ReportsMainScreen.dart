@@ -907,6 +907,14 @@ class ReportScreen extends StatelessWidget {
                       'Tenants with an outstanding ledger balance as of a specified date',
                   "navigate": DelinquentTenants()
                 },
+                // Web shows Lease Renewal to Staff too (Reports.jsx →
+                // /staff/staffleaserenewalreport); same card as Admin.
+                {
+                  'title': 'Lease Renewal',
+                  'subtitle':
+                      'Report of leases ending and month-to-month leases with renewal details',
+                  "navigate": LeaseRenewalReportScreen()
+                },
                 {
                   'title': 'Convenience Fee Override',
                   'subtitle':

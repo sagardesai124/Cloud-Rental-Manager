@@ -21,6 +21,10 @@ const Color _greenBg = Color(0xFFDFF3E4);
 const Color _greenText = Color(0xFF2E7D45);
 const Color _amberBg = Color(0xFFFFF3E0);
 const Color _amberText = Color(0xFFB26A00);
+// Deactivated member (web: grey "Deactivated" chip, row #f5f5f5 at 0.7).
+const Color _greyBg = Color(0xFFEDEDED);
+const Color _greyText = Color(0xFF757575);
+const Color _deactivatedCardBg = Color(0xFFF5F5F5);
 const Color _cancelBtnBg = Color(0xFFFCEAEA);
 const Color _cancelFg = Color(0xFFE03B3B);
 
@@ -309,10 +313,21 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
   // ---------------------------------------------------------------------------
   // Admins tab
   // ---------------------------------------------------------------------------
+  /// Web's TeamAccess sort rank: pending 0, active 1, deactivated 2.
+  int _activationRank(bool? isPending, bool isDeactivated) =>
+      (isPending ?? false) ? 0 : (isDeactivated ? 2 : 1);
+
   Widget _buildAdminsTab() {
-    final admins = [..._data.admins]..sort((a, b) => _adminSortAsc
-        ? a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase())
-        : b.fullName.toLowerCase().compareTo(a.fullName.toLowerCase()));
+    // Web: pending invites first, then active, then deactivated at the
+    // bottom; the name sort applies within each group.
+    final admins = [..._data.admins]..sort((a, b) {
+        final byStatus = _activationRank(a.isPending, a.isDeactivated)
+            .compareTo(_activationRank(b.isPending, b.isDeactivated));
+        if (byStatus != 0) return byStatus;
+        return _adminSortAsc
+            ? a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase())
+            : b.fullName.toLowerCase().compareTo(a.fullName.toLowerCase());
+      });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,6 +368,7 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
       cardKey: key,
       name: name,
       isPending: a.isPending ?? false,
+      isDeactivated: a.isDeactivated,
       details: [
         _detailRow('Email', a.email),
         _detailRow('Phone', a.phoneNumber),
@@ -375,13 +391,19 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
           (s.staffmemberEmail ?? '').toLowerCase().contains(q) ||
           (s.staffmemberDesignation ?? '').toLowerCase().contains(q);
     }).toList()
-      ..sort((a, b) => _staffSortAsc
-          ? (a.staffmemberName ?? '')
-              .toLowerCase()
-              .compareTo((b.staffmemberName ?? '').toLowerCase())
-          : (b.staffmemberName ?? '')
-              .toLowerCase()
-              .compareTo((a.staffmemberName ?? '').toLowerCase()));
+      ..sort((a, b) {
+        // Same grouping as web: pending, active, then deactivated.
+        final byStatus = _activationRank(a.isPending, a.isDeactivated)
+            .compareTo(_activationRank(b.isPending, b.isDeactivated));
+        if (byStatus != 0) return byStatus;
+        return _staffSortAsc
+            ? (a.staffmemberName ?? '')
+                .toLowerCase()
+                .compareTo((b.staffmemberName ?? '').toLowerCase())
+            : (b.staffmemberName ?? '')
+                .toLowerCase()
+                .compareTo((a.staffmemberName ?? '').toLowerCase());
+      });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,6 +455,7 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
       cardKey: key,
       name: name,
       isPending: s.isPending ?? false,
+      isDeactivated: s.isDeactivated,
       details: [
         _detailRow('Title', s.staffmemberDesignation),
         _detailRow('Email', s.staffmemberEmail),
@@ -1096,16 +1119,18 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
     required String cardKey,
     required String name,
     required bool isPending,
+    bool isDeactivated = false,
     required List<Widget> details,
     required String? email,
     required String userType,
     required String? userId,
   }) {
     final bool expanded = _expandedKey == cardKey;
-    return Container(
+    final Widget card = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        // Web greys a deactivated member's row (#f5f5f5, 0.7 opacity).
+        color: isDeactivated ? _deactivatedCardBg : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _cardBorder),
       ),
@@ -1144,7 +1169,14 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
                     flex: 4,
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: _statusPill(isPending),
+                      // "Pending invite" is the longest label: shrink it a
+                      // little on narrow phones instead of overflowing.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: _statusPill(isPending,
+                            isDeactivated: isDeactivated),
+                      ),
                     ),
                   ),
                 ],
@@ -1209,12 +1241,18 @@ class _TeamAccessSectionState extends State<TeamAccessSection>
         ],
       ),
     );
+    return isDeactivated ? Opacity(opacity: 0.7, child: card) : card;
   }
 
-  Widget _statusPill(bool isPending) {
-    final Color bg = isPending ? _amberBg : _greenBg;
-    final Color fg = isPending ? _amberText : _greenText;
-    final String label = isPending ? 'Pending' : 'Active';
+  /// Web: "Pending invite" (amber), "Deactivated" (grey) when
+  /// status is "deactivate", otherwise "Active" (green).
+  Widget _statusPill(bool isPending, {bool isDeactivated = false}) {
+    final Color bg =
+        isPending ? _amberBg : (isDeactivated ? _greyBg : _greenBg);
+    final Color fg =
+        isPending ? _amberText : (isDeactivated ? _greyText : _greenText);
+    final String label =
+        isPending ? 'Pending invite' : (isDeactivated ? 'Deactivated' : 'Active');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(

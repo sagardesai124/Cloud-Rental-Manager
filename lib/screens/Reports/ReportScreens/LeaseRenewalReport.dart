@@ -17,6 +17,7 @@ import 'package:three_zero_two_property/Model/lease_renewal_report.dart'
     as model;
 import 'package:three_zero_two_property/Model/profile.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/repository/lease_renewal_report_repo.dart';
 import 'package:three_zero_two_property/repository/GetAdminAddressPdf.dart';
 import 'package:three_zero_two_property/widgets/appbar.dart' as widget_302;
@@ -39,6 +40,9 @@ class _LeaseRenewalReportScreenState extends State<LeaseRenewalReportScreen>
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(_startDateController.text, _endDateController.text);
 
   model.LeaseRenewalReport? _reportData;
   bool _isLoading = false;
@@ -1356,15 +1360,19 @@ class _LeaseRenewalReportScreenState extends State<LeaseRenewalReportScreen>
                             ],
                           ),
                         ],
+                        if (_dateRangeError != null)
+                          ReportDateRangeErrorText(_dateRangeError!),
                         SizedBox(height: 24),
                         // Action Buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             ElevatedButton(
-                              onPressed: _fetchReport,
+                              onPressed: _dateRangeError != null ? null : _fetchReport,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: blueColor,
+                                disabledBackgroundColor: blueColor.withOpacity(0.6),
+                                disabledForegroundColor: Colors.white,
                                 foregroundColor: Colors.white,
                                 padding: EdgeInsets.symmetric(
                                     horizontal: 32, vertical: 12),

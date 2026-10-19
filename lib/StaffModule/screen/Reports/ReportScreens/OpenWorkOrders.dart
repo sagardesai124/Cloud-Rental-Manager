@@ -15,6 +15,7 @@ import 'package:three_zero_two_property/Model/profile.dart';
 import 'package:three_zero_two_property/StaffModule/widgets/staff_report_header.dart';
 import 'package:three_zero_two_property/widgets/pdf_report_header.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import '../../../repository/GetAdminAddressPdf.dart';
 import '../../../repository/OpenWorkOrderReportService.dart';
@@ -260,6 +261,9 @@ class _OpenWorkOrdersState extends State<OpenWorkOrders>
   bool customdate = false;
   final TextEditingController _fromDateController = TextEditingController();
   final TextEditingController _toDateController = TextEditingController();
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(_fromDateController.text, _toDateController.text);
   DateTime? _selectedDate;
 
   List<WorkOrderReportData> get _pagedData {
@@ -1468,6 +1472,8 @@ class _OpenWorkOrdersState extends State<OpenWorkOrders>
                             ],
                           ),
                         ),
+                        if (_dateRangeError != null)
+                          ReportDateRangeErrorText(_dateRangeError!),
                         const SizedBox(height: 10),
                         // Status and Run Report Button
                         Padding(
@@ -1564,10 +1570,12 @@ class _OpenWorkOrdersState extends State<OpenWorkOrders>
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: blueColor,
+                                    disabledBackgroundColor: blueColor.withOpacity(0.6),
+                                    disabledForegroundColor: Colors.white,
                                     padding:
                                         const EdgeInsets.symmetric(vertical: 9),
                                   ),
-                                  onPressed: () {
+                                  onPressed: _dateRangeError != null ? null : () {
                                     _runReport();
                                   },
                                   child: const Text(

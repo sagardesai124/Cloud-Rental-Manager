@@ -6162,7 +6162,6 @@ class _Login_ScreenState extends State<Login_Screen> {
       // prefs.setString('brand_logo', jsonData['brand_logo']);
       // print("Saved brand logo: ${jsonData['brand_logo']}");
       // prefs.setString('userid', jsonData['user_id'] ?? "");
-      prefs.setString('password', password.text);
       // prefs.setString('userid', jsonData['user_id']);
       String? brandLogo = jsonData['brand_logo'];
 
@@ -6280,7 +6279,6 @@ class _Login_ScreenState extends State<Login_Screen> {
       prefs.setString('first_name', firstname.first);
       prefs.setString('last_name', firstname.length > 1 ? firstname.last : "");
       prefs.setString('staffemail', jsonData['staffmember_email']);
-      prefs.setString('staffmember_password', password.text);
       //prefs.setString('user_id', jsonData['user_id']);
       // String? userId = jsonData['user_id'];
       await Provider.of<StaffPermissionProvider>(context, listen: false)
@@ -6355,7 +6353,6 @@ class _Login_ScreenState extends State<Login_Screen> {
       prefs.setString('first_name', jsonData['tenant_firstName']);
       prefs.setString('last_name', jsonData['tenant_lastName']);
       prefs.setString('email', jsonData['tenant_email']);
-      prefs.setString('tenant_password', password.text);
       //prefs.setString('user_id', jsonData['user_id']);
       // String? userId = jsonData['user_id'];
       await Provider.of<PermissionProvider>(context, listen: false)
@@ -6435,7 +6432,6 @@ class _Login_ScreenState extends State<Login_Screen> {
       // prefs.setString('first_name', jsonData['${rolename.toLowerCase()}_firstName']);
       // prefs.setString('last_name', jsonData['${rolename.toLowerCase()}_lastName']);
       prefs.setString('email', jsonData['vendor_email']);
-      prefs.setString('vendor_password', password.text);
       // prefs.setString('checkedToken', token);
       //  prefs.setString('adminId', adminId!);
       await Provider.of<VendorPermission>(context, listen: false)

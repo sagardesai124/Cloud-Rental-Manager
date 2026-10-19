@@ -197,7 +197,6 @@ class _Change_passwordState extends State<Change_password> {
   @override
   void initState() {
     super.initState();
-    _loadOldPassword();
   }
 
   TextEditingController currentpassword = TextEditingController();
@@ -219,27 +218,6 @@ class _Change_passwordState extends State<Change_password> {
 
   final formKey = GlobalKey<FormState>();
   GlobalKey<FormState> _formkey = GlobalKey<FormState>();
-
-  //for save
-
-  Future<void> _savePassword(String password) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        "tenant_password", password); // Store the new password
-  }
-
-  String oldPassword = "";
-  Future<void> _loadOldPassword() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    String? pass = prefs.getString("tenant_password");
-    setState(() {
-      // Same nullable as the validation below — `pass!` threw on a
-      // session with no stored copy. Empty string instead; the check
-      // itself now treats absence as a failure.
-      oldPassword = pass ?? '';
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -977,29 +955,12 @@ class _Change_passwordState extends State<Change_password> {
                                     onTap: loading
                                         ? null
                                         : () async {
-                                      SharedPreferences prefs =
-                                          await SharedPreferences.getInstance();
-                                      String? pass =
-                                          prefs.getString("tenant_password");
                                       // Validate Current Password
                                       if (currentpassword.text.isEmpty) {
                                         setState(() {
                                           currentpassworderror = true;
                                           currentpasswordmessage =
                                               "Current password is required";
-                                        });
-                                      // A missing stored copy must FAIL this check, not skip it. With
-                                      // `pass != null &&` a null fell through to the
-                                      // else below and marked the field valid, so a
-                                      // session restored without the password re-stored
-                                      // let the password be changed without knowing the
-                                      // old one. Any non-empty box passed.
-                                      } else if (pass == null ||
-                                          currentpassword.text != pass) {
-                                        setState(() {
-                                          currentpassworderror = true;
-                                          currentpasswordmessage =
-                                              "Current password is incorrect";
                                         });
                                       } else {
                                         setState(() {
@@ -1028,7 +989,8 @@ class _Change_passwordState extends State<Change_password> {
                                           passwordmessage =
                                               'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character';
                                         });
-                                      } else if (password.text == pass) {
+                                      } else if (password.text.trim() ==
+                                          currentpassword.text.trim()) {
                                         setState(() {
                                           passworderror = true;
                                           passwordmessage =
@@ -1484,8 +1446,6 @@ class _Change_passwordState extends State<Change_password> {
       // the else branch and printed its message, leaving the form untouched.
       // StaffModule's copy already checks the HTTP status.
       if (response.statusCode == 200) {
-        await _savePassword(password.text.trim());
-
         // The server issues a fresh token with the password change and the old
         // one stops working. Web stores it the same way (TenantPassChange.jsx),
         // and StaffModule's copy of this screen already does. Without it every
@@ -1524,6 +1484,16 @@ class _Change_passwordState extends State<Change_password> {
         });
         return responseData;
       } else {
+        // The server checks the current password (no copy is kept on the
+        // device); show its answer under the field, as before.
+        if ('${responseData["message"]}'
+            .toLowerCase()
+            .contains('current password is incorrect')) {
+          setState(() {
+            currentpassworderror = true;
+            currentpasswordmessage = "Current password is incorrect";
+          });
+        }
         Fluttertoast.showToast(msg: responseData["message"]);
         return;
       }

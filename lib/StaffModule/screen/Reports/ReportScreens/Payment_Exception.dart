@@ -29,6 +29,7 @@ import 'package:three_zero_two_property/StaffModule/repository/payment_Exception
 import 'package:three_zero_two_property/StaffModule/widgets/staff_report_header.dart';
 import 'package:three_zero_two_property/widgets/pdf_report_header.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/widgets/report_date_range.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/provider/getAdminAddress.dart';
 import 'package:three_zero_two_property/repository/AccountTotalsReports.dart';
@@ -1243,6 +1244,9 @@ class _PaymentExceptionReportsState extends State<PaymentExceptionReports>
 
   TextEditingController fromDate = TextEditingController();
   TextEditingController toDate = TextEditingController();
+  /// Web's From/To check (null when the range is fine).
+  String? get _dateRangeError =>
+      reportDateRangeError(fromDate.text, toDate.text);
   String? daterange;
   String? chargeType;
   String? selectedrenatalownerid;
@@ -2665,46 +2669,9 @@ class _PaymentExceptionReportsState extends State<PaymentExceptionReports>
     ];
   }
 
-  String convertDateFormat(String date) {
-    if (date.isEmpty) return date;
-
-    // If already in yyyy-MM-dd format, return as is
-    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(date.trim())) {
-      return date.trim();
-    }
-
-    try {
-      // Try parsing with multiple date formats
-      List<String> dateFormats = [
-        'MM/dd/yyyy',
-        'M/d/yyyy',
-        'dd-MM-yyyy',
-        'd-M-yyyy',
-        'yyyy-MM-dd',
-        'yyyy-M-d',
-        'dd/MM/yyyy',
-        'd/M/yyyy',
-      ];
-
-      DateTime? parsedDate;
-      for (String format in dateFormats) {
-        try {
-          parsedDate = DateFormat(format).parse(date);
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-
-      if (parsedDate != null) {
-        // Convert to yyyy-MM-dd format
-        return DateFormat('yyyy-MM-dd').format(parsedDate);
-      }
-    } catch (e) {
-      logError('Error converting date format: $e');
-    }
-    return date; // Return the original date if conversion fails
-  }
+  /// The shown From/To date (company date format, including YYYY-MMM-DD) as
+  /// the yyyy-MM-dd Run builds the request from, like web.
+  String convertDateFormat(String date) => reverseFormatDate(date);
 
   filters({List<Data>? data}) {
     return Padding(
@@ -3082,9 +3049,11 @@ class _PaymentExceptionReportsState extends State<PaymentExceptionReports>
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: blueColor,
+                      disabledBackgroundColor: blueColor.withOpacity(0.6),
+                      disabledForegroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 9),
                     ),
-                    onPressed: () {
+                    onPressed: _dateRangeError != null ? null : () {
                       _runReport();
                     },
                     child: const Text(
@@ -3172,6 +3141,8 @@ class _PaymentExceptionReportsState extends State<PaymentExceptionReports>
               ],
             ),
           ),
+          if (_dateRangeError != null)
+            ReportDateRangeErrorText(_dateRangeError!),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0.0),

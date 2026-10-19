@@ -273,6 +273,9 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
   /// server reads, like web. Used for Run and the exports.
   String formatDate(String dateStr) => reverseFormatDate(dateStr);
 
+  /// Web's file name for this report's PDF, Excel and CSV exports.
+  static const String _exportName = "Expiring-Renter's-Insurance";
+
   Future<void> generatePdf(List<RentersInsuranceData> leaseData) async {
     final dateProvider = Provider.of<DateProvider>(context, listen: false);
     final GetAddressAdminPdfService service = GetAddressAdminPdfService();
@@ -407,10 +410,10 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
     if (Platform.isIOS) {
       await Printing.sharePdf(
           bytes: await pdf.save(),
-          filename: 'Expiring-Renter-Insurances-Report.pdf');
+          filename: '$_exportName.pdf');
     } else {
       await Printing.layoutPdf(
-      name: 'Expiring-Renter-Insurances-Report',
+      name: _exportName,
       onLayout: (PdfPageFormat format) async => pdf.save(),
     );
     }
@@ -421,6 +424,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
     // Create a new Excel document.
     final syncXlsx.Workbook workbook = syncXlsx.Workbook();
     final syncXlsx.Worksheet sheet = workbook.worksheets[0];
+    sheet.name = "Expiring Renter's Insurance";
 
     // Adjusting column widths
     sheet.getRangeByName('A1:H1').columnWidth = 20;
@@ -477,10 +481,8 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
     final List<int> bytes = workbook.saveAsStream();
     workbook.dispose();
 
-    //  Generate a unique file name
-    final DateTime now = DateTime.now();
-    final String formattedDate = DateFormat('yyyyMMddHHmmss').format(now);
-    final String fileName = 'Renters_insurance_report_$formattedDate.xlsx';
+    // Web's file name for this export.
+    final String fileName = '$_exportName.xlsx';
 
     // Get the directory to save the file.
     final Directory directory = await getApplicationDocumentsDirectory();
@@ -564,10 +566,8 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
     }
 // Convert buffer to list of bytes for CSV file
     final List<int> bytes = utf8.encode(csvBuffer.toString());
-    // Define file name with current date and time
-    final DateTime now = DateTime.now();
-    final String formattedDate = DateFormat('yyyyMMddHHmmss').format(now);
-    final String fileName = 'Account_totals_report_$formattedDate.csv';
+    // Web's file name for this export.
+    final String fileName = '$_exportName.csv';
 
     // Define file path
     final Directory directory = await getApplicationDocumentsDirectory();
@@ -583,8 +583,8 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
     final File file = File(path);
 
     await file.writeAsBytes(bytes, flush: true);
-
-    //Share.shareXFiles([XFile(path)]);
+    // Share it like the other reports' CSV exports (and Excel here).
+    Share.shareXFiles([XFile(path)]);
     // // Convert rows to CSV string
     // String csv = const ListToCsvConverter().convert(rows);
     //

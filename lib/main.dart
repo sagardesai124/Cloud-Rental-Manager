@@ -20,6 +20,7 @@ import 'package:three_zero_two_property/repository/properties_summery.dart';
 import 'package:three_zero_two_property/screens/Splash_Screen/splash_screen.dart';
 import 'package:three_zero_two_property/services/api_client.dart';
 import 'package:three_zero_two_property/services/app_headers.dart';
+import 'package:three_zero_two_property/services/stored_password_cleanup.dart';
 import 'StaffModule/repository/staffpermission_provider.dart';
 import 'TenantsModule/repository/permission_provider.dart';
 import 'VendorModule/repository/vendor_permission.dart';
@@ -97,6 +98,7 @@ void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
     await AppHeaders.init();
+    await purgeStoredSessionPasswords();
     timeago.setLocaleMessages('en_custom', CustomTimeAgo());
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,

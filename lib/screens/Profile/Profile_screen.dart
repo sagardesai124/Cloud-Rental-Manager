@@ -95,8 +95,6 @@ class _Profile_screenState extends State<Profile_screen>
     setState(() {
       _fetchProfile();
       ;
-      _loadOldPassword();
-      ;
     });
   }
 
@@ -114,7 +112,6 @@ class _Profile_screenState extends State<Profile_screen>
     });
     checkInternet();
     _fetchProfile();
-    _loadOldPassword();
     status2FA(); // Fetch 2FA status on screen load
     backupcodeapicall();
   }
@@ -524,9 +521,8 @@ class _Profile_screenState extends State<Profile_screen>
       body: jsonEncode(<String, dynamic>{
         'email': email,
         // Trim to match how login submits the password
-        // (login_screen.dart: `password.text.trim()`) and to match the
-        // trimmed value cached locally by _savePassword below — sending an
-        // untrimmed value here stored a password that login could never match.
+        // (login_screen.dart: `password.text.trim()`) — sending an untrimmed
+        // value here stored a password that login could never match.
         'password': password.text.trim(),
         'admin_id': id,
         'role': "admin",
@@ -544,7 +540,6 @@ class _Profile_screenState extends State<Profile_screen>
         // ScaffoldMessenger.of(context).showSnackBar(
         //   SnackBar(content: Text("Password updated successfully")),
         // );
-        await _savePassword(password.text.trim());
         Fluttertoast.showToast(msg: 'Password updated successfully');
         // Both fields are emptied so the new password is not left sitting on
         // screen in plaintext once it has been saved. The Staff/Vendor/Tenant
@@ -669,23 +664,6 @@ class _Profile_screenState extends State<Profile_screen>
         backupCode = false;
       });
     }
-  }
-
-  //for save
-
-  Future<void> _savePassword(String password) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString("password", password); // Store the new password
-  }
-
-  String oldPassword = "";
-  Future<void> _loadOldPassword() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    String? pass = prefs.getString("password");
-    setState(() {
-      oldPassword = pass!; // Fetch the old password
-    });
   }
 
   @override
@@ -3108,11 +3086,6 @@ class _Profile_screenState extends State<Profile_screen>
                                           // the Tenant/Vendor change-password
                                           // screens and the OTP screen.
                                           if (loading) return;
-                                          SharedPreferences prefs =
-                                              await SharedPreferences
-                                                  .getInstance();
-                                          String? pass =
-                                              prefs.getString("password");
                                           // Validate the new password
                                           if (password.text.trim().isEmpty) {
                                             setState(() {
@@ -3136,13 +3109,6 @@ class _Profile_screenState extends State<Profile_screen>
                                               passworderror = true;
                                               passwordmessage =
                                                   'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character';
-                                            });
-                                          } else if (password.text.trim() ==
-                                              pass) {
-                                            setState(() {
-                                              passworderror = true;
-                                              passwordmessage =
-                                                  'New password cannot be the same as the old password';
                                             });
                                           } else {
                                             setState(() {
