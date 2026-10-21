@@ -1868,7 +1868,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                             Text('Update History', style: TextStyle(fontSize: 16, color: blueColor, fontWeight: FontWeight.bold)),
                             if (_canEditWorkOrder)
                             InkWell(
-                              onTap: () { showUpdateDialog(context); },
+                              onTap: () { showUpdateDialog(context, summery); },
                               child: Container(
                                 height: 30,
                                 width: 85,
@@ -2657,7 +2657,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                           if (_canEditWorkOrder)
                           InkWell(
                             onTap: () {
-                              showUpdateDialog(context);
+                              showUpdateDialog(context, summery);
                             },
                             child: Material(
                               elevation: 1,
@@ -4704,12 +4704,33 @@ class _Workorder_summeryState extends State<Workorder_summery>
     );
   }
 
-  void showUpdateDialog(BuildContext context) {
-    String? selectedStatus;
+  void showUpdateDialog(BuildContext context, [WorkOrderData_summery? current]) {
+    // Same choices as web's Update (WorkOrderDetails.jsx).
+    const statuses = [
+      'New',
+      'Open',
+      'In Progress',
+      'On Hold',
+      'Completed',
+      'Closed',
+    ];
+    // Like web, Update opens with the work order's current status.
+    String? selectedStatus =
+        statuses.contains(current?.status) ? current!.status : null;
     TextEditingController message = TextEditingController();
     TextEditingController privateNotes = TextEditingController();
     TextEditingController selectedDate = TextEditingController();
     String dueDateApi = '';
+    // ...and its current due date and assignee (web pre-fills both too).
+    if (current != null) {
+      final due = DateTime.tryParse(current.date ?? '') ?? DateTime.now();
+      dueDateApi = DateFormat('yyyy-MM-dd').format(due);
+      selectedDate.text = Provider.of<DateProvider>(context, listen: false)
+          .formatCurrentDate(dueDateApi);
+      final staffId = (current.staffmemberId ?? '').trim();
+      _selectedstaffId = staffId.isEmpty ? null : staffId;
+      _selectedStaffs = staffId.isEmpty ? null : staffs[staffId];
+    }
     bool loadingStaff = staffs.isEmpty;
     bool staffFetchStarted = false;
 
@@ -4974,7 +4995,9 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                                     ),
                                                   );
                                                 }).toList(),
-                                                value: _selectedstaffId,
+                                                value: staffs.containsKey(_selectedstaffId)
+                                                    ? _selectedstaffId
+                                                    : null,
                                                 onChanged: (value) {
                                                   setState(() {
                                                     // _selectedUnitId = null;
@@ -5218,12 +5241,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                           ),
                                         ],
                                       ),
-                                      items: [
-                                        'New',
-                                        'In Progress',
-                                        'On Hold',
-                                        'Completed'
-                                      ].map((status) {
+                                      items: statuses.map((status) {
                                         return DropdownMenuItem<String>(
                                           value: status,
                                           child: Text(
@@ -5632,7 +5650,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                     "private_notes": privateNotes.text.trim(),
                                     "status": selectedStatus,
                                     "statusUpdatedBy": "Admin",
-                                    "staffmember_name": _selectedStaffs,
+                                    "staffmember_name": staffs[_selectedstaffId] ?? _selectedStaffs,
                                     "staffmember_id": _selectedstaffId,
                                     "workOrderUpdate_images":
                                         _uploadedFileNames!,

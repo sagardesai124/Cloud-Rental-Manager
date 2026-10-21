@@ -118,9 +118,11 @@ class Tenant {
     tenantFirstName = json['tenant_firstName'].toString();
     tenantLastName = json['tenant_lastName'].toString();
     tenantPhoneNumber = json['tenant_phoneNumber'].toString();
-    tenantAlternativeNumber = json['tenant_alternativeNumber'].toString();
+    // Optional fields: keep a missing value null (not the text "null") so
+    // screens fall back to an empty box, like web.
+    tenantAlternativeNumber = json['tenant_alternativeNumber']?.toString();
     tenantEmail = json['tenant_email'].toString();
-    tenantAlternativeEmail = json['tenant_alternativeEmail'].toString();
+    tenantAlternativeEmail = json['tenant_alternativeEmail']?.toString();
     tenantPassword = json['tenant_password'];
     tenantBirthDate = json['tenant_birthDate'];
     taxPayerId = json['taxPayer_id'];
@@ -378,4 +380,14 @@ class TenantLeaseData {
     data['rent_amount'] = rentAmount;
     return data;
   }
+}
+
+/// The Property text on the Tenants list, like web (TenantsTable.jsx):
+/// "address - unit", only the address when there is no unit, and
+/// "Not available" when the tenant has no address.
+String tenantPropertyLine(Tenant t) {
+  final address = (t.rentalAddress ?? '').trim();
+  if (address.isEmpty) return 'Not available';
+  final unit = (t.rentalUnit ?? '').trim();
+  return unit.isEmpty ? address : '$address - $unit';
 }

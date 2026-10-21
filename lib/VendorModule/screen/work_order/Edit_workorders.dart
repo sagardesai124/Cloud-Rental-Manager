@@ -23,8 +23,6 @@ import '../../../constant/constant.dart';
 import '../../widgets/appbar.dart';
 import '../../widgets/drawer_tiles.dart';
 import '../../../widgets/titleBar.dart';
-import '../../../widgets/clearable_date_picker.dart';
-import '../../../widgets/clearable_date_suffix.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import '../../../Model/All_categories_model.dart';
@@ -836,34 +834,6 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
     });
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final result = await showClearableDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-      helpText: "Due Date",
-    );
-
-    // Cancelled - keep the existing value.
-    if (result == null) return;
-
-    if (result.cleared) {
-      _clearDate();
-      return;
-    }
-
-    setState(() {
-      _dateController.text = DateFormat('yyyy-MM-dd').format(result.date!);
-    });
-  }
-
-  void _clearDate() {
-    setState(() {
-      _dateController.clear();
-    });
-  }
-
   //for tenants
   GlobalKey<ScaffoldState> key = GlobalKey<ScaffoldState>();
 
@@ -1488,19 +1458,8 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                       Text(cat.name ?? ''),
                                                     );
                                                   }).toList(),
-                                                  onChanged:
-                                                  _isLoadingCategories
-                                                      ? null // disables dropdown while loading
-                                                      : (allcategories_model?
-                                                  newValue) {
-                                                    setState(() {
-                                                      _selectedDropdownCategory =
-                                                          newValue;
-                                                      _showTextField =
-                                                          newValue?.name ==
-                                                              'Other';
-                                                    });
-                                                  },
+                                                  // Read-only for vendors, like web (VendorAddWork.jsx).
+                                                  onChanged: null,
                                                   buttonStyleData:
                                                   ButtonStyleData(
                                                     height: 45,
@@ -2631,9 +2590,8 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                     BorderRadius.circular(
                                                         6.0)),
                                                 child: InkWell(
-                                              onTap: () {
-                                                _selectDate(context);
-                                              },
+                                              // Read-only for vendors, like web and the phone layout.
+                                              onTap: null,
                                               child: Row(
                                                 children: [
                                                   Expanded(
@@ -2641,23 +2599,14 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                       _dateController.text.trim().isEmpty
                                                           ? 'dd-mm-yyyy'
                                                           : dateProvider.formatCurrentDate(_dateController.text.trim()),
-                                                      style: TextStyle(
+                                                      style: const TextStyle(
                                                         fontSize: 14,
-                                                        color: _dateController.text.trim().isEmpty
-                                                            ? const Color(0xFFb0b6c3)
-                                                            : blueColor,
+                                                        color: Color(0xFF8898aa),
                                                       ),
                                                     ),
                                                   ),
-                                                  ClearableDateSuffix(
-                                                    controller: _dateController,
-                                                    onPick: () =>
-                                                        _selectDate(context),
-                                                    onClear: _clearDate,
-                                                    icon: Icons.calendar_today,
-                                                    iconColor: blueColor,
-                                                    iconSize: 20,
-                                                  ),
+                                                  const Icon(Icons.calendar_today,
+                                                      size: 20, color: Color(0xFF8898aa)),
                                                 ],
                                               ),
                                             ),
@@ -3258,16 +3207,8 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                       child: Text(cat.name ?? ''),
                                     );
                                   }).toList(),
-                                  onChanged: _isLoadingCategories
-                                      ? null // disables dropdown while loading
-                                      : (allcategories_model? newValue) {
-                                    setState(() {
-                                      _selectedDropdownCategory =
-                                          newValue;
-                                      _showTextField =
-                                          newValue?.name == 'Other';
-                                    });
-                                  },
+                                  // Read-only for vendors, like web (VendorAddWork.jsx).
+                                  onChanged: null,
                                   buttonStyleData: ButtonStyleData(
                                     height: 45,
                                     padding: const EdgeInsets.only(

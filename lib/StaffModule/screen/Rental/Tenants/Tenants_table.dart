@@ -1397,7 +1397,8 @@ class _Tenants_tableState extends State<Tenants_table>
                                                     Expanded(
                                                       flex: 3,
                                                       child: Text(
-                                                        '${(tenants.rentalAddress ?? '').trim().isEmpty ? "Not Available" : tenants.rentalAddress}',
+                                                        // Address + unit like web's Tenants list.
+                                                        tenantPropertyLine(tenants),
                                                         textAlign:
                                                             TextAlign.start,
                                                         style: TextStyle(

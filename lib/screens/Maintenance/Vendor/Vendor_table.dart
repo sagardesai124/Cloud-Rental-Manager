@@ -1035,7 +1035,8 @@ class _Vendor_tableState extends State<Vendor_table>
                           height: 10,
                         ),
                         Text(
-                          "No Data Available",
+                          // Web's Vendors list wording (Vendor.jsx / StaffVendortable.jsx).
+                          "No Vendors Added",
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: blueColor,

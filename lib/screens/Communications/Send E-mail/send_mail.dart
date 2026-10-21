@@ -150,21 +150,36 @@ class _send_emailState extends State<send_email> {
       if (data["statusCode"] == 200) {
         setState(() {
           templateList = templates.map((e) => Template.fromJson(e)).toList();
-          var selectedTemplete = templateList.first;
-          subject.text = selectedTemplete.subject;
-          htmlBody = selectedTemplete.body;
-          eventError = false;
-          // The template filled these in, so their "required" no longer applies.
-          if (subject.text.trim().isNotEmpty) subjectError = false;
-          if (htmlBody.trim().isNotEmpty) bodyError = false;
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              _htmlEditorController.setFocus();
-              _htmlEditorController
-                  .setText(replaceDollarWithAt(replaceSpanTags(htmlBody)));
-            }
-          });
-          selectedTemplateId = selectedTemplete.name;
+          // Like web (SendMails.jsx fetchTemplate): start from the ACTIVE
+          // template, and when the event has none clear Subject/Body and
+          // say so — not whichever template happens to be first (which
+          // threw on an empty list and left the previous event's text).
+          final Template? active = activeTemplateFor(templateList, adminId);
+          if (active != null) {
+            subject.text = active.subject;
+            htmlBody = active.body;
+            selectedTemplateId = active.name;
+            eventError = false;
+            // The template filled these in, so their "required" no longer applies.
+            if (subject.text.trim().isNotEmpty) subjectError = false;
+            if (htmlBody.trim().isNotEmpty) bodyError = false;
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                _htmlEditorController.setFocus();
+                _htmlEditorController
+                    .setText(replaceDollarWithAt(replaceSpanTags(htmlBody)));
+              }
+            });
+          } else {
+            subject.clear();
+            htmlBody = '';
+            selectedTemplateId = null;
+            eventError = false;
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) _htmlEditorController.clear();
+            });
+            Fluttertoast.showToast(msg: kNoActiveTemplateMessage);
+          }
           // templates = [data["template"]]; // Store in list
           // //events = [data["template"]["name"] as String]; // Extract name
           // _selectedEvent = data["template"]["mail_type"]; // Select default
