@@ -54,3 +54,13 @@ class WorkOrder {
     staffMemberName = json['staffmember_name']??"N/A";
   }
 }
+
+/// Property line for the tenant Work Orders list — web parity
+/// (TenantWork.jsx makeRentalAddress): "address, unit", the address alone
+/// when there is no unit, "-" when there is no address.
+String workOrderPropertyLine(WorkOrder w) {
+  final address = (w.rentalAddress ?? '').trim();
+  if (address.isEmpty) return '-';
+  final unit = (w.rentalUnit ?? '').trim();
+  return unit.isEmpty ? address : '$address, $unit';
+}

@@ -6422,6 +6422,8 @@ class _Login_ScreenState extends State<Login_Screen> {
       prefs.setString('first_name', firstname.first);
       // prefs.setString('last_name', firstname.length > 1 ? firstname[1]: "");
       prefs.setString('last_name', firstname.length > 1 ? firstname[1] : "");
+      // Web parity (VendorBidRequests.jsx): bids carry the full vendor_name.
+      prefs.setString('vendor_name', stafffirstname);
       prefs.setString('companyName', selectedCompany);
       prefs.setString("role", "Vendor");
       prefs.setString("vendor_id", jsonData["vendor_id"]);

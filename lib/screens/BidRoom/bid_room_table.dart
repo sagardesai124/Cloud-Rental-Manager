@@ -2195,7 +2195,12 @@ class _BidRoomTableState extends State<BidRoomTable>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _formatDateTime(context, submission.submittedAt),
+                            // Web parity (BidRequests.jsx): submitted_at, else createdAt.
+                            _formatDateTime(
+                                context,
+                                (submission.submittedAt?.isNotEmpty ?? false)
+                                    ? submission.submittedAt
+                                    : submission.createdAt),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[700],

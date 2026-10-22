@@ -102,7 +102,9 @@ class _VendorSubmitBidScreenState extends State<VendorSubmitBidScreen> {
     String? token = prefs.getString('token');
     String? firstName = prefs.getString('first_name');
     String? lastName = prefs.getString('last_name');
-    String vendorName = [firstName, lastName].where((s) => s != null && s.isNotEmpty).join(' ').trim();
+    // Web parity: send the full vendor_name; first/last fallback for sessions saved before it existed.
+    String vendorName = prefs.getString('vendor_name')?.trim() ??
+        [firstName, lastName].where((s) => s != null && s.isNotEmpty).join(' ').trim();
     if (vendorName.isEmpty) vendorName = 'Vendor';
 
     if (vendorId == null || token == null) {
@@ -141,6 +143,11 @@ class _VendorSubmitBidScreenState extends State<VendorSubmitBidScreen> {
         'admin_id': adminId ?? '',
         'price_breakdown': priceBreakdown,
         'total_price': totalPrice,
+        // Web parity (BidSubmissionModal.jsx): new Date().toISOString() — UTC, millisecond precision.
+        'submitted_at': DateTime.fromMillisecondsSinceEpoch(
+                DateTime.now().millisecondsSinceEpoch,
+                isUtc: true)
+            .toIso8601String(),
       };
       if (submissionFile != null && submissionFile.isNotEmpty) {
         submission['submission_file'] = submissionFile;

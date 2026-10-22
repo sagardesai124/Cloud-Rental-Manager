@@ -1360,8 +1360,7 @@ class _WorkOrderTableState extends State<WorkOrderTable>
                                                           children: [
                                                             _buildTableRow(
                                                                 'Property :',
-                                                                _getDisplayValue(workorder.rentalAddress ??
-                                                                    '-'),
+                                                                workOrderPropertyLine(workorder),
                                                                 'Category :',
                                                                 _getDisplayValue(
                                                                     workorder.workCategory)),
@@ -1944,8 +1943,8 @@ class _WorkOrderTableState extends State<WorkOrderTable>
                                                               vertical:
                                                               20),
                                                           child: Text(
-                                                            _pagedData[i]
-                                                                .rentalAddress!,
+                                                            workOrderPropertyLine(
+                                                                _pagedData[i]),
                                                             style:
                                                             TextStyle(
                                                               color:

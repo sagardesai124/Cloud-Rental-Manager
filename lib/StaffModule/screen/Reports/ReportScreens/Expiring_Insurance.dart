@@ -299,12 +299,13 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
         dateProvider.formatCurrentDate(DateTime.now().toString());
 
     pdf.addPage(
-      pw.Page(
+      // Several pages when needed, like the web PDF: the title block on
+      // the first page, the table carried on with its headings repeated.
+      // A single pw.Page dropped the whole table once it was taller than
+      // one page.
+      pw.MultiPage(
         margin: const pw.EdgeInsets.all(30), // Adjust margin as needed
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
+        build: (pw.Context context) => [
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
@@ -404,9 +405,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                   5: const pw.FlexColumnWidth(1.2), // Lease Start
                 },
               ),
-            ],
-          );
-        },
+        ],
       ),
     );
 

@@ -199,7 +199,15 @@ class _ReopenWorkorderState extends State<ReopenWorkorder>
               order.ticketNumber?.toLowerCase().contains(searchTerm) == true ||
               order.workSubject?.toLowerCase().contains(searchTerm) == true ||
               order.rentalAddress?.toLowerCase().contains(searchTerm) == true ||
-              order.staffmemberName?.toLowerCase().contains(searchTerm) == true)
+              order.staffmemberName?.toLowerCase().contains(searchTerm) == true ||
+              // Web parity (ReopenWorkOrderReport.jsx filterWorkOrdersBySearch):
+              // category, priority, unit and the raw date strings match too.
+              order.workCategory?.toLowerCase().contains(searchTerm) == true ||
+              order.priority?.toLowerCase().contains(searchTerm) == true ||
+              order.rentalUnit?.toLowerCase().contains(searchTerm) == true ||
+              order.date?.toLowerCase().contains(searchTerm) == true ||
+              order.reopenDate?.toLowerCase().contains(searchTerm) == true ||
+              order.createdAt?.toLowerCase().contains(searchTerm) == true)
           .toList();
     }
 

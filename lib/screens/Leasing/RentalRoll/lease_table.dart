@@ -49,8 +49,7 @@ import '../../../widgets/custom_drawer.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:three_zero_two_property/services/export_file_saver.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:io';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as syncXlsx;
@@ -172,81 +171,12 @@ class _Lease_tableState extends State<Lease_table>
     return const MapEntry('end_date', 'descending');
   }
 
-  // Web parity (RentRoll.js filterRentRollsBySearch): the Active/Expired/Future
-  // date filter is applied client-side on top of the fetched leases. This is
-  // what keeps "Expired - Renewed" leases (end_date < today) out of the Active
-  // list. Applied on BOTH the local and server-paginated paths so they match web.
-  // For 'All' it is a no-op; for Expired/Future the server already matches, so
-  // only the Active case actually changes anything.
-  List<Lease1> _applyStatusDateFilter(List<Lease1> list) {
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    if (selectedStatus == 'Active') {
-      return list.where((lease) {
-        if (lease.startDate == null) return false;
-        if (lease.endDate == null || _leaseEndIsAtWill(lease.endDate)) {
-          return lease.startDate!.compareTo(today) <= 0;
-        }
-        return lease.startDate!.compareTo(today) <= 0 &&
-            lease.endDate!.compareTo(today) >= 0;
-      }).toList();
-    } else if (selectedStatus == 'Expired') {
-      return list.where((lease) {
-        if (lease.endDate == null || _leaseEndIsAtWill(lease.endDate)) {
-          return false;
-        }
-        return lease.endDate!.compareTo(today) < 0;
-      }).toList();
-    } else if (selectedStatus == 'Future') {
-      return list.where((lease) {
-        if (lease.startDate == null) return false;
-        return lease.startDate!.compareTo(today) > 0;
-      }).toList();
-    }
-    return list;
-  }
-
-  List<Lease1> _applyLocalLeaseFilters(List<Lease1> data) {
-    var list = List<Lease1>.from(data);
-    if (searchValue.isNotEmpty && searchValue != 'All') {
-      list = list.where((lease) {
-        final searchLower = searchValue.toLowerCase();
-        return (lease.rentalAddress?.toLowerCase().contains(searchLower) ??
-                false) ||
-            (lease.tenantNames?.toLowerCase().contains(searchLower) ?? false) ||
-            (lease.rentCycle?.toLowerCase().contains(searchLower) ?? false) ||
-            (lease.startDate?.toLowerCase().contains(searchLower) ?? false) ||
-            (lease.endDate?.toLowerCase().contains(searchLower) ?? false) ||
-            (lease.amount != null
-                ? lease.amount!
-                    .toStringAsFixed(2)
-                    .toLowerCase()
-                    .contains(searchLower)
-                : false) ||
-            (lease.remainingDays?.toLowerCase().contains(searchLower) ??
-                false) ||
-            (lease.rentDueDate?.toLowerCase().contains(searchLower) ?? false) ||
-            (lease.totalBalance != null
-                ? lease.totalBalance!
-                    .toStringAsFixed(2)
-                    .toLowerCase()
-                    .contains(searchLower)
-                : false);
-      }).toList();
-    }
-    list = _applyStatusDateFilter(list);
-    if (selectedRentalOwners.isNotEmpty) {
-      list = list
-          .where((lease) => selectedRentalOwners.contains(lease.rentalOwnerName))
-          .toList();
-    }
-    return list;
-  }
-
   Future<LeasesPageResult> _loadLeasesPage() async {
     if (!_useServerLeasePagination()) {
-      var list = await LeaseRepository().fetchLease('');
-      list = _applyLocalLeaseFilters(list);
-      sortData(list);
+      // Rental owner picked: the same server list web uses (selected status,
+      // search and sort), narrowed to the picked owners and paged on the
+      // phone.
+      final list = await _fetchAllLeasesForExport();
       return LeasesPageResult(items: list, pagination: null);
     }
     final sort = _leaseApiSortParams();
@@ -273,23 +203,38 @@ class _Lease_tableState extends State<Lease_table>
         sortOrder: sort.value,
       );
     }
-    // Match web: enforce the status date filter on the server page too, so
-    // "Expired - Renewed" leases don't leak into the Active list.
+    // Like web (RentRoll.jsx: "Server handles filtering"): show the server's
+    // page as it is. The server decides Active / Expired / Future (it already
+    // keeps renewed and draft leases out of Active and puts evicted / ended
+    // at-will leases in Expired), so a second date check here would hide
+    // leases web shows and leave the count out of step with the pagination.
     return LeasesPageResult(
-      items: _applyStatusDateFilter(result.items),
+      items: result.items,
       pagination: result.pagination,
     );
   }
 
-  // Web parity (RentRoll.js filterRentRollsBySearch): exports must include the
-  // FULL filtered lease set across all pages, not just the current server page.
-  // Mirrors the client-pagination branch of _loadLeasesPage(): fetch every
-  // lease, then apply the same search/status/rental-owner filters and sort as
-  // the on-screen list.
+  // Web parity (RentRoll.jsx fetchAllDataForExport): ask the server for every
+  // lease (limit 0) with the selected status, search and sort, so the export
+  // holds exactly web's leases in web's order. The server decides Active /
+  // Expired / Future (it leaves out unsigned draft leases and counts evicted
+  // ones as expired), so no date rule is applied here.
   Future<List<Lease1>> _fetchAllLeasesForExport() async {
-    var list = await LeaseRepository().fetchLease('');
-    list = _applyLocalLeaseFilters(list);
-    sortData(list);
+    final sort = _leaseApiSortParams();
+    final result = await LeaseRepository().fetchLeasePage(
+      page: 1,
+      limit: 0,
+      search: searchValue,
+      status: _apiLeaseStatus(),
+      sortBy: sort.key,
+      sortOrder: sort.value,
+    );
+    var list = result.items;
+    if (selectedRentalOwners.isNotEmpty) {
+      list = list
+          .where((lease) => selectedRentalOwners.contains(lease.rentalOwnerName))
+          .toList();
+    }
     return list;
   }
 
@@ -2852,7 +2797,11 @@ class _Lease_tableState extends State<Lease_table>
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4.landscape,
-          header: (pw.Context context) => pw.Row(
+          // Title on the first page only, like web; later pages repeat
+          // just the column headings.
+          header: (pw.Context context) => context.pageNumber > 1
+              ? pw.SizedBox()
+              : pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Image(image, width: 50, height: 50),
@@ -2903,6 +2852,8 @@ class _Lease_tableState extends State<Lease_table>
                 },
                 children: [
                   pw.TableRow(
+                    // Column headings on every page, like web.
+                    repeat: true,
                     decoration:
                         pw.BoxDecoration(color: PdfColor.fromHex('#5A86D5')),
                     children: headers
@@ -3057,20 +3008,14 @@ class _Lease_tableState extends State<Lease_table>
       final List<int> bytes = workbook.saveAsStream();
       workbook.dispose();
 
-      // Save to a user-visible location (Download on Android, Documents on iOS)
-      // and share it, so the file actually lands — matches the Scheduled export.
-      final Directory directory = await getApplicationDocumentsDirectory();
-      if (!await directory.exists() && !Platform.isIOS) {
-        await directory.create(recursive: true);
-      }
-      final path =
-          '${directory.path}/Leases_Report_${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}.xlsx';
-      final file = File(path);
-      await file.writeAsBytes(bytes, flush: true);
-      // Only confirm when the user actually completes the save/share — dismissing
-      // the Android share sheet no longer shows a false "saved" toast.
-      final ShareResult result = await Share.shareXFiles([XFile(path)]);
-      if (result.status != ShareResultStatus.dismissed) {
+      // Android: "Save as" to a folder the user picks (like a web download);
+      // iOS: share sheet with "Save to Files". Toast only when it was saved.
+      final saved = await saveExportedFile(
+        fileName:
+            'Leases_Report_${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}.xlsx',
+        bytes: bytes,
+      );
+      if (saved) {
         Fluttertoast.showToast(msg: 'Excel file saved');
       }
     } catch (e) {
@@ -3117,20 +3062,14 @@ class _Lease_tableState extends State<Lease_table>
         csvBuffer.writeln(row.join(','));
       }
 
-      // Save to a user-visible location (Download on Android, Documents on iOS)
-      // and share it, so the file actually lands — matches the Scheduled export.
-      final Directory directory = await getApplicationDocumentsDirectory();
-      if (!await directory.exists() && !Platform.isIOS) {
-        await directory.create(recursive: true);
-      }
-      final path =
-          '${directory.path}/Leases_Report_${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}.csv';
-      final file = File(path);
-      await file.writeAsString(csvBuffer.toString(), flush: true);
-      // Only confirm when the user actually completes the save/share — dismissing
-      // the Android share sheet no longer shows a false "saved" toast.
-      final ShareResult result = await Share.shareXFiles([XFile(path)]);
-      if (result.status != ShareResultStatus.dismissed) {
+      // Android: "Save as" to a folder the user picks (like a web download);
+      // iOS: share sheet with "Save to Files". Toast only when it was saved.
+      final saved = await saveExportedFile(
+        fileName:
+            'Leases_Report_${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}.csv',
+        bytes: utf8.encode(csvBuffer.toString()),
+      );
+      if (saved) {
         Fluttertoast.showToast(msg: 'CSV file saved');
       }
     } catch (e) {
