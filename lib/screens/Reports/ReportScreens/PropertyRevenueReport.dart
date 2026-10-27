@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
@@ -591,7 +592,7 @@ class _PropertyRevenueReportState extends State<PropertyRevenueReport>
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Image.asset(
-                    "assets/images/no_data.jpg",
+                    "assets/images/no_data_transparent.png",
                     height: 200,
                     width: 200,
                   ),
@@ -745,15 +746,29 @@ class _PropertyRevenueReportState extends State<PropertyRevenueReport>
               ),
             ),
             SizedBox(width: 10),
+            // Greyed out and not tappable until a run has returned report data.
             Container(
               height: 40,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: blueColor,
+                  disabledBackgroundColor: Colors.grey.shade400,
+                  disabledForegroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(horizontal: 12),
                 ),
-                onPressed: () {},
+                // Greyed when the report has no properties (the body shows
+                // "No Data Available"), same as an empty run.
+                onPressed: (propertyRevenueReportModel?.data?.properties
+                                ?.isNotEmpty ??
+                            false) &&
+                        errorMessage == null
+                    ? () {}
+                    : null,
                 child: PopupMenuButton<String>(
+                  enabled: (propertyRevenueReportModel?.data?.properties
+                              ?.isNotEmpty ??
+                          false) &&
+                      errorMessage == null,
                   onSelected: (value) async {
                     final properties =
                         propertyRevenueReportModel?.data?.properties ?? [];
@@ -1309,7 +1324,7 @@ class _PropertyRevenueReportState extends State<PropertyRevenueReport>
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Image.asset(
-                        "assets/images/no_data.jpg",
+                        "assets/images/no_data_transparent.png",
                         height: 200,
                         width: 200,
                       ),
@@ -2168,15 +2183,15 @@ class _PropertyRevenueReportState extends State<PropertyRevenueReport>
       ];
 
       final StringBuffer csvBuffer = StringBuffer();
-      csvBuffer.writeln(headers.join(','));
+      csvBuffer.writeln(csvRow(headers));
 
       final summary = propertyRevenueReportModel!.data!.summary;
 
       for (var property in properties) {
         final String sanitizedAddress =
-            (property.rentalAddress ?? 'N/A').replaceAll(',', ' ');
+            (property.rentalAddress ?? 'N/A');
 
-        csvBuffer.writeln([
+        csvBuffer.writeln(csvRow([
           sanitizedAddress,
           NumberFormat('#,##0.00').format(property.currentPeriod?.revenue ?? 0),
           NumberFormat('#,##0.00')
@@ -2184,18 +2199,18 @@ class _PropertyRevenueReportState extends State<PropertyRevenueReport>
           NumberFormat('#,##0.00').format(property.revenueChangeAmount ?? 0),
           NumberFormat('#,##0.00')
               .format(property.revenueChangePercentage ?? 0),
-        ].join(','));
+        ]));
       }
 
       // Add grand total
-      csvBuffer.writeln([
+      csvBuffer.writeln(csvRow([
         'Grand Total',
         NumberFormat('#,##0.00').format(summary?.totalCurrentRevenue ?? 0),
         NumberFormat('#,##0.00').format(summary?.totalPreviousRevenue ?? 0),
         NumberFormat('#,##0.00').format(summary?.totalRevenueChangeAmount ?? 0),
         NumberFormat('#,##0.00')
             .format(summary?.totalRevenueChangePercentage ?? 0),
-      ].join(','));
+      ]));
 
       final DateTime now = DateTime.now();
       final String formattedDate = DateFormat('yyyyMMddHHmmss').format(now);

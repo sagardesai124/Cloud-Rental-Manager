@@ -183,10 +183,12 @@ const Map<String, Object> _staffPrefs = {
 };
 
 final _cases = <_Case>[
+  // The Mortgages list uses the standard report empty state.
   _Case('Admin Mortgages list', _adminPrefs, () => const admin_list.MortgageTable(),
-      'No mortgages found', _realLender),
+      'No Data Available', _realLender),
+  // The Mortgages list uses the standard report empty state.
   _Case('Staff Mortgages list', _staffPrefs, () => const staff_list.MortgageTable(),
-      'No mortgages found', _realLender),
+      'No Data Available', _realLender),
   _Case('Admin property Mortgage tab', _adminPrefs,
       () => const admin_prop.PropertyMortgageTable(propertyId: 'R-1'),
       'No mortgages found for this property', 'Realowner'),

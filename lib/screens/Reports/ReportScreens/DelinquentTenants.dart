@@ -937,6 +937,122 @@ class _DelinquentTenantsState extends State<DelinquentTenants>
     );
   }
 
+  /// Search box and Export, shown in every state of the report like web
+  /// (DelinquentTenants.jsx renders them outside its loading/empty branches), so an
+  /// empty report still offers Export (a file with headings only).
+  Widget _buildToolbar(List<DelinquentTenantsData> data) {
+    return Padding(
+      padding: EdgeInsets.only(
+          left:
+              MediaQuery.of(context).size.width > 500
+                  ? 10
+                  : 0,
+          right:
+              MediaQuery.of(context).size.width > 500
+                  ? 10
+                  : 0),
+      child: Row(
+        mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Material(
+              // Flat: the elevation-3 shadow made the search field
+              // sit proud of the flat Export button beside it.
+              elevation: 0,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10),
+                height: MediaQuery.of(context)
+                            .size
+                            .width <
+                        500
+                    ? 48
+                    : 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.circular(8),
+                  border: Border.all(
+                      color: const Color(0xFF8A95A8)),
+                ),
+                child: TextField(
+                  onChanged: (value) {
+                    setState(() {
+                      searchvalue = value;
+                      currentPage = 0; // reset to first page on search change
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    hintText: "Search here...",
+                    hintStyle: TextStyle(
+                        color: Color(0xFF8A95A8)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          SizedBox(
+            // Same height as the search field beside
+            // it (48 narrow / 50 wide).
+            height: MediaQuery.of(context)
+                        .size
+                        .width <
+                    500
+                ? 48
+                : 50,
+            child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: blueColor,
+            ),
+            onPressed: () {},
+            child: PopupMenuButton<String>(
+              onSelected: (value) async {
+                // Export logic
+                if (value == 'PDF') {
+                  generateDelinquentTenantsPdf(data);
+                } else if (value == 'XLSX') {
+                  generateDelinquentTenantsExcel(
+                      data);
+                } else if (value == 'CSV') {
+                  generateDelinquentTenantsCsv(data);
+                }
+              },
+              itemBuilder: (BuildContext context) =>
+                  <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                    value: 'PDF', child: Text('PDF')),
+                const PopupMenuItem<String>(
+                    value: 'XLSX',
+                    child: Text('XLSX')),
+                const PopupMenuItem<String>(
+                    value: 'CSV', child: Text('CSV')),
+              ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  istenantDataLoading
+                      ? const Center(
+                          child: SpinKitFadingCircle(
+                            color: Colors.white,
+                            size: 21.0,
+                          ),
+                        )
+                      : Text('Export'),
+                  Icon(Icons.arrow_drop_down),
+                ],
+              ),
+            ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -960,14 +1076,36 @@ class _DelinquentTenantsState extends State<DelinquentTenants>
                     future: _futureRentersInsurance,
                     builder: (context, snapshot) {
                       if (isLoading) {
-                        return Padding(
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              child: _buildToolbar(const []),
+                            ),
+                            Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: ColabShimmerLoadingWidget(),
+                        ),
+                          ],
                         );
                       } else if (snapshot.hasError) {
-                        return _reportErrorState(onRetry: _retryFetch);
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              child: _buildToolbar(const []),
+                            ),
+                            _reportErrorState(onRetry: _retryFetch),
+                          ],
+                        );
                       } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Container(
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              child: _buildToolbar(const []),
+                            ),
+                            Container(
                           height: MediaQuery.of(context).size.height * .5,
                           child: Center(
                             child: Column(
@@ -975,7 +1113,7 @@ class _DelinquentTenantsState extends State<DelinquentTenants>
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Image.asset(
-                                  "assets/images/no_data.jpg",
+                                  "assets/images/no_data_transparent.png",
                                   height: 200,
                                   width: 200,
                                 ),
@@ -992,6 +1130,8 @@ class _DelinquentTenantsState extends State<DelinquentTenants>
                               ],
                             ),
                           ),
+                        ),
+                          ],
                         );
                       }
 
@@ -1041,116 +1181,7 @@ class _DelinquentTenantsState extends State<DelinquentTenants>
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
                             children: [
-                              Padding(
-                                padding: EdgeInsets.only(
-                                    left:
-                                        MediaQuery.of(context).size.width > 500
-                                            ? 10
-                                            : 0,
-                                    right:
-                                        MediaQuery.of(context).size.width > 500
-                                            ? 10
-                                            : 0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Material(
-                                        // Flat: the elevation-3 shadow made the search field
-                                        // sit proud of the flat Export button beside it.
-                                        elevation: 0,
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10),
-                                          height: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? 48
-                                              : 50,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                                color: const Color(0xFF8A95A8)),
-                                          ),
-                                          child: TextField(
-                                            onChanged: (value) {
-                                              setState(() {
-                                                searchvalue = value;
-                                                currentPage = 0; // reset to first page on search change
-                                              });
-                                            },
-                                            decoration: const InputDecoration(
-                                              border: InputBorder.none,
-                                              hintText: "Search here...",
-                                              hintStyle: TextStyle(
-                                                  color: Color(0xFF8A95A8)),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    SizedBox(
-                                      // Same height as the search field beside
-                                      // it (48 narrow / 50 wide).
-                                      height: MediaQuery.of(context)
-                                                  .size
-                                                  .width <
-                                              500
-                                          ? 48
-                                          : 50,
-                                      child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: blueColor,
-                                      ),
-                                      onPressed: () {},
-                                      child: PopupMenuButton<String>(
-                                        onSelected: (value) async {
-                                          // Export logic
-                                          if (value == 'PDF') {
-                                            generateDelinquentTenantsPdf(data);
-                                          } else if (value == 'XLSX') {
-                                            generateDelinquentTenantsExcel(
-                                                data);
-                                          } else if (value == 'CSV') {
-                                            generateDelinquentTenantsCsv(data);
-                                          }
-                                        },
-                                        itemBuilder: (BuildContext context) =>
-                                            <PopupMenuEntry<String>>[
-                                          const PopupMenuItem<String>(
-                                              value: 'PDF', child: Text('PDF')),
-                                          const PopupMenuItem<String>(
-                                              value: 'XLSX',
-                                              child: Text('XLSX')),
-                                          const PopupMenuItem<String>(
-                                              value: 'CSV', child: Text('CSV')),
-                                        ],
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            istenantDataLoading
-                                                ? const Center(
-                                                    child: SpinKitFadingCircle(
-                                                      color: Colors.white,
-                                                      size: 21.0,
-                                                    ),
-                                                  )
-                                                : Text('Export'),
-                                            Icon(Icons.arrow_drop_down),
-                                          ],
-                                        ),
-                                      ),
-                                      ),
-                                    )
-                                  ],
-                                ),
-                              ),
+                              _buildToolbar(data),
                               const SizedBox(height: 20),
                               _buildHeaders(),
                               const SizedBox(height: 10),

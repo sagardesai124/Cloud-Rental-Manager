@@ -149,7 +149,7 @@ class _MaintenanceTableState extends State<MaintenanceTable>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Maintenance entry deleted successfully'),
+              content: Text('Maintenance entry deleted'),
               backgroundColor: Colors.green,
             ),
           );

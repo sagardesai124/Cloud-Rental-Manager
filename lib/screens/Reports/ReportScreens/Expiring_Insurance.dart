@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -51,6 +52,10 @@ class ExpiringInsurance extends StatefulWidget {
 class _ExpiringInsuranceState extends State<ExpiringInsurance>
     with NetworkRetryState {
   Future<List<RentersInsuranceData>>? _futureReport;
+
+  /// True once a run has returned policies. Export stays greyed until then
+  /// (and while a run is loading, since it clears its list on Run).
+  bool _hasRows = false;
 
   int totalrecords = 0;
   int rowsPerPage = 5;
@@ -266,6 +271,15 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
       lastFromDate = currentFromDate;
       lastToDate = currentToDate;
     }
+
+    // Track whether this run produced policies so Export is enabled only then.
+    _hasRows = false;
+    final future = _futureReport;
+    future?.then((rows) {
+      if (mounted && identical(future, _futureReport)) {
+        setState(() => _hasRows = rows.isNotEmpty);
+      }
+    }, onError: (_) {});
     setState(() {});
   }
 
@@ -529,22 +543,41 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
     // Request storage permissions
     await requestPermissions();
 
+    // Like web's CSV (ExpiringRenterInsurancesReport.jsx): a title block
+    // ("Insurance Report", the company, "As of" today), a blank line, then
+    // the headers.
+    String companyName = '';
+    try {
+      final profileData = await GetAddressAdminPdfService().fetchAdminAddress();
+      companyName = profileData?.companyName ?? '';
+    } catch (e) {
+      logError("Error fetching profile data: $e");
+    }
+    final asOf = dateProvider.formatCurrentDate(DateTime.now().toString());
+
     // Prepare CSV data
     List<List<dynamic>> rows = [
       [
         'Insurance Company',
         'Policy ID',
         'Company Phone',
-        'EffectiveDate',
-        'ExpirationDate',
-        'LiabilityCoverage',
+        'Effective Date',
+        'Expiration Date',
+        'Liability Coverage',
         'Tenants',
       ]
     ];
     final StringBuffer csvBuffer = StringBuffer();
-    csvBuffer.writeln(rows.first.join(','));
+    csvBuffer.writeln(csvRow(['Insurance Report']));
+    csvBuffer.writeln(csvRow([companyName]));
+    csvBuffer.writeln(csvRow(['As of $asOf']));
+    csvBuffer.writeln();
+    csvBuffer.writeln(csvRow(rows.first));
+    if (leaseData.isEmpty) {
+      csvBuffer.writeln(csvRow(['No record found']));
+    }
     for (var lease in leaseData) {
-      csvBuffer.writeln([
+      csvBuffer.writeln(csvRow([
         lease.insuranceCompany ?? '',
         lease.policyId ?? '',
         formatPhoneNumberedit(lease.insuranceCompanyPhoneNumber ?? ''),
@@ -561,7 +594,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                     "${tenant.tenantFirstName} ${tenant.tenantLastName}")
                 .join(', ')
             : '',
-      ].join(','));
+      ]));
     }
 // Convert buffer to list of bytes for CSV file
     final List<int> bytes = utf8.encode(csvBuffer.toString());
@@ -1600,8 +1633,11 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                   ),
                                 ),
                                 const SizedBox(width: 12),
+                                // Export is greyed out and not tappable until
+                                // the report has policies.
                                 Expanded(
                                   child: PopupMenuButton<String>(
+                                    enabled: _hasRows,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -1656,7 +1692,9 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                     child: Container(
                                       height: 48,
                                       decoration: BoxDecoration(
-                                        color: blueColor,
+                                        color: _hasRows
+                                            ? blueColor
+                                            : Colors.grey.shade400,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: const Row(
@@ -1835,7 +1873,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Image.asset(
-                                      "assets/images/no_data.jpg",
+                                      "assets/images/no_data_transparent.png",
                                       height: 200,
                                       width: 200,
                                     ),
@@ -1863,7 +1901,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Image.asset(
-                                      "assets/images/no_data.jpg",
+                                      "assets/images/no_data_transparent.png",
                                       height: 200,
                                       width: 200,
                                     ),
@@ -2264,7 +2302,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Image.asset(
-                                    "assets/images/no_data.jpg",
+                                    "assets/images/no_data_transparent.png",
                                     height: 200,
                                     width: 200,
                                   ),
@@ -2292,7 +2330,7 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Image.asset(
-                                    "assets/images/no_data.jpg",
+                                    "assets/images/no_data_transparent.png",
                                     height: 200,
                                     width: 200,
                                   ),

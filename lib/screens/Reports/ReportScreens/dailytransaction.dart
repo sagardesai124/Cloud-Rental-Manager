@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -1474,7 +1475,7 @@ class _DailyTransactionsState extends State<DailyTransactions>
     final StringBuffer csvBuffer = StringBuffer();
 
     // Add headers to the CSV file
-    csvBuffer.writeln(headers.join(','));
+    csvBuffer.writeln(csvRow(headers));
 
     double grandTotal = 0.0;
     final dateProvider = Provider.of<DateProvider>(context, listen: false);
@@ -1488,10 +1489,10 @@ class _DailyTransactionsState extends State<DailyTransactions>
       for (var property in owner.charges!) {
         // Replace commas in the rental address with spaces
         final String sanitizedAddress =
-            (property.rentalData?.rentalAddress ?? 'N/A').replaceAll(',', ' ');
+            (property.rentalData?.rentalAddress ?? 'N/A');
 
         // Add property and tenant details
-        csvBuffer.writeln([
+        csvBuffer.writeln(csvRow([
           sanitizedAddress,
           '${property.tenantData?.tenantFirstName ?? 'N/A'} ${property.tenantData?.tenantLastName ?? 'N/A'}',
           dateProvider.formatCurrentDate(owner.date ?? ''),
@@ -1501,11 +1502,11 @@ class _DailyTransactionsState extends State<DailyTransactions>
           property.cc_type ?? 'N/A',
           property.cc_number ?? 'N/A',
           formatCurrency(property.totalAmount)
-        ].join(','));
+        ]));
 
         // Iterate through payment entries for the current property
         for (var payment in property.entry!) {
-          csvBuffer.writeln([
+          csvBuffer.writeln(csvRow([
             payment.account ?? 'N/A',
             '',
             '',
@@ -1515,7 +1516,7 @@ class _DailyTransactionsState extends State<DailyTransactions>
             '',
             '',
             formatCurrency(payment.amount)
-          ].join(','));
+          ]));
         }
 
         // Add surcharge row if applicable
@@ -1535,7 +1536,7 @@ class _DailyTransactionsState extends State<DailyTransactions>
       }
 
       // Add subtotal row for the current rental owner
-      csvBuffer.writeln([
+      csvBuffer.writeln(csvRow([
         'Subtotal - ${owner.date}',
         '',
         '',
@@ -1545,14 +1546,14 @@ class _DailyTransactionsState extends State<DailyTransactions>
         '',
         '',
         formatCurrency(owner.subtotal)
-      ].join(','));
+      ]));
 
       // Accumulate grand total
       grandTotal += owner.subtotal ?? 0.0;
     }
 
     // Add grand total row at the end
-    csvBuffer.writeln([
+    csvBuffer.writeln(csvRow([
       'Grand Total',
       '',
       '',
@@ -1562,7 +1563,7 @@ class _DailyTransactionsState extends State<DailyTransactions>
       '',
       '',
       formatCurrency(grandTotal)
-    ].join(','));
+    ]));
 
     // Convert buffer to list of bytes for CSV file
     final List<int> bytes = utf8.encode(csvBuffer.toString());
@@ -1822,7 +1823,7 @@ class _DailyTransactionsState extends State<DailyTransactions>
                                               CrossAxisAlignment.center,
                                           children: [
                                             Image.asset(
-                                              "assets/images/no_data.jpg",
+                                              "assets/images/no_data_transparent.png",
                                               height: 200,
                                               width: 200,
                                             ),
@@ -3868,14 +3869,18 @@ class _DailyTransactionsState extends State<DailyTransactions>
               children: [
                 if (showTableData)
                   Expanded(
+                    // No rows yet: Export stays in place, greyed and disabled.
                     child: SizedBox(
                       height: 42,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: blueColor,
+                          disabledBackgroundColor: Colors.grey.shade400,
+                          disabledForegroundColor: Colors.white,
                         ),
-                        onPressed: () {},
+                        onPressed: (data?.isNotEmpty ?? false) ? () {} : null,
                         child: PopupMenuButton<String>(
+                          enabled: data?.isNotEmpty ?? false,
                           onSelected: (value) async {
                             // Export logic
                             if (value == 'PDF' && data != null) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -542,19 +543,19 @@ class _Rent_collectionState extends State<Rent_collection>
         tableData.add([
           pw.Align(
             alignment: pw.Alignment.centerLeft,
-            child: pw.Text(property.rentalOwnerCompany ?? 'N/A'),
+            child: pw.Text(property.rentalOwnerCompany ?? '-'),
           ),
           pw.Align(
             alignment: pw.Alignment.centerRight,
-            child: pw.Text(formatCurrency(property.totalCharged) ?? 'N/A'),
+            child: pw.Text(formatCurrency(property.totalCharged) ?? '-'),
           ),
           pw.Align(
             alignment: pw.Alignment.centerRight,
-            child: pw.Text(formatCurrency(property.totalPending) ?? 'N/A'),
+            child: pw.Text(formatCurrency(property.totalPending) ?? '-'),
           ),
           pw.Align(
             alignment: pw.Alignment.centerRight,
-            child: pw.Text(property.collectedPercentage?.toString() ?? 'N/A'),
+            child: pw.Text(property.collectedPercentage?.toString() ?? '-'),
           ),
         ]);
       }
@@ -571,21 +572,21 @@ class _Rent_collectionState extends State<Rent_collection>
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: pw.Text(
-            formatCurrency(owner.totalSummary?.totalCharged) ?? 'N/A',
+            formatCurrency(owner.totalSummary?.totalCharged) ?? '-',
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
         ),
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: pw.Text(
-            formatCurrency(owner.totalSummary?.totalPending) ?? 'N/A',
+            formatCurrency(owner.totalSummary?.totalPending) ?? '-',
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
         ),
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: pw.Text(
-            owner.totalSummary?.averageCollectedPercentage?.toString() ?? 'N/A',
+            owner.totalSummary?.averageCollectedPercentage?.toString() ?? '-',
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
         ),
@@ -607,14 +608,14 @@ class _Rent_collectionState extends State<Rent_collection>
         if (detail.recurringCards != null &&
             detail.recurringCards!.isNotEmpty) {
           autoPay = detail.recurringCards!.map((card) {
-            final tenantName = card.tenantName ?? 'N/A';
+            final tenantName = card.tenantName ?? '-';
             final date = card.date != null
                 ? dateProvider.formatCurrentDate(card.date!)
-                : 'N/A';
+                : '-';
             return '$tenantName - $date';
           }).join('\n');
         } else {
-          autoPay = 'N/A';
+          autoPay = '-';
         }
 
         // Handle Notes mapping
@@ -624,28 +625,28 @@ class _Rent_collectionState extends State<Rent_collection>
               .map((note) {
                 final date = note.date != null
                     ? dateProvider.formatCurrentDate(note.date!)
-                    : 'N/A';
+                    : '-';
                 final content = note.content ?? '';
                 return '$date: $content';
               })
               .where((content) => content.isNotEmpty)
               .join('\n');
         } else {
-          notes = 'N/A';
+          notes = '-';
         }
 
         // Add the row
         tableData.add([
-          detail.rentalData?.rentalAdress ?? 'N/A',
-          '${detail.rentalData?.rentalCity ?? 'N/A'}, '
-              '${detail.rentalData?.rentalState ?? 'N/A'}, '
-              '${detail.rentalData?.rentalPostcode ?? 'N/A'}',
-          detail.rentalOwnerData?.rentalOwnerCompanyName ?? 'N/A',
+          detail.rentalData?.rentalAdress ?? '-',
+          '${detail.rentalData?.rentalCity ?? '-'}, '
+              '${detail.rentalData?.rentalState ?? '-'}, '
+              '${detail.rentalData?.rentalPostcode ?? '-'}',
+          detail.rentalOwnerData?.rentalOwnerCompanyName ?? '-',
           detail.leaseData?.startDate != null
               ? dateProvider.formatCurrentDate(detail.leaseData!.startDate!)
-              : 'N/A',
-          formatCurrency(detail.leaseData?.leaseAmount) ?? 'N/A',
-          formatCurrency(detail.leaseData?.balance) ?? 'N/A',
+              : '-',
+          formatCurrency(detail.leaseData?.leaseAmount) ?? '-',
+          formatCurrency(detail.leaseData?.balance) ?? '-',
           autoPay,
           notes,
         ]);
@@ -671,14 +672,14 @@ class _Rent_collectionState extends State<Rent_collection>
           if (detail.recurringCards != null &&
               detail.recurringCards!.isNotEmpty) {
             autoPay = detail.recurringCards!.map((card) {
-              final tenantName = card.tenantName ?? 'N/A';
+              final tenantName = card.tenantName ?? '-';
               final date = card.date != null
                   ? dateProvider.formatCurrentDate(card.date!)
-                  : 'N/A';
+                  : '-';
               return '$date : $tenantName';
             }).join('\n');
           } else {
-            autoPay = 'N/A';
+            autoPay = '-';
           }
 
           String notes;
@@ -687,26 +688,26 @@ class _Rent_collectionState extends State<Rent_collection>
                 .map((note) {
                   final date = note.date != null
                       ? dateProvider.formatCurrentDate(note.date!)
-                      : 'N/A';
+                      : '-';
                   final content = note.content ?? '';
                   return '$date: $content';
                 })
                 .where((content) => content.isNotEmpty)
                 .join('\n');
           } else {
-            notes = 'N/A';
+            notes = '-';
           }
 
           ownerTableData.add([
-            detail.rentalData?.rentalAdress ?? 'N/A',
-            '${detail.rentalData?.rentalCity ?? 'N/A'}, '
-                '${detail.rentalData?.rentalState ?? 'N/A'}, '
-                '${detail.rentalData?.rentalPostcode ?? 'N/A'}',
-            detail.rentalOwnerData?.rentalOwnerCompanyName ?? 'N/A',
+            detail.rentalData?.rentalAdress ?? '-',
+            '${detail.rentalData?.rentalCity ?? '-'}, '
+                '${detail.rentalData?.rentalState ?? '-'}, '
+                '${detail.rentalData?.rentalPostcode ?? '-'}',
+            detail.rentalOwnerData?.rentalOwnerCompanyName ?? '-',
             detail.leaseData?.startDate != null
                 ? dateProvider.formatCurrentDate(detail.leaseData!.startDate!)
-                : 'N/A',
-            formatCurrency(detail.leaseData?.leaseAmount) ?? 'N/A',
+                : '-',
+            formatCurrency(detail.leaseData?.leaseAmount) ?? '-',
             formatCurrency(balance),
             autoPay,
             notes,
@@ -725,7 +726,7 @@ class _Rent_collectionState extends State<Rent_collection>
           pw.Text('', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
           pw.Text('', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
           pw.Text(
-            formatCurrency(owner.deadBeatsSummary?.totalBalance) ?? 'N/A',
+            formatCurrency(owner.deadBeatsSummary?.totalBalance) ?? '-',
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
           pw.Text('', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
@@ -746,19 +747,19 @@ class _Rent_collectionState extends State<Rent_collection>
     for (var owner in rentalOwnerReports) {
       for (var property in owner.summary!) {
         tableData.add([
-          property.rentalOwnerCompany ?? 'N/A',
-          formatCurrency(property.totalCharged) ?? 'N/A',
-          formatCurrency(property.totalPending) ?? 'N/A',
-          property.collectedPercentage?.toString() ?? 'N/A',
+          property.rentalOwnerCompany ?? '-',
+          formatCurrency(property.totalCharged) ?? '-',
+          formatCurrency(property.totalPending) ?? '-',
+          property.collectedPercentage?.toString() ?? '-',
         ]);
       }
 
       // Add Overall row
       tableData.add([
         'Overall',
-        formatCurrency(owner.totalSummary?.totalCharged) ?? 'N/A',
-        formatCurrency(owner.totalSummary?.totalPending) ?? 'N/A',
-        owner.totalSummary?.averageCollectedPercentage?.toString() ?? 'N/A',
+        formatCurrency(owner.totalSummary?.totalCharged) ?? '-',
+        formatCurrency(owner.totalSummary?.totalPending) ?? '-',
+        owner.totalSummary?.averageCollectedPercentage?.toString() ?? '-',
       ]);
     }
 
@@ -777,12 +778,12 @@ class _Rent_collectionState extends State<Rent_collection>
         if (detail.recurringCards != null &&
             detail.recurringCards!.isNotEmpty) {
           autoPay = detail.recurringCards!.map((card) {
-            final tenantName = card.tenantName ?? 'N/A';
-            final date = card.date ?? 'N/A';
+            final tenantName = card.tenantName ?? '-';
+            final date = card.date ?? '-';
             return '$tenantName - $date';
           }).join('\n');
         } else {
-          autoPay = 'N/A';
+          autoPay = '-';
         }
 
         // Handle Notes mapping
@@ -790,28 +791,28 @@ class _Rent_collectionState extends State<Rent_collection>
         if (detail.notes != null && detail.notes!.isNotEmpty) {
           notes = detail.notes!
               .map((note) {
-                final date = note.date ?? 'N/A';
+                final date = note.date ?? '-';
                 final content = note.content ?? '';
                 return '$date: $content';
               })
               .where((content) => content.isNotEmpty)
               .join('\n');
         } else {
-          notes = 'N/A';
+          notes = '-';
         }
 
         // Add the row
         tableData.add([
-          detail.rentalData?.rentalAdress ?? 'N/A',
-          '${detail.rentalData?.rentalCity ?? 'N/A'}, '
-              '${detail.rentalData?.rentalState ?? 'N/A'}, '
-              '${detail.rentalData?.rentalPostcode ?? 'N/A'}',
-          detail.rentalOwnerData?.rentalOwnerCompanyName ?? 'N/A',
+          detail.rentalData?.rentalAdress ?? '-',
+          '${detail.rentalData?.rentalCity ?? '-'}, '
+              '${detail.rentalData?.rentalState ?? '-'}, '
+              '${detail.rentalData?.rentalPostcode ?? '-'}',
+          detail.rentalOwnerData?.rentalOwnerCompanyName ?? '-',
           detail.leaseData?.startDate != null
               ? dateProvider.formatCurrentDate(detail.leaseData!.startDate!)
-              : 'N/A',
-          formatCurrency(detail.leaseData?.leaseAmount) ?? 'N/A',
-          formatCurrency(detail.leaseData?.balance) ?? 'N/A',
+              : '-',
+          formatCurrency(detail.leaseData?.leaseAmount) ?? '-',
+          formatCurrency(detail.leaseData?.balance) ?? '-',
           autoPay,
           notes,
         ]);
@@ -837,14 +838,14 @@ class _Rent_collectionState extends State<Rent_collection>
           if (detail.recurringCards != null &&
               detail.recurringCards!.isNotEmpty) {
             autoPay = detail.recurringCards!.map((card) {
-              final tenantName = card.tenantName ?? 'N/A';
+              final tenantName = card.tenantName ?? '-';
               final date = card.date != null
                   ? dateProvider.formatCurrentDate(card.date!)
-                  : 'N/A';
+                  : '-';
               return '$date : $tenantName';
             }).join('\n');
           } else {
-            autoPay = 'N/A';
+            autoPay = '-';
           }
 
           String notes;
@@ -853,26 +854,26 @@ class _Rent_collectionState extends State<Rent_collection>
                 .map((note) {
                   final date = note.date != null
                       ? dateProvider.formatCurrentDate(note.date!)
-                      : 'N/A';
+                      : '-';
                   final content = note.content ?? '';
                   return '$date: $content';
                 })
                 .where((content) => content.isNotEmpty)
                 .join('\n');
           } else {
-            notes = 'N/A';
+            notes = '-';
           }
 
           ownerTableData.add([
-            detail.rentalData?.rentalAdress ?? 'N/A',
-            '${detail.rentalData?.rentalCity ?? 'N/A'} '
-                '${detail.rentalData?.rentalState ?? 'N/A'}'
-                '${detail.rentalData?.rentalPostcode ?? 'N/A'}',
-            detail.rentalOwnerData?.rentalOwnerCompanyName ?? 'N/A',
+            detail.rentalData?.rentalAdress ?? '-',
+            '${detail.rentalData?.rentalCity ?? '-'}, '
+                '${detail.rentalData?.rentalState ?? '-'}, '
+                '${detail.rentalData?.rentalPostcode ?? '-'}',
+            detail.rentalOwnerData?.rentalOwnerCompanyName ?? '-',
             detail.leaseData?.startDate != null
                 ? dateProvider.formatCurrentDate(detail.leaseData!.startDate!)
-                : 'N/A',
-            formatCurrency(detail.leaseData?.leaseAmount) ?? 'N/A',
+                : '-',
+            formatCurrency(detail.leaseData?.leaseAmount) ?? '-',
             formatCurrency(balance),
             autoPay,
             notes,
@@ -887,7 +888,7 @@ class _Rent_collectionState extends State<Rent_collection>
           '',
           '',
           '',
-          formatCurrency(owner.deadBeatsSummary?.totalBalance) ?? 'N/A',
+          formatCurrency(owner.deadBeatsSummary?.totalBalance) ?? '-',
           '',
           '',
         ]);
@@ -1052,35 +1053,49 @@ class _Rent_collectionState extends State<Rent_collection>
     // Prepare the CSV content
     final StringBuffer csvBuffer = StringBuffer();
 
-    // Add SUMMARY SECTION
-    csvBuffer.writeln('Summary');
-    csvBuffer.writeln('Rental Owner,Total Charged,Total Pending,Collected %');
-    final summaryTableData =
-        _generateSummaryTableDataExcel(delinquentTenantsData);
-    for (var row in summaryTableData) {
-      csvBuffer.writeln(row.join(','));
-    }
-    csvBuffer.writeln();
-
-    // Add DETAILS SECTION
-    csvBuffer.writeln('Details');
-    csvBuffer.writeln(
-        'Street,City State Zip,Entity,Move-in Date,Monthly Rent,Balance,Auto-Pay,Notes');
+    // Same layout as web's Rent Collection CSV (RentCollectionReport.jsx):
+    // the Details first, then the Summary under padded columns, then the
+    // Delinquent Leases.
+    csvBuffer.writeln(csvRow(const [
+      'Address',
+      'City, State, Zip',
+      'Entity',
+      'Move-in Date',
+      'Monthly Rent',
+      'Balance',
+      'Auto-Pay',
+      'Notes',
+    ]));
     final detailsTableData =
         _generateDetailsTableDataExcel(delinquentTenantsData, dateProvider);
     for (var row in detailsTableData) {
-      csvBuffer.writeln(row.join(','));
+      csvBuffer.writeln(csvRow(row));
     }
     csvBuffer.writeln();
+    csvBuffer.writeln();
 
-    // Add DELINQUENT LEASES SECTION
-    csvBuffer.writeln('Delinquent Leases');
-    csvBuffer.writeln(
-        'Street,City State Zip,Entity,Move-in Date,Monthly Rent,Balance,Auto-Pay,Notes');
+    csvBuffer.writeln(csvRow(const [
+      '',
+      '',
+      'Entity',
+      '',
+      'Total Charged',
+      'Total Outstanding',
+      'Collected %',
+    ]));
+    final summaryTableData =
+        _generateSummaryTableDataExcel(delinquentTenantsData);
+    for (var row in summaryTableData) {
+      csvBuffer.writeln(csvRow(['', '', row[0], '', row[1], row[2], row[3]]));
+    }
+    csvBuffer.writeln();
+    csvBuffer.writeln();
+
+    csvBuffer.writeln(csvRow(const ['', '', '', 'Delinquent Leases', '', '', '']));
     final delinquentLeasesTableData = _generateDelinquentLeasesTableDataExcel(
         delinquentTenantsData, dateProvider);
     for (var row in delinquentLeasesTableData) {
-      csvBuffer.writeln(row.join(','));
+      csvBuffer.writeln(csvRow(row));
     }
 
     // Save the CSV file
@@ -1803,6 +1818,7 @@ class _Rent_collectionState extends State<Rent_collection>
                                     ),
                                     const SizedBox(width: 8),
                                     // Download Button
+                                    // No rows yet: Export stays in place, greyed and disabled.
                                     Container(
                                       height: 45,
                                       width: 60,
@@ -1817,19 +1833,30 @@ class _Rent_collectionState extends State<Rent_collection>
                                           FutureBuilder<Rentcollection_model>(
                                         future: _futureRentcollection,
                                         builder: (context, snapshot) {
+                                          final bool hasExportData =
+                                              DelinquentTenantsModel
+                                                      ?.leases?.isNotEmpty ??
+                                                  false;
                                           return PopupMenuButton<String>(
+                                            enabled: hasExportData,
                                             offset: const Offset(0, 45),
                                             onSelected: handleDownload,
-                                            icon: const Row(
+                                            icon: Row(
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
                                               children: [
                                                 FaIcon(
                                                     FontAwesomeIcons.download,
-                                                    size: 16),
-                                                SizedBox(width: 2),
+                                                    size: 16,
+                                                    color: hasExportData
+                                                        ? null
+                                                        : Colors.grey.shade400),
+                                                const SizedBox(width: 2),
                                                 Icon(Icons.arrow_drop_down,
-                                                    size: 16),
+                                                    size: 16,
+                                                    color: hasExportData
+                                                        ? null
+                                                        : Colors.grey.shade400),
                                               ],
                                             ),
                                             tooltip: "Download",
@@ -1895,7 +1922,7 @@ class _Rent_collectionState extends State<Rent_collection>
                                             MainAxisAlignment.center,
                                         children: [
                                           Image.asset(
-                                            "assets/images/no_data.jpg",
+                                            "assets/images/no_data_transparent.png",
                                             height: 200,
                                             width: 200,
                                           ),
@@ -2931,32 +2958,8 @@ class _Rent_collectionState extends State<Rent_collection>
                       (searchvalue.isNotEmpty ||
                           selectedRentalOwner != 'All' ||
                           selectedBalanceFilter != 'All'))
-                    Container(
-                      height: MediaQuery.of(context).size.height * .3,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.filter_alt_off,
-                                size: 60, color: Colors.grey[400]),
-                            const SizedBox(height: 10),
-                            Text(
-                              "No Results Found",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: blueColor,
-                                  fontSize: 16),
-                            ),
-                            const SizedBox(height: 5),
-                            const Text(
-                              "Try adjusting your filters",
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    // Same search/filter empty state as the other reports.
+                    kNoSearchResults(context),
                   ...paginatedData.asMap().entries.map((entry) {
                     int rowIndex = entry.key;
                     var item = entry.value;
@@ -3857,7 +3860,7 @@ class _Rent_collectionState extends State<Rent_collection>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset(
-                        "assets/images/no_data.jpg",
+                        "assets/images/no_data_transparent.png",
                         height: 200,
                         width: 200,
                       ),

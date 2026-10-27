@@ -141,7 +141,9 @@ class _Lease_tableState extends State<Lease_table>
     }
   }
 
-  bool _useServerLeasePagination() => selectedRentalOwners.isEmpty;
+  // Like web (RentRoll.jsx): the server also filters by rental owner, so the
+  // list is always paged by the server.
+  bool _useServerLeasePagination() => true;
 
   String _apiLeaseStatus() {
     switch (selectedStatus) {
@@ -172,13 +174,6 @@ class _Lease_tableState extends State<Lease_table>
   }
 
   Future<LeasesPageResult> _loadLeasesPage() async {
-    if (!_useServerLeasePagination()) {
-      // Rental owner picked: the same server list web uses (selected status,
-      // search and sort), narrowed to the picked owners and paged on the
-      // phone.
-      final list = await _fetchAllLeasesForExport();
-      return LeasesPageResult(items: list, pagination: null);
-    }
     final sort = _leaseApiSortParams();
     var result = await LeaseRepository().fetchLeasePage(
       page: currentPage + 1,
@@ -187,6 +182,7 @@ class _Lease_tableState extends State<Lease_table>
       status: _apiLeaseStatus(),
       sortBy: sort.key,
       sortOrder: sort.value,
+      rentalOwnerIds: selectedRentalOwners.join(','),
     );
     final p = result.pagination;
     if (p != null && p.totalPages > 0 && currentPage >= p.totalPages) {
@@ -201,6 +197,7 @@ class _Lease_tableState extends State<Lease_table>
         status: _apiLeaseStatus(),
         sortBy: sort.key,
         sortOrder: sort.value,
+        rentalOwnerIds: selectedRentalOwners.join(','),
       );
     }
     // Like web (RentRoll.jsx: "Server handles filtering"): show the server's
@@ -228,14 +225,9 @@ class _Lease_tableState extends State<Lease_table>
       status: _apiLeaseStatus(),
       sortBy: sort.key,
       sortOrder: sort.value,
+      rentalOwnerIds: selectedRentalOwners.join(','),
     );
-    var list = result.items;
-    if (selectedRentalOwners.isNotEmpty) {
-      list = list
-          .where((lease) => selectedRentalOwners.contains(lease.rentalOwnerName))
-          .toList();
-    }
-    return list;
+    return result.items;
   }
 
   void _scheduleLeaseLoad() {
@@ -249,15 +241,21 @@ class _Lease_tableState extends State<Lease_table>
       final prefs = await SharedPreferences.getInstance();
       final adminId = prefs.getString('adminId');
       final owners = await RentalOwnerService().fetchRentalOwners(adminId);
-      final names = owners
-          .map((o) => o.rentalOwnername ?? '')
-          .where((n) => n.isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort();
+      // Like web (RentRoll.jsx): every rental owner on the account, by id,
+      // A–Z ignoring case, whatever is picked or shown in the list.
+      final names = <String, String>{};
+      for (final o in owners) {
+        final id = o.rentalownerId ?? '';
+        final name = o.rentalOwnername ?? '';
+        if (id.isNotEmpty && name.isNotEmpty) names[id] = name;
+      }
+      final ids = names.keys.toList()
+        ..sort((a, b) =>
+            names[a]!.toLowerCase().compareTo(names[b]!.toLowerCase()));
       if (mounted) {
         setState(() {
-          availableRentalOwners = names;
+          _rentalOwnerNames = names;
+          availableRentalOwners = ids;
           _selectedRentalOwnersNotifier.value = List.from(selectedRentalOwners);
         });
       }
@@ -864,8 +862,11 @@ class _Lease_tableState extends State<Lease_table>
   // every lease, not just Active ones.
   String selectedStatus = "All";
   final List<String> statusOptions = ["Active", "Expired", "Future", "All"];
+  // Rental owner ids (like web), with their names for display.
   List<String> selectedRentalOwners = [];
   List<String> availableRentalOwners = [];
+  Map<String, String> _rentalOwnerNames = {};
+  String _rentalOwnerName(String id) => _rentalOwnerNames[id] ?? id;
   final ValueNotifier<List<String>> _selectedRentalOwnersNotifier =
       ValueNotifier<List<String>>([]);
 
@@ -1340,33 +1341,6 @@ class _Lease_tableState extends State<Lease_table>
                                 (pageResult.pagination!.totalItems > 0);
                           } else {
                             data = pageResult.items;
-                            if (!_useServerLeasePagination() &&
-                                data.isNotEmpty) {
-                              final uniqueRentalOwners = data
-                                  .map((lease) => lease.rentalOwnerName)
-                                  .where((name) =>
-                                      name != null &&
-                                      name.isNotEmpty &&
-                                      name != 'N/A')
-                                  .cast<String>()
-                                  .toSet()
-                                  .toList()
-                                ..sort();
-                              if (availableRentalOwners.toString() !=
-                                  uniqueRentalOwners.toString()) {
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  if (mounted) {
-                                    setState(() {
-                                      availableRentalOwners =
-                                          uniqueRentalOwners;
-                                      _selectedRentalOwnersNotifier.value =
-                                          List.from(selectedRentalOwners);
-                                    });
-                                  }
-                                });
-                              }
-                            }
                             totalPages = (data.length / itemsPerPage)
                                 .ceil()
                                 .clamp(1, 1 << 30);
@@ -2406,12 +2380,23 @@ class _Lease_tableState extends State<Lease_table>
     return (value == null || value.trim().isEmpty) ? 'N/A' : value;
   }
 
+  // Like web's "All owners": clears every pick so all leases show.
+  void _selectAllRentalOwners() {
+    if (selectedRentalOwners.isEmpty) return;
+    selectedRentalOwners.clear();
+    _selectedRentalOwnersNotifier.value = [];
+    setState(() {
+      if (currentPage != 0) currentPage = 0;
+      futureLease = _loadLeasesPage();
+    });
+  }
+
   Widget _buildRentalOwnerDropdown() {
     // Use selectedRentalOwners directly for display text
     String displayText = selectedRentalOwners.isEmpty
         ? 'Select rental owners'
         : selectedRentalOwners.length == 1
-            ? selectedRentalOwners.first
+            ? _rentalOwnerName(selectedRentalOwners.first)
             : '${selectedRentalOwners.length} owners selected';
 
     return ValueListenableBuilder<List<String>>(
@@ -2435,7 +2420,48 @@ class _Lease_tableState extends State<Lease_table>
             ],
           ),
           value: null, // Always null for multi-select
-          items: availableRentalOwners.map((owner) {
+          items: [
+            // Like web's "All owners": ticked while no owner is picked;
+            // tapping it clears the picks so every lease shows.
+            if (availableRentalOwners.isNotEmpty)
+              DropdownMenuItem<String>(
+                value: '',
+                enabled: false,
+                child: ValueListenableBuilder<List<String>>(
+                  valueListenable: _selectedRentalOwnersNotifier,
+                  builder: (context, currentSelectedList, _) {
+                    final allOwners = currentSelectedList.isEmpty;
+                    return InkWell(
+                      onTap: _selectAllRentalOwners,
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: allOwners,
+                            onChanged: (_) => _selectAllRentalOwners(),
+                            activeColor: blueColor,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          Expanded(
+                            child: Text(
+                              'All owners',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: allOwners
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: Colors.black87,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ...availableRentalOwners.map((owner) {
             return DropdownMenuItem<String>(
               value: owner,
               enabled: false, // Disable to prevent dropdown from closing
@@ -2482,7 +2508,7 @@ class _Lease_tableState extends State<Lease_table>
                         ),
                         Expanded(
                           child: Text(
-                            owner,
+                            _rentalOwnerName(owner),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: isCurrentlySelected
@@ -2499,7 +2525,8 @@ class _Lease_tableState extends State<Lease_table>
                 },
               ),
             );
-          }).toList(),
+          }),
+          ],
           onChanged: (value) {
             // Do nothing - selection handled in item's InkWell
           },
@@ -2554,7 +2581,7 @@ class _Lease_tableState extends State<Lease_table>
                     mainAxisSize: MainAxisSize.min,
                     children: availableRentalOwners.map((owner) {
                       return CheckboxListTile(
-                        title: Text(owner),
+                        title: Text(_rentalOwnerName(owner)),
                         value: tempSelected.contains(owner),
                         activeColor: blueColor,
                         onChanged: (bool? value) {

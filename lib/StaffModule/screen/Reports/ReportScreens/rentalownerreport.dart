@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'dart:developer';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -1083,7 +1084,7 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
     final StringBuffer csvBuffer = StringBuffer();
 
     // Add headers to the CSV file
-    csvBuffer.writeln(headers.join(','));
+    csvBuffer.writeln(csvRow(headers));
 
     double grandTotal = 0.0;
 
@@ -1096,10 +1097,10 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
       for (var property in owner.payments) {
         // Replace commas in the rental address with spaces
         final String sanitizedAddress =
-            (property.rentalData!.rentalAddress ?? 'N/A').replaceAll(',', ' ');
+            (property.rentalData!.rentalAddress ?? 'N/A');
 
         // Add property and tenant details
-        csvBuffer.writeln([
+        csvBuffer.writeln(csvRow([
           sanitizedAddress,
           '${property.tenantData!.tenantFirstName ?? 'N/A'} ${property.tenantData!.tenantLastName ?? 'N/A'}',
           _transactionDate(property),
@@ -1109,11 +1110,11 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
           property.ccType ?? '',
           property.ccNumber ?? '',
           formatCurrency(property.totalAmount)
-        ].join(','));
+        ]));
 
         // Iterate through payment entries for the current property
         for (var payment in property.entry) {
-          csvBuffer.writeln([
+          csvBuffer.writeln(csvRow([
             payment.account ?? 'N/A',
             '',
             '',
@@ -1123,12 +1124,12 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
             '',
             '',
             formatCurrency(payment.amount)
-          ].join(','));
+          ]));
         }
 
         // Add surcharge row if applicable
         if (property.surcharge != 0.0) {
-          csvBuffer.writeln([
+          csvBuffer.writeln(csvRow([
             'Surcharge',
             '',
             '',
@@ -1138,12 +1139,12 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
             '',
             '',
             formatMoney(property.surcharge)
-          ].join(','));
+          ]));
         }
       }
 
       // Add subtotal row for the current rental owner
-      csvBuffer.writeln([
+      csvBuffer.writeln(csvRow([
         'Subtotal - ${owner.rentalOwnerName}',
         '',
         '',
@@ -1153,14 +1154,14 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
         '',
         '',
         formatMoney(owner.subTotal ?? 0.0)
-      ].join(','));
+      ]));
 
       // Accumulate grand total
       grandTotal += owner.subTotal ?? 0.0;
     }
 
     // Add grand total row at the end
-    csvBuffer.writeln([
+    csvBuffer.writeln(csvRow([
       'Grand Total',
       '',
       '',
@@ -1170,7 +1171,7 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
       '',
       '',
       formatMoney(grandTotal)
-    ].join(','));
+    ]));
 
     // Convert buffer to list of bytes for CSV file
     final List<int> bytes = utf8.encode(csvBuffer.toString());
@@ -1648,7 +1649,7 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
                                         CrossAxisAlignment.center,
                                     children: [
                                       Image.asset(
-                                        "assets/images/no_data.jpg",
+                                        "assets/images/no_data_transparent.png",
                                         height: 200,
                                         width: 200,
                                       ),
@@ -3846,17 +3847,23 @@ class _RentalOwnerReportsState extends State<RentalOwnerReports>
                   ),
                 ),
                 const SizedBox(width: 6),
-                if (showTableData)
-                  Expanded(
+                Expanded(
+                    // No rows yet (or before the first Run, while rows are
+                    // hidden): Export stays in place, greyed and disabled.
                     child: SizedBox(
                       //  width: 100,
                       height: 42,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: blueColor,
+                          disabledBackgroundColor: Colors.grey.shade400,
+                          disabledForegroundColor: Colors.white,
                         ),
-                        onPressed: () {},
+                        onPressed: (showTableData && (data?.isNotEmpty ?? false))
+                            ? () {}
+                            : null,
                         child: PopupMenuButton<String>(
+                          enabled: showTableData && (data?.isNotEmpty ?? false),
                           onSelected: (value) async {
                             // Export logic
                             if (value == 'PDF' && data != null) {

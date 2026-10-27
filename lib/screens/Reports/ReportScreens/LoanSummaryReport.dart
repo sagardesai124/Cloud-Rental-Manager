@@ -308,9 +308,9 @@ class _LoansummaryreportState extends State<Loansummaryreport>
   }
 
   Widget _buildFilterRow() {
-    // Grey only when there is genuinely no data (raw list), NOT when the
-    // lender filter narrows the view to empty.
-    final bool hasExportData = _allItems.isNotEmpty;
+    // Web parity: Export always shows, greyed while loading or when the
+    // lender filter leaves no rows (the rows the export writes).
+    final bool hasExportData = !_isLoading && _filteredItems.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -445,9 +445,23 @@ class _LoansummaryreportState extends State<Loansummaryreport>
       );
     }
     if (_filteredItems.isEmpty) {
+      // The standard empty state used across reports.
       return Center(
-        child: Text('No loans found',
-            style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Image.asset(
+              "assets/images/no_data_transparent.png",
+              height: 200,
+              width: 200,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "No Data Available",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: blueColor, fontSize: 16),
+            ),
+          ]),
+        ),
       );
     }
 

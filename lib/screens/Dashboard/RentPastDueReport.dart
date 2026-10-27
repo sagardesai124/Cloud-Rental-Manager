@@ -1206,17 +1206,36 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                             ),
                           );
                         } else if (snapshot.hasError) {
-                          return Center(
-                            child: Text(
-                              'Error: \\n${snapshot.error}',
-                              style: TextStyle(color: Colors.red, fontSize: 16),
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: Column(
+                              children: [
+                                filters(),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Error: \\n${snapshot.error}',
+                                  style: TextStyle(
+                                      color: Colors.red, fontSize: 16),
+                                ),
+                              ],
                             ),
                           );
                         } else if (!snapshot.hasData || snapshot.data == null) {
-                          return Center(
-                            child: Text(
-                              'No data available',
-                              style: TextStyle(fontSize: 16),
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: Column(
+                              children: [
+                                filters(),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'No data available',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ],
                             ),
                           );
                         } else {
@@ -1904,12 +1923,17 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                 child: SizedBox(
                   //  width: 100,
                   height: 42,
+                  // No rows (empty, loading or error): Export stays in
+                  // place, greyed and disabled, like the Reports screens.
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: blueColor,
+                      disabledBackgroundColor: Colors.grey.shade400,
+                      disabledForegroundColor: Colors.white,
                     ),
-                    onPressed: () {},
+                    onPressed: (data?.isNotEmpty ?? false) ? () {} : null,
                     child: PopupMenuButton<String>(
+                      enabled: data?.isNotEmpty ?? false,
                       onSelected: (value) async {
                         // Export logic
                         if (value == 'PDF' && data != null) {

@@ -78,9 +78,9 @@ class _Add_Edit_maintenanceState extends State<Add_Edit_maintenance> {
           }
         }
       }
-    } else {
-      _selectedYear = DateTime.now().year.toString();
     }
+    // Add starts with no year ("Select Year"), like web's
+    // handleAddMaintenance (`year: ""`).
   }
 
   @override
@@ -126,6 +126,8 @@ class _Add_Edit_maintenanceState extends State<Add_Edit_maintenance> {
     }
     final n = double.tryParse(clean);
     if (n == null || n < 0) return 'Enter a valid amount';
+    // Web PropDetails.jsx MAX_ANNUAL_EXPENSE_AMOUNT / _MSG.
+    if (n > 999999999.99) return 'Amount must be less than \$1,000,000,000';
     return null;
   }
 
@@ -182,9 +184,10 @@ class _Add_Edit_maintenanceState extends State<Add_Edit_maintenance> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (mounted) {
           Fluttertoast.showToast(
+            // Web PropDetails.jsx wording.
             msg: widget.entryId != null
-                ? 'Maintenance updated successfully'
-                : 'Maintenance added successfully',
+                ? 'Maintenance entry updated'
+                : 'Maintenance entry added',
             backgroundColor: Colors.green,
             textColor: Colors.white,
           );

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
@@ -33,6 +34,47 @@ import 'package:provider/provider.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
+
+/// The Reopen Work Orders CSV, the same as web's (ReopenWorkOrderReport.jsx
+/// generateCSV): web's 9 columns, "N/A" for an empty value, the property as
+/// "address - unit", and [formatDate] (the account date format) for dates.
+String buildReopenWorkOrdersCsv(List<ReopenWorkOrderData> orders,
+    String Function(String date) formatDate) {
+  String orNa(String? value) =>
+      (value == null || value.isEmpty) ? 'N/A' : value;
+  String dateOrNa(String? value) {
+    if (value == null || value.isEmpty) return 'N/A';
+    final formatted = formatDate(value);
+    return formatted.isEmpty ? 'N/A' : formatted;
+  }
+
+  final csv = StringBuffer();
+  csv.writeln(csvRow(const [
+    '#',
+    'Subject',
+    'Category',
+    'Priority',
+    'Property',
+    'Assigned To',
+    'Due Date',
+    'Reopen Date',
+    'Created Date',
+  ]));
+  for (final order in orders) {
+    csv.writeln(csvRow([
+      orNa(order.ticketNumber),
+      orNa(order.workSubject),
+      orNa(order.workCategory),
+      orNa(order.priority),
+      formatLeasePropertyLine(order.rentalAddress, order.rentalUnit),
+      orNa(order.staffmemberName),
+      dateOrNa(order.date),
+      dateOrNa(order.reopenDate),
+      dateOrNa(order.createdAt),
+    ]));
+  }
+  return csv.toString();
+}
 
 class ReopenWorkorder extends StatefulWidget {
   /// When true, uses staff repository (staff_id, content type) and staff UI (app bar, drawer, header).
@@ -470,11 +512,53 @@ class _ReopenWorkorderState extends State<ReopenWorkorder>
     );
   }
 
+  /// The filter bar for the no-rows states, padded like the table view.
+  /// The standard empty state used across reports.
+  Widget _noDataView() {
+    return Center(
+      child: Column(
+        children: [
+          const SizedBox(height: 50),
+          Image.asset(
+            "assets/images/no_data_transparent.png",
+            height: 200,
+            width: 200,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "No Data Available",
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: blueColor,
+                fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyFilters() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 5),
+      child: Column(
+        children: [
+          const SizedBox(height: 5),
+          filters(data: const []),
+        ],
+      ),
+    );
+  }
+
   static const double _filterRadius = 14.0;
   static const Color _filterBorderColor = Color(0xFFCED4DA);
   static const Color _filterHintColor = Color(0xFF8A95A8);
 
+  /// Search box and Export. Also shown when the report has no rows, so
+  /// Export keeps its place, greyed and not tappable.
   Widget filters({List<ReopenWorkOrderData>? data}) {
+    final bool hasRows = data != null && data.isNotEmpty;
+    final Color exportIconColor =
+        hasRows ? _filterHintColor : Colors.grey.shade400;
     return Column(
       children: [
         const SizedBox(height: 12),
@@ -529,13 +613,14 @@ class _ReopenWorkorderState extends State<ReopenWorkorder>
                   border: Border.all(color: _filterBorderColor, width: 1),
                 ),
                 child: PopupMenuButton<String>(
+                  enabled: hasRows,
                   onSelected: (value) async {
                     if (value == 'PDF' && data != null) {
                       _exportToPDF(context);
                     } else if (value == 'XLSX' && data != null) {
                       _exportToExcel(context);
                     } else if (value == 'CSV' && data != null) {
-                      _shareReport(context);
+                      _exportToCsv(context);
                     }
                   },
                   itemBuilder: (BuildContext context) =>
@@ -554,10 +639,10 @@ class _ReopenWorkorderState extends State<ReopenWorkorder>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.download_outlined,
-                            color: _filterHintColor, size: 22),
+                            color: exportIconColor, size: 22),
                         const SizedBox(width: 8),
                         Icon(Icons.keyboard_arrow_down,
-                            color: _filterHintColor, size: 20),
+                            color: exportIconColor, size: 20),
                       ],
                     ),
                   ),
@@ -900,43 +985,21 @@ class _ReopenWorkorderState extends State<ReopenWorkorder>
     }
   }
 
-  void _shareReport(BuildContext context) async {
+  // Like web's CSV (ReopenWorkOrderReport.jsx generateCSV): the rows on
+  // screen, web's columns and file name.
+  void _exportToCsv(BuildContext context) async {
     try {
       setState(() {
         isDataLoading = true;
       });
 
       final dateProvider = Provider.of<DateProvider>(context, listen: false);
-      String fmt(String? d) {
-        if (d == null || d.isEmpty) return 'N/A';
-        final f = dateProvider.formatCurrentDate(d);
-        return f.isEmpty ? 'N/A' : f;
-      }
+      final csv = buildReopenWorkOrdersCsv(
+          filteredData, (d) => dateProvider.formatCurrentDate(d));
 
       final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/reopen_work_orders_report.txt');
-
-      String reportContent = 'REOPEN WORK ORDERS REPORT\n';
-      reportContent +=
-          'Generated on: ${dateProvider.formatCurrentDate(DateFormat('yyyy-MM-dd').format(DateTime.now()))}\n\n';
-
-      for (var order in filteredData) {
-        reportContent += 'Ticket: ${order.ticketNumber}\n';
-        reportContent += 'Subject: ${order.workSubject}\n';
-        reportContent += 'Category: ${order.workCategory}\n';
-        reportContent += 'Priority: ${order.priority}\n';
-        reportContent += 'Status: ${order.status}\n';
-        reportContent += 'Address: ${order.rentalAddress}\n';
-        reportContent += 'Staff: ${order.staffmemberName}\n';
-        reportContent += 'Due Date: ${fmt(order.date)}\n';
-        reportContent += 'Reopen Date: ${fmt(order.reopenDate)}\n';
-        reportContent += 'Created Date: ${fmt(order.createdAt)}\n';
-        reportContent += 'Work Performed: ${order.workPerformed}\n';
-        reportContent += 'Vendor Notes: ${order.vendorNotes}\n';
-        reportContent += '---\n\n';
-      }
-
-      await file.writeAsString(reportContent);
+      final file = File('${directory.path}/Reopen_Work_Order_Report.csv');
+      await file.writeAsString(csv, flush: true);
       await Share.shareXFiles([XFile(file.path)],
           text: 'Reopen Work Orders Report');
 
@@ -987,41 +1050,15 @@ class _ReopenWorkorderState extends State<ReopenWorkorder>
                             ],
                             ),
                           )
-                        else if (errorMessage != null)
-                          Center(
-                            child: Column(
-                              children: [
-                                SizedBox(height: 50),
-                                Image.asset(
-                                  "assets/images/no_data.jpg",
-                                  height: 200,
-                                  width: 200,
-                                ),
-                                SizedBox(
-                                  height: 16,
-                                ),
-                                Text("No Work Orders on Hold Found",
-                                    style: TextStyle(color: blueColor,fontSize: 16,fontWeight: FontWeight.bold)),
-                             
-                              ],
-                            ),
-                          )
-                        else if (reopenWorkOrders.isEmpty)
-                          Center(
-                            child: Column(
-                              children: [
-                                SizedBox(height: 50),
-                              Image.asset(
-                                  "assets/images/no_data.jpg",
-                                  height: 200,
-                                  width: 200,
-                                ),
-                                SizedBox(height: 16),
-                                Text('No reopen work orders found',style: TextStyle(color: blueColor,fontSize: 16,fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          )
-                        else
+                        // Nothing on hold comes back as a non-200 reply,
+                        // so both branches show the standard empty state.
+                        else if (errorMessage != null) ...[
+                          _emptyFilters(),
+                          _noDataView(),
+                        ] else if (reopenWorkOrders.isEmpty) ...[
+                          _emptyFilters(),
+                          _noDataView(),
+                        ] else
                           Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16.0, vertical: 5),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -466,26 +467,22 @@ class _OutstandingLeaseBalanceState extends State<OutstandingLeaseBalance>
     );
   }
 
+  // The standard empty state used across reports.
   Widget _buildNoDataWidget() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'No Outstanding Lease Balance Data',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-            ),
+          Image.asset(
+            "assets/images/no_data_transparent.png",
+            height: 200,
+            width: 200,
           ),
           SizedBox(height: 10),
           Text(
-            'There are no outstanding lease balances to display',
+            "No Data Available",
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+                fontWeight: FontWeight.bold, color: blueColor, fontSize: 16),
           ),
         ],
       ),
@@ -493,6 +490,9 @@ class _OutstandingLeaseBalanceState extends State<OutstandingLeaseBalance>
   }
 
   Widget _buildFiltersSection() {
+    // Export is greyed out and not tappable until a run has returned rows.
+    final bool hasExportData = errorMessage == null &&
+        (outstandingLeaseBalanceModel?.data?.isNotEmpty ?? false);
     return Row(
       children: [
         // Status Filter
@@ -640,6 +640,7 @@ class _OutstandingLeaseBalanceState extends State<OutstandingLeaseBalance>
             border: Border.all(color: Color(0xFF8A95A8)),
           ),
           child: PopupMenuButton<String>(
+            enabled: hasExportData,
             offset: Offset(0, 50),
             onSelected: (value) async {
               // Show loading indicator
@@ -696,7 +697,9 @@ class _OutstandingLeaseBalanceState extends State<OutstandingLeaseBalance>
             ],
             child: Center(
               child:
-                  FaIcon(FontAwesomeIcons.download, color: blueColor, size: 20),
+                  FaIcon(FontAwesomeIcons.download,
+                      color: hasExportData ? blueColor : Colors.grey.shade400,
+                      size: 20),
             ),
           ),
         ),
@@ -2054,17 +2057,17 @@ class _OutstandingLeaseBalanceState extends State<OutstandingLeaseBalance>
       ];
 
       final StringBuffer csvBuffer = StringBuffer();
-      csvBuffer.writeln(headers.join(','));
+      csvBuffer.writeln(csvRow(headers));
 
       double grandTotal = 0.0;
 
       for (var item in data) {
         final String sanitizedAddress =
-            (item.propertyAddress ?? 'N/A').replaceAll(',', ' ');
+            (item.propertyAddress ?? 'N/A');
         final String sanitizedTenants =
-            (item.tenantNames ?? 'N/A').replaceAll(',', ' ');
+            (item.tenantNames ?? 'N/A');
 
-        csvBuffer.writeln([
+        csvBuffer.writeln(csvRow([
           sanitizedAddress,
           sanitizedTenants,
           NumberFormat('#,##0.00').format(item.balance030 ?? 0),
@@ -2072,12 +2075,12 @@ class _OutstandingLeaseBalanceState extends State<OutstandingLeaseBalance>
           NumberFormat('#,##0.00').format(item.balance6190 ?? 0),
           NumberFormat('#,##0.00').format(item.balance90Plus ?? 0),
           NumberFormat('#,##0.00').format(item.outstandingBalance ?? 0),
-        ].join(','));
+        ]));
 
         grandTotal += item.outstandingBalance ?? 0.0;
       }
 
-      csvBuffer.writeln([
+      csvBuffer.writeln(csvRow([
         'Grand Total',
         '',
         '',
@@ -2085,7 +2088,7 @@ class _OutstandingLeaseBalanceState extends State<OutstandingLeaseBalance>
         '',
         '',
         NumberFormat('#,##0.00').format(grandTotal),
-      ].join(','));
+      ]));
 
       final DateTime now = DateTime.now();
       final String formattedDate = DateFormat('yyyyMMddHHmmss').format(now);

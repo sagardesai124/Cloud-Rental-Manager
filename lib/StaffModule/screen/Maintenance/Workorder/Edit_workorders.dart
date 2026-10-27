@@ -6766,7 +6766,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                   Row(
                                     children: [
                                       const Text(
-                                        "Billable To Tenants",
+                                        "Billable To Tenant",
                                         style: TextStyle(color: Colors.grey),
                                       ),
                                       const SizedBox(
@@ -7035,7 +7035,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                   ),
                                   /* Row(
                                 children: [
-                                  Text("Billable To Tenants",style: TextStyle(
+                                  Text("Billable To Tenant",style: TextStyle(
                                       color: Colors.grey
                                   ),),
                                   SizedBox(width: 10,),

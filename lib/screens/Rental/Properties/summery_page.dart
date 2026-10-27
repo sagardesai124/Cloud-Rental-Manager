@@ -58,6 +58,8 @@ import 'applience/Applience_parts.dart';
 import 'infrastracture.dart';
 import 'moveout/Moveout_properties.dart';
 import 'moveout/repository.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/moveout_form_ui.dart'
+    show confirmMoveIn;
 import '../../Leasing/RentalRoll/NewAddLease.dart';
 import '../../Maintenance/Workorder/Add_workorder.dart';
 import '../../../widgets/clearable_date_picker.dart';
@@ -6698,6 +6700,11 @@ class _Summery_pageState extends State<Summery_page>
                   String? id = prefs.getString("adminId");
                   if (_moveInBusy) return;
                   _moveInBusy = true;
+                  // Web asks first; Cancel leaves the tenant as is.
+                  if (!await confirmMoveIn(context)) {
+                    _moveInBusy = false;
+                    return;
+                  }
                   LeaseMoveoutRepository()
                       .addMoveInTenant(
                     adminId: id!,
@@ -6711,8 +6718,7 @@ class _Summery_pageState extends State<Summery_page>
                       isLoading = false;
                       isMovedOut = true;
                     });
-
-                    Navigator.pop(context, true);
+                    // Stays on this screen and refreshes, like web.
                   }).catchError((e) {
                     setState(() {
                       isLoading = false;

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+
+import 'lease_end_decision.dart' show leaseEndNormDate;
 
 /// Shared look of the Move Out Tenants form (lease and property move-out,
 /// Admin and Staff, full screen and popup). Visual only — every screen keeps
@@ -386,6 +389,103 @@ DateTime moveoutPickerInitialDate(String shown) {
   return picked;
 }
 
+/// The days a move-out date field's calendar offers, and the day it opens on.
+class MoveoutPickerRange {
+  final DateTime first;
+  final DateTime last;
+  final DateTime initial;
+  const MoveoutPickerRange(this.first, this.last, this.initial);
+}
+
+/// Web's lease move-out calendars (LeaseTenantsTab / RentRollDetail): Notice
+/// Given Date from lease start to lease end, Move-Out Date from the notice
+/// date (else lease start) to lease end. A missing or unreadable bound stays
+/// open; the calendar opens on the shown date, kept inside the range.
+MoveoutPickerRange moveoutPickerRange(String shown,
+    {String? minDate, String? maxDate}) {
+  DateTime? day(String? d) {
+    final parsed = DateTime.tryParse(leaseEndNormDate(d));
+    return parsed == null ? null : DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
+  final last = day(maxDate) ?? DateTime(2101);
+  var first = day(minDate) ?? DateTime(2000);
+  if (first.isAfter(last)) first = last;
+  final opened = moveoutPickerInitialDate(shown);
+  var initial = DateTime(opened.year, opened.month, opened.day);
+  if (initial.isBefore(first)) initial = first;
+  if (initial.isAfter(last)) initial = last;
+  return MoveoutPickerRange(first, last, initial);
+}
+
+/// Earliest Move-Out Date on web: the tenant's notice date, else lease start.
+/// [noticeShown] is the Notice Given Date field's text.
+String? moveoutMinMoveOutDate(String noticeShown, String? leaseStartDate) {
+  final notice = noticeShown.trim().isEmpty ? '' : reverseFormatDate(noticeShown);
+  return notice.isNotEmpty ? notice : leaseStartDate;
+}
+
+bool _hasUnit(String u) =>
+    u.isNotEmpty && u != '-' && u != 'null' && u != 'undefined';
+
+/// Address / Unit on the lease move-out, like web makeRentalAddress
+/// (plugins/helpers.jsx): "address - unit" when the lease has a unit, the
+/// address alone when it has none, and the unit as is when it already holds
+/// the address.
+String moveoutAddressLine(String? address, String? unit) {
+  final a = (address ?? '').trim();
+  if (a.isEmpty || a == 'null') return '';
+  final u = (unit ?? '').trim();
+  if (!_hasUnit(u)) return a;
+  if (u.contains(a)) return u;
+  return '$a - $u';
+}
+
+/// Address / Unit on the property move-out, like web PropDetails: the street
+/// line, then "- unit" when the tenant's lease has one.
+String moveoutPropertyAddressLine(String? address, String? unit) {
+  final street = moveoutStreetLine(address);
+  final u = (unit ?? '').trim();
+  return _hasUnit(u) ? '$street - $u' : street;
+}
+
+/// The street line like web getStreetLine (utils/propertyAddress.js). Older
+/// properties stored Google's whole address ("562 E Wheatland Rd,
+/// Duncanville, TX 75137, USA") as the street, so the trailing country,
+/// "TX 75137" region and the city before it are peeled off. Web's property
+/// move-out passes only the stored street (its tenant rows carry no city,
+/// state or ZIP), so only those rules apply here.
+String moveoutStreetLine(String? address) {
+  final raw = (address ?? '').trim();
+  if (!raw.contains(',')) return raw;
+  final segments = raw.split(',').map((s) => s.trim()).toList();
+  while (segments.length > 1 && segments.last.isEmpty) {
+    segments.removeLast();
+  }
+  String norm(String s) =>
+      s.toLowerCase().replaceAll('.', '').replaceAll(RegExp(r'\s+'), ' ').trim();
+  bool popIf(bool Function(String) test) {
+    if (segments.length > 1 && test(segments.last)) {
+      segments.removeLast();
+      return true;
+    }
+    return false;
+  }
+
+  const countries = {'us', 'usa', 'united states', 'united states of america'};
+  final unitMarker = RegExp(
+      r'^(#|apt|apartment|unit|suite|ste|fl|floor|bldg|building|rm|room|lot|po box)\b',
+      caseSensitive: false);
+  popIf((s) => countries.contains(norm(s)));
+  final regionStripped =
+      popIf((s) => RegExp(r'^[A-Za-z]{2}\s+\d{5}(-\d{4})?$').hasMatch(s));
+  popIf((s) =>
+      regionStripped &&
+      !RegExp(r'^\d').hasMatch(s) &&
+      !unitMarker.hasMatch(s));
+  return segments.join(', ');
+}
+
 /// Cancel / Move Out, side by side, as on web. While [busy] (the move-out is
 /// being sent) Move Out shows a spinner and ignores taps.
 class MoveoutActions extends StatelessWidget {
@@ -594,4 +694,46 @@ class MoveoutPickedFileTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Move In confirmation, same as web `handleMoveIn` (LeaseTenantsTab,
+/// RentRollDetail, PropDetails): the tenant is moved in only after Confirm.
+/// Cancel, the close button or a tap outside leaves the tenant as is.
+const moveInConfirmTitle = 'Are you sure?';
+const moveInConfirmText = 'Do you want to Move-in this Tenant?';
+const moveInSuccessMessage = 'Tenant moved in successfully';
+
+Future<bool> confirmMoveIn(BuildContext context) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final confirmed = await Alert(
+    context: context,
+    type: AlertType.warning,
+    title: moveInConfirmTitle,
+    desc: moveInConfirmText,
+    style: AlertStyle(backgroundColor: Colors.white),
+    buttons: [
+      DialogButton(
+        key: const Key('move-in-cancel'),
+        onPressed: () => navigator.pop(false),
+        color: Colors.white,
+        radius: BorderRadius.circular(8),
+        border: Border.all(color: blueColor, width: 1.5),
+        child: Text(
+          'Cancel',
+          style: TextStyle(
+              color: blueColor, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ),
+      DialogButton(
+        key: const Key('move-in-confirm'),
+        onPressed: () => navigator.pop(true),
+        color: blueColor,
+        child: const Text(
+          'Confirm',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+      ),
+    ],
+  ).show();
+  return confirmed == true;
 }

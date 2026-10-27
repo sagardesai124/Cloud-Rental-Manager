@@ -409,21 +409,18 @@ void main() {
     });
 
     testWidgets(
-        '(8) staging build: no box and no leaseEnd, the rest unchanged',
+        '(8) staging build: the box is asked, like staging web',
         (tester) async {
-      debugLeaseEndQuestionEnabled = null; // decide from Api_url (staging)
+      debugLeaseEndQuestionEnabled = null; // default build (staging Api_url)
       addTearDown(() => debugLeaseEndQuestionEnabled = true);
       final server = _Server();
       await _run(server, () async {
         final tenants = [_leaseTenant('T-1', 'Pat')];
         await _open(tester, () => page(tenants), (_) {});
-        expect(find.text(_askText), findsNothing);
+        expect(find.text(_askText), findsOneWidget);
+        // Unanswered: Move Out is blocked, nothing is sent (web rule).
         await _tapMoveOut(tester);
-        expect(server.moveouts, hasLength(1));
-        final data = _multipartData(server.moveouts.single);
-        expect(data.containsKey('leaseEnd'), isFalse);
-        expect((data['moveoutTenants'] as List).single['moveout_date'],
-            '2027-09-30');
+        expect(server.moveouts, isEmpty);
         await _finish(tester);
       });
     });

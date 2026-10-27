@@ -1,4 +1,5 @@
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'dart:io';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
@@ -226,6 +227,7 @@ class _InsurancePremiumReportState extends State<InsurancePremiumReport>
             SizedBox(width: 12),
 
             // Download Button
+            // Greyed out and not tappable until the report has rows.
             Container(
               width: 45,
               height: 45,
@@ -235,6 +237,7 @@ class _InsurancePremiumReportState extends State<InsurancePremiumReport>
                 border: Border.all(color: Color(0xFF8A95A8)),
               ),
               child: PopupMenuButton<String>(
+                enabled: reportData != null && reportData!.rows.isNotEmpty,
                 offset: Offset(0, 45),
                 onSelected: (value) async {
                   if (reportData == null || reportData!.rows.isEmpty) {
@@ -270,7 +273,9 @@ class _InsurancePremiumReportState extends State<InsurancePremiumReport>
                 child: Center(
                   child: Icon(
                     Icons.download,
-                    color: Colors.grey[700],
+                    color: reportData != null && reportData!.rows.isNotEmpty
+                        ? Colors.grey[700]
+                        : Colors.grey.shade400,
                   ),
                 ),
               ),
@@ -504,7 +509,7 @@ class _InsurancePremiumReportState extends State<InsurancePremiumReport>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              "assets/images/no_data.jpg",
+              "assets/images/no_data_transparent.png",
               height: 200,
               width: 200,
             ),
@@ -527,7 +532,7 @@ class _InsurancePremiumReportState extends State<InsurancePremiumReport>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.asset(
-                "assets/images/no_data.jpg",
+                "assets/images/no_data_transparent.png",
                 height: 200,
                 width: 200,
               ),
@@ -908,11 +913,11 @@ class _InsurancePremiumReportState extends State<InsurancePremiumReport>
 
       // Headers
       final headers = ['Property Address', ...reportData!.years];
-      csvBuffer.writeln(headers.join(','));
+      csvBuffer.writeln(csvRow(headers));
 
       // Data rows
       for (var row in reportData!.rows) {
-        final sanitizedAddress = row.address.replaceAll(',', ' ');
+        final sanitizedAddress = row.address;
         final rowData = [sanitizedAddress];
         for (var year in reportData!.years) {
           final value = row.getValueForYear(year);
@@ -924,7 +929,7 @@ class _InsurancePremiumReportState extends State<InsurancePremiumReport>
             rowData.add(value.toString());
           }
         }
-        csvBuffer.writeln(rowData.join(','));
+        csvBuffer.writeln(csvRow(rowData));
       }
 
       final DateTime now = DateTime.now();

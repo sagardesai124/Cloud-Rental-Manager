@@ -4939,6 +4939,11 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                     prefs.getString("adminId");
                                                 if (_moveInBusy) return;
                                                 _moveInBusy = true;
+                                                // Web asks first; Cancel leaves the tenant as is.
+                                                if (!await confirmMoveIn(context)) {
+                                                  _moveInBusy = false;
+                                                  return;
+                                                }
                                                 LeaseMoveoutRepository()
                                                     .addMoveInTenant(
                                                   adminId: id!,
@@ -4955,7 +4960,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                                 widget.leaseId);
                                                     isLoading = false;
                                                   });
-                                                  Navigator.pop(context, true);
+                                                  // Stays on this screen and refreshes, like web.
                                                 }).catchError((e) {
                                                   setState(() {
                                                     isLoading = false;
@@ -5278,6 +5283,11 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                         .getString("adminId");
                                                     if (_moveInBusy) return;
                                                     _moveInBusy = true;
+                                                    // Web asks first; Cancel leaves the tenant as is.
+                                                    if (!await confirmMoveIn(context)) {
+                                                      _moveInBusy = false;
+                                                      return;
+                                                    }
                                                     LeaseMoveoutRepository()
                                                         .addMoveInTenant(
                                                       adminId: id!,
@@ -5295,9 +5305,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                         isLoading = false;
                                                         // isMovedOut = true;
                                                       });
-
-                                                      Navigator.pop(
-                                                          context, true);
+                                                      // Stays on this screen and refreshes, like web.
                                                     }).catchError((e) {
                                                       setState(() {
                                                         isLoading = false;
@@ -5493,7 +5501,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
             const MoveoutInfoBanner(),
             const SizedBox(height: 14),
             MoveoutPropertyDetails(
-              address: '${tenant.rentalAddress}',
+              address: moveoutAddressLine(tenant.rentalAddress, tenant.rentalUnit),
               leaseType: '${tenant.leaseType}',
               startEnd:
                   '${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.startDate)} to ${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.endDate)}',
@@ -5514,10 +5522,18 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                     noticeField: buildDateField(
                       startDateControllers[tenant.tenantId]!,
                       enabled: tenant.isSelected!,
+                      // Web: lease start to lease end.
+                      minDate: () => leaseTenant.startDate,
+                      maxDate: leaseTenant.endDate,
                     ),
                     moveOutField: buildDateField(
                       moveoutDateControllers[tenant.tenantId]!,
                       enabled: tenant.isSelected!,
+                      // Web: notice date (else lease start) to lease end.
+                      minDate: () => moveoutMinMoveOutDate(
+                          startDateControllers[tenant.tenantId]!.text,
+                          leaseTenant.startDate),
+                      maxDate: leaseTenant.endDate,
                       // The lease-end question uses this date.
                       onPicked: () => setState(() {}),
                     ),
@@ -5645,7 +5661,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
   }
 
   Widget buildDateField(TextEditingController controller,
-      {bool enabled = false, VoidCallback? onPicked}) {
+      {bool enabled = false,
+      VoidCallback? onPicked,
+      String? Function()? minDate,
+      String? maxDate}) {
     return Padding(
       padding: EdgeInsets.zero,
       child: Container(
@@ -5664,11 +5683,14 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                   icon: const Icon(Icons.calendar_today_outlined,
                       size: 20, color: MoveoutColors.muted),
                   onPressed: () async {
+                    // Web's lease move-out limits (see moveoutPickerRange).
+                    final range = moveoutPickerRange(controller.text,
+                        minDate: minDate?.call(), maxDate: maxDate);
                     DateTime? pickedDate = await showDatePicker(
                       context: context,
-                      initialDate: moveoutPickerInitialDate(controller.text),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
+                      initialDate: range.initial,
+                      firstDate: range.first,
+                      lastDate: range.last,
                       builder: (BuildContext context, Widget? child) {
                         return Theme(
                           data: ThemeData.light().copyWith(

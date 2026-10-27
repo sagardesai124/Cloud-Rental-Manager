@@ -6675,7 +6675,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                             Row(
                               children: [
                                 const Text(
-                                  "Billable To Tenants",
+                                  "Billable To Tenant",
                                   style: TextStyle(color: Colors.grey),
                                 ),
                                 const SizedBox(

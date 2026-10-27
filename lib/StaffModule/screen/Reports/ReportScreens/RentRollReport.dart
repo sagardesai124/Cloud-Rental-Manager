@@ -2336,6 +2336,7 @@ class _RentersInsurancesState extends State<RentersInsurances>
                                   //const SizedBox(width: 8),
 
                                   // Download Button with Dropdown
+                                  // No rentals in this branch: Export stays in place, greyed and disabled.
                                   Container(
                                     height: 45,
                                     width: 75,
@@ -2346,19 +2347,22 @@ class _RentersInsurancesState extends State<RentersInsurances>
                                       color: Colors.white,
                                     ),
                                     child: PopupMenuButton<String>(
+                                      enabled: false,
                                       offset: const Offset(5, 50),
                                       onSelected: handleDownload,
-                                      icon: const Row(
+                                      icon: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          FaIcon(FontAwesomeIcons
-                                              .download), // Your download icon
-                                          SizedBox(
+                                          FaIcon(FontAwesomeIcons.download,
+                                              color: Colors.grey
+                                                  .shade400), // Your download icon
+                                          const SizedBox(
                                               width:
                                                   5), // Adds spacing between the icons
-                                          Icon(Icons
-                                              .arrow_drop_down), // The dropdown arrow icon
+                                          Icon(Icons.arrow_drop_down,
+                                              color: Colors.grey
+                                                  .shade400), // The dropdown arrow icon
                                         ],
                                       ),
                                       tooltip: "Download",
@@ -2388,7 +2392,7 @@ class _RentersInsurancesState extends State<RentersInsurances>
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Image.asset(
-                                      "assets/images/no_data.jpg",
+                                      "assets/images/no_data_transparent.png",
                                       height: 200,
                                       width: 200,
                                     ),
@@ -2475,20 +2479,28 @@ class _RentersInsurancesState extends State<RentersInsurances>
                                       borderRadius: BorderRadius.circular(0),
                                       color: Colors.white,
                                     ),
+                                    // No rows shown (rentals without active leases): Export stays in place, greyed and disabled.
                                     child: PopupMenuButton<String>(
+                                      enabled: data.isNotEmpty,
                                       offset: const Offset(5, 50),
                                       onSelected: handleDownload,
-                                      icon: const Row(
+                                      icon: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          FaIcon(FontAwesomeIcons
-                                              .download), // Your download icon
-                                          SizedBox(
+                                          FaIcon(FontAwesomeIcons.download,
+                                              color: data.isNotEmpty
+                                                  ? null
+                                                  : Colors.grey
+                                                      .shade400), // Your download icon
+                                          const SizedBox(
                                               width:
                                                   5), // Adds spacing between the icons
-                                          Icon(Icons
-                                              .arrow_drop_down), // The dropdown arrow icon
+                                          Icon(Icons.arrow_drop_down,
+                                              color: data.isNotEmpty
+                                                  ? null
+                                                  : Colors.grey
+                                                      .shade400), // The dropdown arrow icon
                                         ],
                                       ),
                                       tooltip: "Download",
@@ -2649,7 +2661,7 @@ class _RentersInsurancesState extends State<RentersInsurances>
                   //                 mainAxisAlignment: MainAxisAlignment.center,
                   //                 crossAxisAlignment: CrossAxisAlignment.center,
                   //                 children: [
-                  //                   Image.asset("assets/images/no_data.jpg",height: 200,width: 200,),
+                  //                   Image.asset("assets/images/no_data_transparent.png",height: 200,width: 200,),
                   //                   SizedBox(height: 10,),
                   //                   Text("No Data Available",style: TextStyle(fontWeight: FontWeight.bold,color:blueColor,fontSize: 16),)
                   //                 ],

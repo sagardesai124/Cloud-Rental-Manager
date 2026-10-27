@@ -59,6 +59,37 @@ import 'package:flutter/services.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
 
+/// Reply-To address check, as on web (Settings.jsx validateReplyToEmail):
+/// empty is allowed; anything typed must look like name@domain.tld.
+bool isValidReplyToEmail(String email) {
+  final value = email.trim();
+  if (value.isEmpty) return true;
+  return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+      .hasMatch(value);
+}
+
+/// Web's message for an invalid Reply-To address.
+const String kInvalidReplyToEmailMessage =
+    'Please enter a valid email address.';
+
+/// Custom date format check, as on web (Settings.jsx isValidDateFormat, the
+/// same rule the server applies): needs Y, M and D, only / - or space between
+/// them, and at most 32 characters.
+bool isValidCustomDateFormat(String format) {
+  if (format.isEmpty || format.length > 32) return false;
+  if (!format.contains('Y') || !format.contains('M') || !format.contains('D')) {
+    return false;
+  }
+  return RegExp(r'^[/\- ]*$').hasMatch(format.replaceAll(RegExp('[YMD]'), ''));
+}
+
+/// Web's starting Custom format (Settings.jsx customInputValue).
+const String kDefaultCustomDateFormat = 'DD/MMM/YYYY';
+
+/// Web's message for an invalid custom date format.
+const String kInvalidCustomDateFormatMessage =
+    'Invalid date format. Must include year (Y), month (M), and day (D) tokens with only / - or space separators.';
+
 // `kUsStateNames` now lives in constant/constant.dart (imported above) so the
 // Profile screen's State dropdown shares the exact same 50-entry web list.
 
@@ -137,6 +168,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   int _originalSelectedRadio = 0;
   // Original values for Mail Service change tracking
   String _originalReplyToEmail = "";
+  String? _replyToEmailError;
   String _originalDurationMail = "";
   bool _originalRentDueReminderEmail = false;
   bool isLoadingAccounts = false;
@@ -440,6 +472,11 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
 
   @override
   void dispose() {
+    // An unsaved Date & Time choice must not stay applied in the app.
+    final dp = _dateFormatProvider;
+    if (dp != null && _dateTimeFormatChanged(dp)) {
+      dp.loadDateFormat();
+    }
     _connectivitySub?.cancel();
     accountname.dispose();
     note.dispose();
@@ -2329,6 +2366,11 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
 
   int dateformateselect = 0;
   int timeformateselect = 0;
+  // Date & Time Format, like web: choices stay on screen until Save; Save and
+  // Reset are greyed out until something differs from what is saved.
+  String _savedDateFormat = '';
+  String _savedTimeFormat = '';
+  DateProvider? _dateFormatProvider;
   int? expandedIndex;
   Set<int> expandedIndices = {};
   String? dateformate1;
@@ -3371,6 +3413,12 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   }
 
   void _onSettingsTabChanged(String value) {
+    // Leaving Date Format with an unsaved choice: go back to what is saved.
+    final dp = _dateFormatProvider;
+    if (isdateformate && value != 'Date Format' && dp != null &&
+        _dateTimeFormatChanged(dp)) {
+      dp.loadDateFormat();
+    }
     setState(() {
       issurge = value == 'Surcharges';
       iscompanyprofile = value == 'Company Profile';
@@ -3391,6 +3439,11 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         final dateProvider = Provider.of<DateProvider>(context, listen: false);
         dateformateselect = dateProvider.dateformateselect;
         timeformateselect = dateProvider.timeformateselect;
+        _dateFormatProvider = dateProvider;
+        _savedDateFormat = dateProvider.dateFormat;
+        _savedTimeFormat = dateProvider.timeFormat;
+        customdate = null;
+        _loadSavedDateTimeFormat();
         DateTime now = DateTime.now();
         dateformate1 = DateFormat('MM/dd/yyyy').format(now);
         dateformate2 = DateFormat('yyyy-MM-dd').format(now);
@@ -4102,8 +4155,81 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   }
 
   // ===================== Date & Time Settings (redesigned) =====================
+  /// The date format the screen would save right now.
+  String _pendingDateFormat(DateProvider dp) {
+    switch (dateformateselect) {
+      case 0:
+        return 'MM/dd/yyyy';
+      case 1:
+        return 'yyyy-MM-dd';
+      case 2:
+        return 'yyyy-MMM-dd';
+      default:
+        final custom = (customdate ?? '').trim();
+        return custom.isEmpty ? dp.dateFormat : fixDateFormat(custom);
+    }
+  }
+
+  /// The time format the screen would save right now.
+  String get _pendingTimeFormat => timeformateselect == 1 ? '12' : '24';
+
+  /// Like web's hasDateFormatChanged(): true once the date or time choice
+  /// differs from what is saved.
+  bool _dateTimeFormatChanged(DateProvider dp) =>
+      _pendingDateFormat(dp) != _savedDateFormat ||
+      _pendingTimeFormat != _savedTimeFormat;
+
+  /// "HOW IT APPEARS", like web: while Custom is picked it follows what is
+  /// typed, and shows "—" for a format web would reject.
+  String _dateTimePreview(DateProvider dp) {
+    if (dateformateselect != 3) return dp.getFormattedDateTimePreview();
+    final custom = _typedCustomFormat;
+    if (custom.isEmpty) return dp.getFormattedDateTimePreview();
+    if (_customFormatInvalid) return '—';
+    return dp.getFormattedDateTimePreview(dateFormat: fixDateFormat(custom));
+  }
+
+  String get _typedCustomFormat => (customdate ?? '').trim().toUpperCase();
+
+  /// Custom card's sample date, like web: the typed format when it is valid,
+  /// otherwise DD/MMM/YYYY.
+  String _customCardPreview() {
+    final custom = _typedCustomFormat;
+    final format = custom.isNotEmpty && isValidCustomDateFormat(custom)
+        ? custom
+        : kDefaultCustomDateFormat;
+    return DateFormat(fixDateFormat(format)).format(DateTime.now());
+  }
+
+  /// Like web's customIsInvalid: Custom is picked and what is typed would be
+  /// rejected (red message, Save greyed out).
+  bool get _customFormatInvalid =>
+      dateformateselect == 3 &&
+      _typedCustomFormat.isNotEmpty &&
+      !isValidCustomDateFormat(_typedCustomFormat);
+
+  /// Load the saved formats from the server and show them, so the screen
+  /// starts from what is actually saved (web loads them the same way).
+  Future<void> _loadSavedDateTimeFormat() async {
+    final dp = _dateFormatProvider;
+    if (dp == null) return;
+    await dp.loadDateFormat();
+    if (!mounted) return;
+    setState(() {
+      _savedDateFormat = dp.dateFormat;
+      _savedTimeFormat = dp.timeFormat;
+      dateformateselect = dp.dateformateselect;
+      timeformateselect = dp.timeformateselect;
+      customdate = null;
+    });
+  }
+
   Widget _buildDateTimeSettings() {
     final dateProvider = Provider.of<DateProvider>(context);
+    // Save / Reset are greyed out until something changes, like web.
+    final bool dtChanged = _dateTimeFormatChanged(dateProvider);
+    final bool canSave = dtChanged && !_customFormatInvalid;
+    const Color dtDisabled = Color(0xFFB8BEC8);
     final bool isNarrow = MediaQuery.of(context).size.width < 500;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4145,9 +4271,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         _dtDateCard(
           dateProvider: dateProvider,
           value: 3,
-          label: "Custom",
+          label: "Custom ($kDefaultCustomDateFormat)",
           format: null,
-          preview: null,
+          preview: _customCardPreview(),
         ),
         if (dateformateselect == 3) ...[
           const SizedBox(height: 12),
@@ -4155,6 +4281,16 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             initialValue: customdate != null && customdate!.isNotEmpty
                 ? customdate
                 : dateProvider.dateFormat.toUpperCase(),
+            // Like web's handleCustomDateChange: only letters, / and -, in
+            // capitals, so the format is sent exactly as web sends it. No
+            // autocorrect, so the phone keyboard can't change it ("dd" → "did").
+            autocorrect: false,
+            enableSuggestions: false,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z/\-]')),
+              TextInputFormatter.withFunction((oldValue, newValue) =>
+                  newValue.copyWith(text: newValue.text.toUpperCase())),
+            ],
             onChanged: (value) {
               setState(() {
                 customdate = value;
@@ -4162,6 +4298,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             },
             decoration: InputDecoration(
               labelText: 'Custom format (e.g. DD-MM-YYYY)',
+              errorText:
+                  _customFormatInvalid ? kInvalidCustomDateFormatMessage : null,
+              errorMaxLines: 3,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               border: OutlineInputBorder(
@@ -4221,17 +4360,22 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () async {
+                // Like web: greyed out until something changes; resets to
+                // YYYY-MM-DD and 24-hour and saves them.
+                onTap: !dtChanged ? null : () async {
                   final dp = Provider.of<DateProvider>(context, listen: false);
-                  await dp.loadDateFormat();
+                  dp.updateTimeFormatLocally('24', 0);
+                  dp.updateDateFormat('yyyy-MM-dd', 1);
                   setState(() {
-                    dateformateselect = dp.dateformateselect;
-                    timeformateselect = dp.timeformateselect;
+                    dateformateselect = 1;
+                    timeformateselect = 0;
                     customdate = null;
                     _customDateController.text = "";
+                    _savedDateFormat = 'yyyy-MM-dd';
+                    _savedTimeFormat = '24';
                   });
                   Fluttertoast.showToast(
-                    msg: "Reset to saved settings",
+                    msg: "Date and time format reset",
                     toastLength: Toast.LENGTH_SHORT,
                     gravity: ToastGravity.BOTTOM,
                     backgroundColor: Colors.black87,
@@ -4244,13 +4388,14 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: blueColor, width: 1.5),
+                    border: Border.all(
+                        color: dtChanged ? blueColor : dtDisabled, width: 1.5),
                   ),
                   child: Center(
                     child: Text(
                       "Reset",
                       style: TextStyle(
-                        color: blueColor,
+                        color: dtChanged ? blueColor : dtDisabled,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -4262,7 +4407,11 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             const SizedBox(width: 14),
             Expanded(
               child: GestureDetector(
-                onTap: () async {
+                // Like web: greyed out until the date or time choice changes,
+                // and while the custom format is invalid.
+                onTap: !canSave ? null : () async {
+                  final savedDate = _pendingDateFormat(dateProvider);
+                  final savedTime = _pendingTimeFormat;
                   customdate = customdate != null && customdate!.isNotEmpty
                       ? customdate
                       : dateProvider.dateFormat;
@@ -4282,8 +4431,12 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                     String fixedDate = fixDateFormat(customdate!);
                     context.read<DateProvider>().updateDateFormat(fixedDate, 3);
                   }
+                  setState(() {
+                    _savedDateFormat = savedDate;
+                    _savedTimeFormat = savedTime;
+                  });
                   Fluttertoast.showToast(
-                    msg: "Date format updated successfully",
+                    msg: "Date and time format updated",
                     toastLength: Toast.LENGTH_SHORT,
                     gravity: ToastGravity.BOTTOM,
                     backgroundColor: Colors.black87,
@@ -4294,19 +4447,21 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 child: Container(
                   height: 54,
                   decoration: BoxDecoration(
-                    color: blueColor,
+                    color: canSave ? blueColor : const Color(0xFFE3E6EA),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.check, color: Colors.white, size: 20),
-                        SizedBox(width: 8),
+                        Icon(Icons.check,
+                            color: canSave ? Colors.white : dtDisabled,
+                            size: 20),
+                        const SizedBox(width: 8),
                         Text(
                           "Save Changes",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: canSave ? Colors.white : dtDisabled,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
@@ -4386,8 +4541,12 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
           if (format != null) {
             dateProvider.updateDateFormatLocally(format, value);
           } else {
-            customdate = "";
-            _customDateController.text = "";
+            // Like web: Custom starts from DD/MMM/YYYY, or keeps what was
+            // typed earlier.
+            if ((customdate ?? '').trim().isEmpty) {
+              customdate = kDefaultCustomDateFormat;
+            }
+            _customDateController.text = customdate!;
           }
           dateformateselect = value;
         });
@@ -4436,7 +4595,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     return GestureDetector(
       onTap: () {
         setState(() {
-          dateProvider.updateTimeFormat(format, value);
+          // Like web: picking a time format only changes the screen; it is
+          // saved with Save Changes.
+          dateProvider.updateTimeFormatLocally(format, value);
           timeformateselect = value;
         });
       },
@@ -4534,7 +4695,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  dateProvider.getFormattedDateTimePreview(),
+                  _dateTimePreview(dateProvider),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -4967,6 +5128,11 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
 
   void _backToSettingsMenu() {
     FocusScope.of(context).unfocus();
+    // Back from Date Format with an unsaved choice: go back to what is saved.
+    final dp = _dateFormatProvider;
+    if (isdateformate && dp != null && _dateTimeFormatChanged(dp)) {
+      dp.loadDateFormat();
+    }
     setState(() {
       _showSettingsMenu = true;
     });
@@ -8351,6 +8517,14 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 controller: replyToEmail,
                 hint: "Enter email",
               ),
+              if (_replyToEmailError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    _replyToEmailError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
               const SizedBox(height: 8),
               Text(
                 "Tenant replies to automated emails will go to this address.",
@@ -8408,6 +8582,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 onTap: () {
                   setState(() {
                     replyToEmail.text = _originalReplyToEmail;
+                    _replyToEmailError = null;
                     durationmail.text = _originalDurationMail;
                     rentDueReminderEmail = _originalRentDueReminderEmail;
                   });
@@ -8436,6 +8611,15 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             Expanded(
               child: GestureDetector(
                 onTap: () async {
+                  // Like web: an invalid Reply-To address blocks the save.
+                  if (!isValidReplyToEmail(replyToEmail.text)) {
+                    setState(() =>
+                        _replyToEmailError = kInvalidReplyToEmailMessage);
+                    return;
+                  }
+                  if (_replyToEmailError != null) {
+                    setState(() => _replyToEmailError = null);
+                  }
                   if (mailupdate)
                     await updateMail();
                   else

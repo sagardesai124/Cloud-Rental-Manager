@@ -48,6 +48,9 @@ class BidRequest {
   String? createdByName;
   List<String>? selectedVendorIds;
   String? createdAt;
+  // The real moment the bid room was created (the vendor list sends it as
+  // createdAt_iso; createdAt there is the server's zone-less clock time).
+  String? createdAtIso;
   String? updatedAt;
   bool? isDelete;
   int? v;
@@ -71,6 +74,7 @@ class BidRequest {
     this.createdByName,
     this.selectedVendorIds,
     this.createdAt,
+    this.createdAtIso,
     this.updatedAt,
     this.isDelete,
     this.v,
@@ -100,6 +104,7 @@ class BidRequest {
           ? List<String>.from(json['selected_vendor_ids'])
           : null,
       createdAt: json['createdAt'],
+      createdAtIso: json['createdAt_iso']?.toString(),
       updatedAt: json['updatedAt'],
       isDelete: json['is_delete'],
       v: json['__v'],

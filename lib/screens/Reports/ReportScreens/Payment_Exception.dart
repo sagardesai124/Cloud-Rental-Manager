@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'dart:developer';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -1009,7 +1010,7 @@ class _PaymentExceptionReportsState extends State<PaymentExceptionReports>
 
     // Add headers to the CSV file
     for (final row in rows) {
-      csvBuffer.writeln(row.join(','));
+      csvBuffer.writeln(csvRow(row));
     }
 
     // Convert buffer to list of bytes for CSV file
@@ -1319,7 +1320,7 @@ class _PaymentExceptionReportsState extends State<PaymentExceptionReports>
                                               CrossAxisAlignment.center,
                                           children: [
                                             Image.asset(
-                                              "assets/images/no_data.jpg",
+                                              "assets/images/no_data_transparent.png",
                                               height: 200,
                                               width: 200,
                                             ),
@@ -2718,6 +2719,9 @@ class _PaymentExceptionReportsState extends State<PaymentExceptionReports>
   String convertDateFormat(String date) => reverseFormatDate(date);
 
   filters({List<Data>? data}) {
+    // Export is greyed out and not tappable while the (searched) report
+    // has no rows.
+    final bool hasExportData = data?.isNotEmpty ?? false;
     return Padding(
       padding: EdgeInsets.only(
           left: MediaQuery.of(context).size.width > 500 ? 12 : 0,
@@ -3236,9 +3240,12 @@ class _PaymentExceptionReportsState extends State<PaymentExceptionReports>
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: blueColor,
+                        disabledBackgroundColor: Colors.grey.shade400,
+                        disabledForegroundColor: Colors.white,
                       ),
-                      onPressed: () {},
+                      onPressed: hasExportData ? () {} : null,
                       child: PopupMenuButton<String>(
+                        enabled: hasExportData,
                         onSelected: (value) async {
                           final dateProvider =
                               Provider.of<DateProvider>(context, listen: false);

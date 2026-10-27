@@ -2090,7 +2090,7 @@ class _BidRoomTableState extends State<BidRoomTable>
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         child: Text(
-          'No submissions available',
+          'No submissions yet', // web BidRequests.jsx
           style: TextStyle(
             color: Colors.grey[600],
             fontSize: 14,

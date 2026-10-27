@@ -151,6 +151,9 @@ void main() {
             ));
             await _settle(tester, 30);
 
+            // Export appears only once a Run returns policies, like web.
+            await tester.tap(find.text('Run'));
+            await _settle(tester, 20);
             await tester.tap(find.text('Export'));
             await _settle(tester, 10);
             await tester.tap(find.text(kind).last);

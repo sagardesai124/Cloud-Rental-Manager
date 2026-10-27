@@ -128,14 +128,15 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
   DateTime? _pickedFrom;
   DateTime? _pickedTo;
 
-  /// Local filled date field. Kept local on purpose: the shared
-  /// CustomDateField is used by many other screens, so the grey fill from the
-  /// agreed design is applied here rather than changing that widget. Picker
-  /// behaviour matches it — same theme, same range, same date formatting.
+  /// Local outlined date field, styled like the other reports' From/To
+  /// fields. Kept local on purpose: the shared CustomDateField is used by
+  /// many other screens. Picker behaviour matches it — same theme, same
+  /// range, same date formatting.
   Widget _filledDateField(TextEditingController controller,
       {required bool isFrom}) {
     final bool empty = controller.text.trim().isEmpty;
     return GestureDetector(
+      key: ValueKey(isFrom ? 'expiring-lease-from' : 'expiring-lease-to'),
       onTap: () async {
         final picked = await showDatePicker(
           context: context,
@@ -166,26 +167,18 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
       child: Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F6F8),
-          border: Border.all(color: const Color(0xFFEDEFF2)),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFCED4DA)),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                empty ? 'MM/DD/YYYY' : controller.text,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: empty ? const Color(0xFF8A95A8) : blueColor,
-                ),
-              ),
-            ),
-            const Icon(Icons.calendar_today_outlined,
-                size: 18, color: Color(0xFF8A95A8)),
-          ],
+        child: Text(
+          empty ? (isFrom ? 'From' : 'To') : controller.text,
+          style: TextStyle(
+            fontSize: 14,
+            color: empty ? const Color(0xFF8A95A8) : Colors.black,
+          ),
         ),
       ),
     );
@@ -207,17 +200,6 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
     'Last Year',
     'Custom',
   ];
-
-  /// Small uppercase field label used across the filter card.
-  Widget _filterLabel(String text) => Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF8A95A8),
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.6,
-        ),
-      );
 
   /// Web parity: the Date Range dropdown starts on Custom with both dates
   /// empty, and Run stays disabled until a range is chosen.
@@ -338,7 +320,7 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
         toDate: currentToDate,
       );
 
-      // Track whether the run produced rows so Export can appear only then.
+      // Track whether the run produced rows so Export is enabled only then.
       _futureReport!.then((rows) {
         if (mounted) setState(() => _hasRows = rows.isNotEmpty);
       }).catchError((_) {
@@ -819,6 +801,117 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
   bool ascending1 = false;
   bool ascending2 = false;
   bool ascending3 = false;
+  /// Search box, shown in every state of the report.
+  Widget _buildSearchRow() {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width > 500 ? 15 : 5),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFCED4DA)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(Icons.search, size: 20, color: Color(0xFF8A95A8)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                textAlignVertical: TextAlignVertical.center,
+                style: const TextStyle(fontSize: 14),
+                onChanged: (value) {
+                  setState(() {
+                    searchvalue = value;
+                    currentPage = 0; // reset to first page on search change
+                  });
+                },
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  hintText: "Search here...",
+                  hintStyle: TextStyle(color: Color(0xFF8A95A8), fontSize: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Export, beside Run. Greyed out and not tappable until the report
+  /// has rows.
+  Widget _buildExportButton() {
+    return PopupMenuButton<String>(
+      enabled: _hasRows,
+        onSelected: (value) async {
+        final hasDates = _fromDateController
+                .text.isNotEmpty &&
+            _toDateController
+                .text.isNotEmpty;
+
+        // Export must match what the
+        // report shows. Without a range
+        // nothing has been run, so
+        // exporting every lease would hand
+        // back rows the user never saw.
+        if (!hasDates) {
+          Fluttertoast.showToast(
+            msg:
+                'Choose a date range and tap Run before exporting.',
+            backgroundColor: Colors.red,
+          );
+          return;
+        }
+        final data =
+            await ExpiringLeaseTableService()
+                .fetchExpiringLeases(
+          fromDate:
+              _fromDateController.text,
+          toDate: _toDateController.text,
+        );
+
+        if (value == 'PDF') {
+          await generatePdf(data);
+        } else if (value == 'XLSX') {
+          await generateExcel(data);
+        } else if (value == 'CSV') {
+          await generateCsv(data);
+        }
+      },
+      itemBuilder: (BuildContext context) =>
+          <PopupMenuEntry<String>>[
+        const PopupMenuItem<String>(
+            value: 'PDF',
+            child: Text('PDF')),
+        const PopupMenuItem<String>(
+            value: 'XLSX',
+            child: Text('XLSX')),
+        const PopupMenuItem<String>(
+            value: 'CSV',
+            child: Text('CSV')),
+      ],
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: _hasRows ? blueColor : Colors.grey.shade400,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Export', style: TextStyle(color: Colors.white)),
+            Icon(Icons.arrow_drop_down, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeaders() {
     var width = MediaQuery.of(context).size.width;
     return Padding(
@@ -1142,201 +1235,133 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
                   SizedBox(
                     height: 10,
                   ),
+                  // Filters laid out like the other reports (Expiring
+                  // Renter's Insurance): outlined Date Range and From/To
+                  // fields, then Run beside Export.
                   Padding(
-                    padding: EdgeInsets.only(
-                        left: MediaQuery.of(context).size.width > 500 ? 10 : 0,
-                        right:
-                            MediaQuery.of(context).size.width > 500 ? 10 : 0),
-                    child: Container(
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                            left: 16.0, right: 16.0, bottom: 8),
-                        child: Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(
-                                color: const Color(0xFFEDEFF2)),
-                            borderRadius: BorderRadius.circular(20.0),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                children: [
-                                  // Filter card laid out to the agreed
-                                  // design: DATE RANGE beside Run, then
-                                  // FROM/TO underneath, uppercase labels and
-                                  // filled inputs.
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.end,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            _filterLabel('DATE RANGE'),
-                                            const SizedBox(height: 6),
-                                            Container(
-                                              height: 48,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 14),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFF5F6F8),
-                                                border: Border.all(
-                                                    color: const Color(
-                                                        0xFFEDEFF2)),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
+                    padding: EdgeInsets.fromLTRB(
+                        MediaQuery.of(context).size.width > 500 ? 21 : 11,
+                        4,
+                        MediaQuery.of(context).size.width > 500 ? 21 : 11,
+                        12),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 5.0),
+                            child: Container(
+                              height: 48,
+                              decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: const Color(0xFFCED4DA))),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton2<String>(
+                                  isExpanded: true,
+                                  value: daterange,
+                                  items: _dateRangeOptions
+                                      .map((v) => DropdownMenuItem<String>(
+                                            value: v,
+                                            child: Text(
+                                              v == 'Custom' ? 'Custom Date' : v,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w400,
+                                                color: Colors.black,
                                               ),
-                                              child:
-                                                  DropdownButtonHideUnderline(
-                                                child: DropdownButton2<String>(
-                                                  isExpanded: true,
-                                                  value: daterange,
-                                                  // The plain DropdownButton
-                                                  // opened a full-screen white
-                                                  // sheet; this keeps the menu
-                                                  // sized to the field.
-                                                  iconStyleData: IconStyleData(
-                                                    icon: Icon(
-                                                        Icons
-                                                            .keyboard_arrow_down,
-                                                        color: blueColor),
-                                                  ),
-                                                  buttonStyleData:
-                                                      const ButtonStyleData(
-                                                          padding:
-                                                              EdgeInsets.zero,
-                                                          height: 48),
-                                                  menuItemStyleData:
-                                                      const MenuItemStyleData(
-                                                          height: 44),
-                                                  dropdownStyleData:
-                                                      DropdownStyleData(
-                                                    maxHeight: 320,
-                                                    elevation: 3,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12),
-                                                      border: Border.all(
-                                                          color: const Color(
-                                                              0xFFE3E6EB)),
-                                                    ),
-                                                  ),
-                                                  style: TextStyle(
-                                                      color: blueColor,
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.w600),
-                                                  items: _dateRangeOptions
-                                                      .map((v) =>
-                                                          DropdownMenuItem<
-                                                              String>(
-                                                            value: v,
-                                                            child: Text(
-                                                                v == 'Custom'
-                                                                    ? 'Custom Date'
-                                                                    : v,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis),
-                                                          ))
-                                                      .toList(),
-                                                  onChanged: (value) {
-                                                    if (value == null) return;
-                                                    final dp = Provider.of<
-                                                            DateProvider>(
-                                                        context,
-                                                        listen: false);
-                                                    setState(() {
-                                                      daterange = value;
-                                                      _applyDateRangePreset(
-                                                          value, dp);
-                                                    });
-                                                  },
-                                                ),
-                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      SizedBox(
-                                        height: 48,
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: _canRun
-                                                ? blueColor
-                                                : blueColor.withOpacity(0.4),
-                                            foregroundColor: Colors.white,
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 22),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          onPressed: _canRun
-                                              ? () => _fetchData(force: true)
-                                              : null,
-                                          child: const Text('Run',
-                                              style: TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight:
-                                                      FontWeight.w600)),
-                                        ),
-                                      ),
-                                    ],
+                                          ))
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    final dp = Provider.of<
+                                            DateProvider>(
+                                        context,
+                                        listen: false);
+                                    setState(() {
+                                      daterange = value;
+                                      _applyDateRangePreset(
+                                          value, dp);
+                                    });
+                                  },
+                                  buttonStyleData: const ButtonStyleData(
+                                    height: 46,
+                                    padding: EdgeInsets.only(left: 0, right: 4),
                                   ),
-                                  const SizedBox(height: 14),
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            _filterLabel('FROM'),
-                                            const SizedBox(height: 6),
-                                            _filledDateField(
-                                                _fromDateController,
-                                                isFrom: true),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            _filterLabel('TO'),
-                                            const SizedBox(height: 6),
-                                            _filledDateField(
-                                                _toDateController,
-                                                isFrom: false),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                  dropdownStyleData: DropdownStyleData(
+                                    maxHeight: 250,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
                                   ),
-                                  if (_dateRangeError != null)
-                                    ReportDateRangeErrorText(_dateRangeError!),
-                                ],
+                                  menuItemStyleData: const MenuItemStyleData(
+                                    height: 40,
+                                    padding: EdgeInsets.only(left: 14, right: 14),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 5.0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _filledDateField(_fromDateController,
+                                      isFrom: true),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _filledDateField(_toDateController,
+                                      isFrom: false),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_dateRangeError != null)
+                            ReportDateRangeErrorText(_dateRangeError!),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 5.0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 48,
+                                    child: ElevatedButton(
+                                      onPressed: _canRun
+                                          ? () => _fetchData(force: true)
+                                          : null,
+                                      style: ElevatedButton.styleFrom(
+                                        elevation: 0,
+                                        backgroundColor: blueColor,
+                                        foregroundColor: Colors.white,
+                                        disabledBackgroundColor:
+                                            blueColor.withOpacity(0.6),
+                                        disabledForegroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: const Text('Run'),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildExportButton()),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1495,7 +1520,10 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
                                       color: Colors.red, fontSize: 14)));
                         } else if (!snapshot.hasData ||
                             snapshot.data!.isEmpty) {
-                          return Container(
+                          return Column(
+                            children: [
+                              _buildSearchRow(),
+                              Container(
                             height: MediaQuery.of(context).size.height * .5,
                             child: Center(
                               child: Column(
@@ -1503,7 +1531,7 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Image.asset(
-                                    "assets/images/no_data.jpg",
+                                    "assets/images/no_data_transparent.png",
                                     height: 200,
                                     width: 200,
                                   ),
@@ -1520,6 +1548,8 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
                                 ],
                               ),
                             ),
+                              ),
+                            ],
                           );
                         }
 
@@ -1574,176 +1604,7 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
                         return SingleChildScrollView(
                           child: Column(
                             children: [
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  left: MediaQuery.of(context).size.width > 500
-                                      ? 10
-                                      : 0,
-                                  right: MediaQuery.of(context).size.width > 500
-                                      ? 10
-                                      : 0,
-                                ),
-                                child: Row(
-                                  children: [
-                                    // Search box expands
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 5.0),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10),
-                                          height: 52,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                                BorderRadius.circular(14),
-                                            border: Border.all(
-                                                color: const Color(0xFFEDEFF2)),
-                                          ),
-                                          // Icon and field as explicit Row
-                                          // children: the Row centres both, so
-                                          // the hint no longer depends on the
-                                          // input decorator's own padding.
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              const Icon(Icons.search,
-                                                  size: 20,
-                                                  color: Color(0xFF8A95A8)),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: TextField(
-                                                  textAlignVertical:
-                                                      TextAlignVertical.center,
-                                                  style: const TextStyle(
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.w500),
-                                                  onChanged: (value) {
-                                                    setState(() {
-                                                      searchvalue = value;
-                                                      currentPage = 0; // reset to first page on search change
-                                                    });
-                                                  },
-                                                  decoration:
-                                                      const InputDecoration(
-                                                    border: InputBorder.none,
-                                                    // Collapsed removes the
-                                                    // decorator's built-in
-                                                    // height so the text sits
-                                                    // level with the icon.
-                                                    isCollapsed: true,
-                                                    hintText: "Search here...",
-                                                    hintStyle: TextStyle(
-                                                        color:
-                                                            Color(0xFF8A95A8),
-                                                        fontSize: 15,
-                                                        fontWeight:
-                                                            FontWeight.w500),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-
-                                    // Export appears only once the report has
-                                    // rows, so the search field spans the full
-                                    // width on an empty report.
-                                    if (_hasRows)
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 5.0),
-                                      // Fixed box so the pill is exactly as
-                                      // tall as the search field; the nested
-                                      // PopupMenuButton was adding its own
-                                      // padding and pushing it taller.
-                                      child: SizedBox(
-                                        height: 52,
-                                        child: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: blueColor,
-                                          foregroundColor: Colors.white,
-                                          minimumSize:
-                                              const Size(0, 52),
-                                          tapTargetSize: MaterialTapTargetSize
-                                              .shrinkWrap,
-                                          padding: const EdgeInsets
-                                              .symmetric(horizontal: 14),
-                                          shape:
-                                              RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(14),
-                                          ),
-                                        ),
-                                        onPressed: () {},
-                                        child: PopupMenuButton<String>(
-                                          padding: EdgeInsets.zero,
-                                          onSelected: (value) async {
-                                            final hasDates = _fromDateController
-                                                    .text.isNotEmpty &&
-                                                _toDateController
-                                                    .text.isNotEmpty;
-
-                                            // Export must match what the
-                                            // report shows. Without a range
-                                            // nothing has been run, so
-                                            // exporting every lease would hand
-                                            // back rows the user never saw.
-                                            if (!hasDates) {
-                                              Fluttertoast.showToast(
-                                                msg:
-                                                    'Choose a date range and tap Run before exporting.',
-                                                backgroundColor: Colors.red,
-                                              );
-                                              return;
-                                            }
-                                            final data =
-                                                await ExpiringLeaseTableService()
-                                                    .fetchExpiringLeases(
-                                              fromDate:
-                                                  _fromDateController.text,
-                                              toDate: _toDateController.text,
-                                            );
-
-                                            if (value == 'PDF') {
-                                              await generatePdf(data);
-                                            } else if (value == 'XLSX') {
-                                              await generateExcel(data);
-                                            } else if (value == 'CSV') {
-                                              await generateCsv(data);
-                                            }
-                                          },
-                                          itemBuilder: (BuildContext context) =>
-                                              <PopupMenuEntry<String>>[
-                                            const PopupMenuItem<String>(
-                                                value: 'PDF',
-                                                child: Text('PDF')),
-                                            const PopupMenuItem<String>(
-                                                value: 'XLSX',
-                                                child: Text('XLSX')),
-                                            const PopupMenuItem<String>(
-                                                value: 'CSV',
-                                                child: Text('CSV')),
-                                          ],
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text('Export'),
-                                              Icon(Icons.arrow_drop_down),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              _buildSearchRow(),
                               SizedBox(height: 20),
                               _buildHeaders(),
                               SizedBox(height: 10),
@@ -2311,7 +2172,7 @@ class _ExpiringLeasesState extends State<ExpiringLeases>
                   //                crossAxisAlignment: CrossAxisAlignment.center,
                   //                children: [
                   //                  Image.asset(
-                  //                    "assets/images/no_data.jpg",
+                  //                    "assets/images/no_data_transparent.png",
                   //                    height: 200,
                   //                    width: 200,
                   //                  ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -748,6 +749,7 @@ class _PropertyTaxReportState extends State<PropertyTaxReport>
               ),
               SizedBox(width: 16),
               // Export Button
+              // Greyed out and not tappable until the report has rows.
               Expanded(
                 child: Material(
                   elevation: 3,
@@ -760,6 +762,7 @@ class _PropertyTaxReportState extends State<PropertyTaxReport>
                       border: Border.all(color: const Color(0xFF8A95A8)),
                     ),
                     child: PopupMenuButton<String>(
+                      enabled: filteredData.isNotEmpty,
                       onSelected: (value) async {
                         if (value == 'PDF' && filteredData.isNotEmpty) {
                           _exportToPDF();
@@ -796,14 +799,18 @@ class _PropertyTaxReportState extends State<PropertyTaxReport>
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.grey[800],
+                                color: filteredData.isNotEmpty
+                                    ? Colors.grey[800]
+                                    : Colors.grey.shade400,
                               ),
                             ),
                             SizedBox(width: 4),
                             Icon(
                               Icons.keyboard_arrow_down,
                               size: 16,
-                              color: Colors.grey[600],
+                              color: filteredData.isNotEmpty
+                                  ? Colors.grey[600]
+                                  : Colors.grey.shade400,
                             ),
                           ],
                         ),
@@ -1108,12 +1115,34 @@ class _PropertyTaxReportState extends State<PropertyTaxReport>
       for (final property in filteredData) {
         List<dynamic> taxes = property['taxes'] ?? [];
         if (taxes.isEmpty) {
-          csv.writeln(
-              '${property['address'] ?? ''},${property['city'] ?? ''},${property['state'] ?? ''},${property['totalTaxAmount']?.toString() ?? '0'},${property['totalAssessmentValue']?.toString() ?? '0'},No Taxes,,,,');
+          // Quoted like web's CSV, so values with commas stay in their
+          // column.
+          csv.writeln(csvRow([
+            property['address'] ?? '',
+            property['city'] ?? '',
+            property['state'] ?? '',
+            property['totalTaxAmount']?.toString() ?? '0',
+            property['totalAssessmentValue']?.toString() ?? '0',
+            'No Taxes',
+            '',
+            '',
+            '',
+            '',
+          ]));
         } else {
           for (final tax in taxes) {
-            csv.writeln(
-                '${property['address'] ?? ''},${property['city'] ?? ''},${property['state'] ?? ''},${tax['taxAmount']?.toString() ?? '0'},${tax['assessmentValue']?.toString() ?? '0'},${tax['status'] ?? ''},${tax['taxAuthority'] ?? ''},${tax['notes'] ?? ''},${tax['dueDate'] ?? ''},${tax['paidDate'] ?? ''}');
+            csv.writeln(csvRow([
+              property['address'] ?? '',
+              property['city'] ?? '',
+              property['state'] ?? '',
+              tax['taxAmount']?.toString() ?? '0',
+              tax['assessmentValue']?.toString() ?? '0',
+              tax['status'] ?? '',
+              tax['taxAuthority'] ?? '',
+              tax['notes'] ?? '',
+              tax['dueDate'] ?? '',
+              tax['paidDate'] ?? '',
+            ]));
           }
         }
       }

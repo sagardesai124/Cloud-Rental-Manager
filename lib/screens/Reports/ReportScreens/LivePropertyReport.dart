@@ -1,4 +1,5 @@
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'package:flutter/material.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
@@ -848,10 +849,11 @@ class _LivePropertyReportState extends State<LivePropertyReport>
 
               SizedBox(width: 16),
 
-              // Export Button
+              // Export Button — greyed out and not tappable until the report
+              // has rows.
               Expanded(
                 child: ElevatedButton(
-                  onPressed: propertyData.isEmpty
+                  onPressed: filteredData.isEmpty
                       ? null
                       : () {
                     if (filteredData.isNotEmpty) {
@@ -915,6 +917,7 @@ class _LivePropertyReportState extends State<LivePropertyReport>
                     backgroundColor: blueColor,
                     disabledBackgroundColor: Colors.grey.shade400,
                     foregroundColor: Colors.white,
+                    disabledForegroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -1466,8 +1469,37 @@ class _LivePropertyReportState extends State<LivePropertyReport>
           'Property,City,State,Zipcode,Subdivision,Rental Owner,Parcel #,Purchase Price,Placed in Service,Insured Year,Insured Value,Monthly Rent,2025 Tax Bill,Update Date,Mortgaged,Bank,Mortgage #,Balance,Principal,Payment,Interest %,Type');
 
       for (final property in filteredData) {
-        csv.writeln(
-            '${property.property?.address ?? ''},${property.property?.city ?? ''},${property.property?.state ?? ''},${property.property?.zipcode ?? ''},${property.property?.subdivision ?? ''},${property.rentalOwner?.name ?? ''},${property.purchaseInfo?.parcelNumber ?? ''},${formatCurrency(property.purchaseInfo?.purchasePrice)},${property.placedInService ?? ''},${property.insuredYear ?? ''},${formatCurrency(property.insuredValue)},${formatCurrency(property.monthlyRent)},${formatCurrency(property.taxBill)},${property.lastUpdateDate != null ? DateFormat('yyyy-MM-dd').format(DateTime.parse(property.lastUpdateDate!)) : ''},${property.hasMortgage == true ? 'Yes' : 'No'},${property.bankName ?? ''},${property.mortgageNumber ?? ''},${formatCurrency(property.remainingBalance)},${formatCurrency(property.principal)},${formatCurrency(property.monthlyPayment)},${property.interestPercentage != null ? '${property.interestPercentage}%' : ''},${property.status ?? ''}');
+        // Quoted like web's CSV, so addresses and amounts with commas stay
+        // in their column.
+        csv.writeln(csvRow([
+          property.property?.address ?? '',
+          property.property?.city ?? '',
+          property.property?.state ?? '',
+          property.property?.zipcode ?? '',
+          property.property?.subdivision ?? '',
+          property.rentalOwner?.name ?? '',
+          property.purchaseInfo?.parcelNumber ?? '',
+          formatCurrency(property.purchaseInfo?.purchasePrice),
+          property.placedInService ?? '',
+          property.insuredYear ?? '',
+          formatCurrency(property.insuredValue),
+          formatCurrency(property.monthlyRent),
+          formatCurrency(property.taxBill),
+          property.lastUpdateDate != null
+              ? DateFormat('yyyy-MM-dd')
+                  .format(DateTime.parse(property.lastUpdateDate!))
+              : '',
+          property.hasMortgage == true ? 'Yes' : 'No',
+          property.bankName ?? '',
+          property.mortgageNumber ?? '',
+          formatCurrency(property.remainingBalance),
+          formatCurrency(property.principal),
+          formatCurrency(property.monthlyPayment),
+          property.interestPercentage != null
+              ? '${property.interestPercentage}%'
+              : '',
+          property.status ?? '',
+        ]));
       }
 
       // Save to temporary file

@@ -63,10 +63,11 @@ class _Report {
   const _Report(this.name, this.admin, this.staff, {this.pickerBoxes = false});
 }
 
-/// Opens the [index]th calendar (0 = From, 1 = To) and picks [day] of the
+/// Opens the [index]th date field (0 = From, 1 = To) and picks [day] of the
 /// month it opens on.
 Future<void> _pickDay(WidgetTester tester, int index, int day) async {
-  await tester.tap(find.byIcon(Icons.calendar_today_outlined).at(index));
+  await tester.tap(find.byKey(
+      ValueKey(index == 0 ? 'expiring-lease-from' : 'expiring-lease-to')));
   await _settle(tester, 10);
   await tester.tap(find
       .descendant(

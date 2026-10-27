@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/Model/bid_request.dart';
 import 'package:three_zero_two_property/VendorModule/repository/vendor_bid_repo.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
@@ -188,23 +190,31 @@ class _VendorBidRoomTableState extends State<VendorBidRoomTable>
     }
   }
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return 'N/A';
+  // Like web's Vendor Bid Room (VendorBidRequests.jsx): Created On is the
+  // createdAt_iso moment (else createdAt) in the viewer's local time, as
+  // "<account date format> HH:mm:ss"; Due Date uses the account date
+  // format. Both show "-" when empty.
+  String _createdOn(BidRequest request) {
+    final iso = request.createdAtIso ?? '';
+    final raw = iso.isNotEmpty ? iso : (request.createdAt ?? '');
+    if (raw.isEmpty) return '-';
     try {
-      DateTime date = DateTime.parse(dateStr);
-      return DateFormat('yyyy-MM-dd').format(date);
+      final dateFormat = Provider.of<DateProvider>(context).dateFormat;
+      return DateFormat('$dateFormat HH:mm:ss')
+          .format(DateTime.parse(raw).toLocal());
     } catch (e) {
-      return dateStr;
+      return raw;
     }
   }
 
-  String _formatTime(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return 'N/A';
+  String _dueDate(BidRequest request) {
+    final raw = request.dueDate ?? '';
+    if (raw.isEmpty) return '-';
     try {
-      DateTime date = DateTime.parse(dateStr);
-      return DateFormat('HH:mm:ss').format(date);
+      final dateFormat = Provider.of<DateProvider>(context).dateFormat;
+      return DateFormat(dateFormat).format(DateTime.parse(raw).toLocal());
     } catch (e) {
-      return '';
+      return raw;
     }
   }
 
@@ -227,21 +237,9 @@ class _VendorBidRoomTableState extends State<VendorBidRoomTable>
             ),
           ),
           Expanded(
-            child: Row(
-            
-              children: [
-                Text(
-                  _formatDate(request.createdAt),
-                  style: TextStyle(color: Colors.black, fontSize: 13),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  _formatTime(request.createdAt),
-                  style: TextStyle(
-                  color: Colors.black, fontSize: 13
-                  ),
-                ),
-              ],
+            child: Text(
+              _createdOn(request),
+              style: TextStyle(color: Colors.black, fontSize: 13),
             ),
           ),
          
@@ -262,7 +260,7 @@ class _VendorBidRoomTableState extends State<VendorBidRoomTable>
           ),
           Expanded(
             child: Text(
-              _formatDate(request.dueDate),
+              _dueDate(request),
               style: TextStyle(color: Colors.black, fontSize: 13),
             ),
           ),

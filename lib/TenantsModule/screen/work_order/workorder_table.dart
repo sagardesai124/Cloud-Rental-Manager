@@ -1365,9 +1365,8 @@ class _WorkOrderTableState extends State<WorkOrderTable>
                                                                 _getDisplayValue(
                                                                     workorder.workCategory)),
                                                             _buildTableRow(
-                                                                'Assign :',
-                                                                _getDisplayValue(workorder.staffMemberName ??
-                                                                    '-'),
+                                                                'Assigned :',
+                                                                workOrderAssignedLine(workorder),
                                                                 'Status :',
                                                                 _getDisplayValue(workorder.status ??
                                                                     '-')),
@@ -1991,8 +1990,8 @@ class _WorkOrderTableState extends State<WorkOrderTable>
                                                               vertical:
                                                               20),
                                                           child: Text(
-                                                            _pagedData[i]
-                                                                .staffMemberName!,
+                                                            workOrderAssignedLine(
+                                                                _pagedData[i]),
                                                             style:
                                                             TextStyle(
                                                               color:

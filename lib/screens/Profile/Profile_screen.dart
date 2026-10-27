@@ -13,6 +13,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
@@ -33,6 +35,27 @@ import '../../widgets/custom_switch.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
 import 'package:email_validator/email_validator.dart';
+
+/// Like web (Profile.jsx first/last name, city and country): only letters
+/// and spaces. A change with anything else is ignored and the text stays as
+/// it was, the same way web ignores that keystroke or paste.
+final TextInputFormatter lettersAndSpacesOnly = TextInputFormatter.withFunction(
+    (oldValue, newValue) =>
+        RegExp(r'^[a-zA-Z\s]*$').hasMatch(newValue.text) ? newValue : oldValue);
+
+/// Created Date as web shows it (Profile.jsx formatDateTime): the saved
+/// date format and the time with seconds (24-hour, or 12-hour with a
+/// zero-padded hour), in the device's local time. The server sends an ISO
+/// instant ("2026-09-22T16:16:04.328Z"); a value that isn't a date is shown
+/// as it is.
+String formatProfileCreatedDate(DateProvider dateProvider, String? raw) {
+  final value = raw?.trim() ?? '';
+  if (value.isEmpty) return '';
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null) return value;
+  final time = dateProvider.timeFormat == '12' ? 'hh:mm:ss a' : 'HH:mm:ss';
+  return DateFormat('${dateProvider.dateFormat} $time').format(parsed.toLocal());
+}
 
 class Profile_screen extends StatefulWidget {
   // final String email;
@@ -386,6 +409,8 @@ class _Profile_screenState extends State<Profile_screen>
   }
 
   Future<void> _fetchProfile() async {
+    // Read before any await, so no context is used after one.
+    final dateProvider = Provider.of<DateProvider>(context, listen: false);
     try {
       final profileData = await ProfileRepository().fetchProfile();
       // Web normalises the stored state once, on load, before it ever reaches
@@ -404,7 +429,8 @@ class _Profile_screenState extends State<Profile_screen>
         _companyAddressController.text = profileData.companyAddress ?? '';
         _companyPostalCodeController.text = profileData.companyPostalCode ?? '';
         _companyCityController.text = profileData.companyCity ?? '';
-        _createdDate.text = profileData.createdAt ?? "";
+        _createdDate.text =
+            formatProfileCreatedDate(dateProvider, profileData.createdAt);
         _companyStateController.text = normalizedState;
         _companyCountryController.text = profileData.companyCountry ?? '';
         // Change Password starts empty, matching the Staff/Vendor/Tenant
@@ -2255,6 +2281,7 @@ class _Profile_screenState extends State<Profile_screen>
                                         (v) => _validateRequired(
                                             v, 'a first name'),
                                         isRequired: true,
+                                        inputFormatters: [lettersAndSpacesOnly],
                                       ),
                                       const SizedBox(height: 16.0),
                                       const Text(
@@ -2272,6 +2299,7 @@ class _Profile_screenState extends State<Profile_screen>
                                         (v) =>
                                             _validateRequired(v, 'a last name'),
                                         isRequired: true,
+                                        inputFormatters: [lettersAndSpacesOnly],
                                       ),
                                       const SizedBox(height: 16.0),
                                       const Text(
@@ -2386,7 +2414,10 @@ class _Profile_screenState extends State<Profile_screen>
                                           'City',
                                           _companyCityController,
                                           (v) =>
-                                              _validateRequired(v, 'a city')),
+                                              _validateRequired(v, 'a city'),
+                                          inputFormatters: [
+                                            lettersAndSpacesOnly
+                                          ]),
                                       const SizedBox(height: 16.0),
                                       const Text(
                                         'State',
@@ -2412,7 +2443,10 @@ class _Profile_screenState extends State<Profile_screen>
                                           'Country',
                                           _companyCountryController,
                                           (v) => _validateRequired(
-                                              v, 'a country')),
+                                              v, 'a country'),
+                                          inputFormatters: [
+                                            lettersAndSpacesOnly
+                                          ]),
                                       const SizedBox(height: 16.0),
 
                                       // ElevatedButton(
@@ -3575,6 +3609,7 @@ class _Profile_screenState extends State<Profile_screen>
     String? Function(String?)? validator, {
     bool isEnabled = true,
     bool isRequired = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     // Flat field, matching the house form style (add_tenants.dart `_input`):
     // a hairline outline instead of a drop shadow.
@@ -3597,6 +3632,7 @@ class _Profile_screenState extends State<Profile_screen>
             return null; // No validation for non-required fields
           },
           enabled: isEnabled,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             border: InputBorder.none,
             enabledBorder: InputBorder.none,

@@ -836,7 +836,7 @@ Widget kNoSearchResults(BuildContext context) {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Image.asset(
-          "assets/images/no_data.jpg",
+          "assets/images/no_data_transparent.png",
           height: 160,
           width: 160,
         ),

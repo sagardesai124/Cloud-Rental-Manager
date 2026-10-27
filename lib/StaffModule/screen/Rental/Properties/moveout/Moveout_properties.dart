@@ -172,7 +172,8 @@ class _Moveout_propertiesState extends State<Moveout_properties> {
               const MoveoutInfoBanner(),
               const SizedBox(height: 14),
               MoveoutPropertyDetails(
-                address: '${widget.properties.rentalAddress}',
+                address: moveoutPropertyAddressLine(
+                    widget.properties.rentalAddress, tenant.rentalUnit),
                 leaseType: '${tenant.leaseType}',
                 startEnd:
                     '${dateProvider.formatCurrentDate(tenant.startDate!)} to ${dateProvider.formatCurrentDate(tenant.endDate!)}',

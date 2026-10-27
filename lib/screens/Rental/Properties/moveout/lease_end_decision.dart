@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:three_zero_two_property/constant/constant.dart';
 
 /// The lease-end question asked when a move-out leaves no tenant on a
 /// fixed-term lease (web 2.2 owner rule 2026-10-07: a tenant moving out does
@@ -9,15 +8,12 @@ import 'package:three_zero_two_property/constant/constant.dart';
 /// messages. The server mirrors the month-to-month and reason rules in
 /// Server/utils/leaseMoveout.js. Older servers ignore `leaseEnd`.
 
-/// The question needs the 2.2 server, which reads `leaseEnd`. Staging still
-/// runs an older server that ignores the answer (staging web does not ask
-/// either), so builds pointed at staging don't ask. Production moves to 2.2
-/// on 2026-10-15 (Lou, 10/9); if that slips, return false here for the
-/// Thursday build. newdev already runs 2.2.
-bool get leaseEndQuestionEnabled =>
-    debugLeaseEndQuestionEnabled ?? !Api_url.contains('staging.');
+/// The question needs the 2.2 server, which reads `leaseEnd`. Every server
+/// the app points at (staging, production, newdev) runs 2.2 now, and staging
+/// web asks it too (QA, 2026-10-23), so every build asks.
+bool get leaseEndQuestionEnabled => debugLeaseEndQuestionEnabled ?? true;
 
-/// Tests set this to force the question on or off; null = decide from Api_url.
+/// Tests set this to force the question on or off; null = on.
 @visibleForTesting
 bool? debugLeaseEndQuestionEnabled;
 

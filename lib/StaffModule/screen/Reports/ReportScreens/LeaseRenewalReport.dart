@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/lease_renewal_csv.dart';
+import 'package:three_zero_two_property/provider/dateProvider.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +28,7 @@ import 'package:three_zero_two_property/StaffModule/widgets/custom_drawer.dart';
 import 'package:three_zero_two_property/widgets/CustomTableShimmer.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
+import 'package:three_zero_two_property/StaffModule/widgets/staff_report_header.dart';
 
 class LeaseRenewalReportScreen extends StatefulWidget {
   @override
@@ -718,6 +722,38 @@ class _LeaseRenewalReportScreenState extends State<LeaseRenewalReportScreen>
     }
   }
 
+  // Like web's CSV (LeaseRenewalReport.jsx generateCSV): the rows on screen,
+  // in web's two sections, shared the same way as the Excel export.
+  Future<void> _generateCsv() async {
+    if (_reportData == null) {
+      Fluttertoast.showToast(msg: 'No data to export');
+      return;
+    }
+    // Read before any await.
+    final dateProvider = Provider.of<DateProvider>(context, listen: false);
+    final csv = buildLeaseRenewalCsv(
+      leasesEnding: _filteredLeasesEnding,
+      mtmLeases: _filteredMtmLeases,
+      formatDate: (d) => dateProvider.formatCurrentDate(d),
+    );
+
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          'Lease_Renewal_Report_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.csv';
+      final File file = File('${directory.path}/$fileName');
+      await file.writeAsString(csv, flush: true);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Lease Renewal Report',
+      );
+    } catch (e) {
+      logError('Error generating CSV: $e');
+      Fluttertoast.showToast(msg: 'Error generating CSV: ${friendlyErrorMessage(e)}');
+    }
+  }
+
   Widget _buildLeaseEndingCard(model.LeaseEnding lease, int index) {
     final isExpanded = _expandedLeasesEnding[index] ?? false;
     final tenant = lease.tenants.isNotEmpty ? lease.tenants.first : null;
@@ -1013,10 +1049,10 @@ class _LeaseRenewalReportScreenState extends State<LeaseRenewalReportScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Grey only when the report genuinely has no leases (raw), NOT when the
-    // text search narrows the view to empty.
-    final bool hasExportData = (_reportData?.leasesEnding.isNotEmpty ?? false) ||
-        (_reportData?.mtmLeases.isNotEmpty ?? false);
+    // Export is greyed out unless the searched list has a lease, the
+    // same rows the export writes.
+    final bool hasExportData =
+        _filteredLeasesEnding.isNotEmpty || _filteredMtmLeases.isNotEmpty;
     return Scaffold(
       appBar: widget_302_Staff.widget_302_Staff.App_Bar(context: context),
       backgroundColor: Colors.white,
@@ -1028,23 +1064,12 @@ class _LeaseRenewalReportScreenState extends State<LeaseRenewalReportScreen>
           ? SingleChildScrollView(
               child: Column(
                 children: [
-                  // Header
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Lease Renewal Report',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: blueColor,
-                          ),
-                        ),
-                      ],
-                    ),
+                  // Header with the back arrow, like the other reports
+                  SizedBox(height: 16),
+                  StaffReportHeader(
+                    title: 'Lease Renewal Report',
                   ),
+                  SizedBox(height: 10),
                   // Filter Section
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
@@ -1345,15 +1370,15 @@ class _LeaseRenewalReportScreenState extends State<LeaseRenewalReportScreen>
                                   ),
                                 ),
                               ],
+                              // The menu closes itself before onSelected runs,
+                              // so the report screen stays open after an export.
                               onSelected: (String value) {
-                                Navigator.pop(context);
                                 if (value == 'pdf') {
                                   _generatePdf();
                                 } else if (value == 'excel') {
                                   _generateExcel();
                                 } else if (value == 'csv') {
-                                  Fluttertoast.showToast(
-                                      msg: 'CSV export coming soon');
+                                  _generateCsv();
                                 }
                               },
                             ),
@@ -1369,14 +1394,30 @@ class _LeaseRenewalReportScreenState extends State<LeaseRenewalReportScreen>
                           padding: EdgeInsets.all(8),
                           child: ColabShimmerLoadingWidget(),
                         )
-                      : _reportData == null
+                      // The standard empty state used across reports, also
+                      // when the run (or the search) has no leases at all.
+                      : _reportData == null ||
+                              (_filteredLeasesEnding.isEmpty &&
+                                  _filteredMtmLeases.isEmpty)
                           ? Padding(
-                              padding: EdgeInsets.all(40),
-                              child: Text(
-                                'No data available',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 16,
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Image.asset(
+                                      "assets/images/no_data_transparent.png",
+                                      height: 200,
+                                      width: 200,
+                                    ),
+                                    SizedBox(height: 10),
+                                    Text(
+                                      "No Data Available",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: blueColor,
+                                          fontSize: 16),
+                                    ),
+                                  ],
                                 ),
                               ),
                             )

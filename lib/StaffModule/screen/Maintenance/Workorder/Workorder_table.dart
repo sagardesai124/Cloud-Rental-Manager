@@ -1225,7 +1225,7 @@ class _Workorder_tableState extends State<Workorder_table>
                         Row(
                           children: [
                             Text(
-                              "Billable To Tenants",
+                              "Show Billable", // web Workorder.jsx list filter
                               style: TextStyle(
                                   color: Colors.grey.shade900,
                                   fontSize:

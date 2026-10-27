@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'dart:developer';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -930,7 +931,7 @@ class _AccountTotalsReportsState extends State<AccountTotalsReports>
     final StringBuffer csvBuffer = StringBuffer();
 
     // Add headers to the CSV file
-    csvBuffer.writeln(headers.join(','));
+    csvBuffer.writeln(csvRow(headers));
 
     double grandTotal = 0.0;
 
@@ -942,11 +943,11 @@ class _AccountTotalsReportsState extends State<AccountTotalsReports>
       // Iterate through each property for the current rental owner
       for (var property in owner.payments) {
         // Add property and tenant details
-        csvBuffer.writeln([
+        csvBuffer.writeln(csvRow([
           '',
           property.account,
           property.amount ?? 0 / 0,
-        ].join(','));
+        ]));
 
         // Add surcharge row if applicable
         // if (property.surcharge != 0.0) {
@@ -966,11 +967,11 @@ class _AccountTotalsReportsState extends State<AccountTotalsReports>
 
       // Add subtotal row for the current rental owner
       if (owner.rentalOwnerName != 'Grand Totals')
-        csvBuffer.writeln([
+        csvBuffer.writeln(csvRow([
           '',
           'Subtotal ',
           '${(owner.subTotal ?? 0.0).toStringAsFixed(2)}'
-        ].join(','));
+        ]));
 
       // Accumulate grand total
       grandTotal += owner.subTotal ?? 0.0;
@@ -1302,7 +1303,7 @@ class _AccountTotalsReportsState extends State<AccountTotalsReports>
                                               CrossAxisAlignment.center,
                                           children: [
                                             Image.asset(
-                                              "assets/images/no_data.jpg",
+                                              "assets/images/no_data_transparent.png",
                                               height: 200,
                                               width: 200,
                                             ),
@@ -3256,17 +3257,21 @@ class _AccountTotalsReportsState extends State<AccountTotalsReports>
                   ),
                 ),
                 Expanded(
+                  // No rows yet: Export stays in place, greyed and disabled.
                   child: SizedBox(
                     //  width: 100,
                     height: 42,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: blueColor,
+                        disabledBackgroundColor: Colors.grey.shade400,
+                        disabledForegroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16.0, vertical: 8.0),
                       ),
-                      onPressed: () {},
+                      onPressed: (data?.isNotEmpty ?? false) ? () {} : null,
                       child: PopupMenuButton<String>(
+                        enabled: data?.isNotEmpty ?? false,
                         onSelected: (value) async {
                           // Export logic
                           if (value == 'PDF' && data != null) {

@@ -1293,7 +1293,7 @@ class _ConvenienceFeeReportsState extends State<ConvenienceFeeReports>
                                           CrossAxisAlignment.center,
                                       children: [
                                         Image.asset(
-                                          "assets/images/no_data.jpg",
+                                          "assets/images/no_data_transparent.png",
                                           height: 200,
                                           width: 200,
                                         ),
@@ -2483,6 +2483,9 @@ class _ConvenienceFeeReportsState extends State<ConvenienceFeeReports>
   }
 
   filters({List<Data>? data}) {
+    // Export is greyed out and not tappable while the (searched) report
+    // has no rows.
+    final bool hasExportData = data?.isNotEmpty ?? false;
     return Column(
       children: [
         const SizedBox(
@@ -2537,9 +2540,12 @@ class _ConvenienceFeeReportsState extends State<ConvenienceFeeReports>
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: blueColor,
+                      disabledBackgroundColor: Colors.grey.shade400,
+                      disabledForegroundColor: Colors.white,
                     ),
-                    onPressed: () {},
+                    onPressed: hasExportData ? () {} : null,
                     child: PopupMenuButton<String>(
+                      enabled: hasExportData,
                       onSelected: (value) async {
                         // Export logic
                         final dateProvider =

@@ -778,26 +778,45 @@ class _CustomReportBuilderState extends State<CustomReportBuilder>
     );
   }
 
+  /// The standard empty state used across reports: the picture with a
+  /// bold heading.
+  Widget _emptyState(double maxW, String heading) {
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxW),
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            "assets/images/no_data_transparent.png",
+            height: 200,
+            width: 200,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            heading,
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: blueColor,
+                fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTableSection(double contentWidth) {
     final columns = _selectedReport?.selectedColumns ?? [];
     final maxW = contentWidth > 0 ? contentWidth : double.infinity;
 
+    // Like web: "Please select a saved report" until one is picked.
     if (_selectedReport == null || columns.isEmpty) {
-      return Container(
-        constraints: BoxConstraints(maxWidth: maxW),
-        padding: const EdgeInsets.all(48),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Center(
-          child: Text(
-            'No data available. Select a report from Saved Reports to view data.',
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
+      return _emptyState(
+          maxW,
+          _selectedReport == null
+              ? 'Please select a saved report'
+              : 'No Data Available');
     }
 
     if (_reportDataLoading) {
@@ -838,20 +857,7 @@ class _CustomReportBuilderState extends State<CustomReportBuilder>
     }
 
     if (_reportData.isEmpty) {
-      return Container(
-        constraints: BoxConstraints(maxWidth: maxW),
-        padding: const EdgeInsets.all(48),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: const Center(
-          child: Text(
-            'No data for this report.',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ),
-      );
+      return _emptyState(maxW, 'No Data Available');
     }
 
     final includeHistory = _selectedReport!.includeHistory;

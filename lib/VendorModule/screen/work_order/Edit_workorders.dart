@@ -2250,7 +2250,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     ),
                                     /* Row(
                                   children: [
-                                    Text("Billable To Tenants",style: TextStyle(
+                                    Text("Billable To Tenant",style: TextStyle(
                                         color: Colors.grey
                                     ),),
                                     SizedBox(width: 10,),
@@ -3693,7 +3693,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                               ),
                               /* Row(
                                 children: [
-                                  Text("Billable To Tenants",style: TextStyle(
+                                  Text("Billable To Tenant",style: TextStyle(
                                       color: Colors.grey
                                   ),),
                                   SizedBox(width: 10,),

@@ -536,10 +536,13 @@ class DateProvider with ChangeNotifier {
     await prefs.setInt('selectedTimeIndex', timeformateselect);
   }
 
-  String getFormattedDateTimePreview() {
+  /// [dateFormat] previews a format that is not saved yet (Custom being typed).
+  String getFormattedDateTimePreview({String? dateFormat}) {
     DateTime now = DateTime.now();
-    String timeFormatPattern = _timeFormat == '24' ? 'HH:mm' : 'h:mm a';
-    String dateTimeFormat = '$_dateFormat $timeFormatPattern';
+    // Same as web's "HOW IT APPEARS" preview (DateFormatSection.jsx):
+    // seconds included, and a leading zero on 12-hour times.
+    String timeFormatPattern = _timeFormat == '24' ? 'HH:mm:ss' : 'hh:mm:ss a';
+    String dateTimeFormat = '${dateFormat ?? _dateFormat} $timeFormatPattern';
     return DateFormat(dateTimeFormat).format(now);
   }
 }

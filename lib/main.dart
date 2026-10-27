@@ -29,6 +29,7 @@ import 'provider/edit_applicant.dart';
 import 'package:credit_card_validator/credit_card_validator.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'provider/notification_provider.dart';
+import 'widgets/keyboard_background_guard.dart';
 // void main() {
 //   runApp(
 //     MultiProvider(providers: [
@@ -203,9 +204,14 @@ class MyApp extends StatelessWidget {
         // state that can only be triggered by that screen's own failed
         // request. To undo: re-add `import 'widgets/network_guard.dart';`
         // and wrap the ScrollConfiguration below in NetworkGuard(child: ...).
-        return ScrollConfiguration(
-          behavior: NoGlowScrollBehavior(),
-          child: child!,
+        // KeyboardBackgroundGuard: on Android, closes the keyboard when the
+        // app goes to the background, so it doesn't come back with the
+        // keyboard's space still reserved (blank area, cut-off text).
+        return KeyboardBackgroundGuard(
+          child: ScrollConfiguration(
+            behavior: NoGlowScrollBehavior(),
+            child: child!,
+          ),
         );
       },
     );

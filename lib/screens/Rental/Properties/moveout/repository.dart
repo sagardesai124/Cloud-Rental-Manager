@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/moveout_form_ui.dart'
+    show moveInSuccessMessage;
 
 class LeaseMoveoutRepository {
   // The server takes the caller's OWN id: staff_id for Staff, adminId
@@ -161,7 +163,8 @@ class LeaseMoveoutRepository {
     );
     var responseData = json.decode(response.body);
     if (responseData["statusCode"] == 200) {
-      Fluttertoast.showToast(msg: responseData["message"]);
+      // Same success text as web handleMoveIn.
+      Fluttertoast.showToast(msg: moveInSuccessMessage);
       return json.decode(response.body);
 
     } else {

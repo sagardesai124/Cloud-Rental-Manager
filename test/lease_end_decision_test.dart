@@ -56,7 +56,7 @@ void main() {
         isTrue);
   });
 
-  group('on/off by server (staging runs an older server)', () {
+  group('asked on every server (staging runs 2.2 now, like web)', () {
     late String savedUrl;
     setUp(() {
       savedUrl = Api_url;
@@ -67,10 +67,10 @@ void main() {
       debugLeaseEndQuestionEnabled = true;
     });
 
-    test('staging build: never asked', () {
+    test('staging build: asked, like staging web', () {
       Api_url = 'https://staging.cloudrentalmanager.com';
-      expect(leaseEndQuestionEnabled, isFalse);
-      expect(_ask(['A'], ['A']), isFalse);
+      expect(leaseEndQuestionEnabled, isTrue);
+      expect(_ask(['A'], ['A']), isTrue);
     });
     test('production and newdev builds: asked', () {
       Api_url = 'https://saas.cloudrentalmanager.com';

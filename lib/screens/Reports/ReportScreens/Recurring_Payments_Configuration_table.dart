@@ -17,6 +17,7 @@ import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/Model/Recurring_Payments_Configuration_model.dart';
+import 'package:three_zero_two_property/services/recurring_payments_search.dart';
 import 'package:three_zero_two_property/repository/Recurring_Payments_Configuration_repo.dart';
 import 'package:three_zero_two_property/widgets/report_header.dart';
 import 'package:three_zero_two_property/widgets/pdf_report_header.dart';
@@ -183,6 +184,141 @@ class _Recurring_Payments_Configuration_ReportState
 
   Set<int> expandedIndices = {};
   int totalDisplayData = 0;
+  String searchvalue = '';
+
+  /// The properties that match the search, like web.
+  List<Data> get _visibleData => filterRecurringPayments(
+      recurringPaymentsConfiguration?.data ?? const [], searchvalue);
+  /// Search box and Export. Also shown when there is no data, so Export
+  /// keeps its place, greyed and not tappable.
+  Widget _buildSearchExportRow() {
+    final bool hasRows =
+        recurringPaymentsConfiguration?.data?.isNotEmpty ?? false;
+    return Padding(
+      padding: EdgeInsets.only(
+          left: MediaQuery.of(context).size.width > 500
+              ? 25
+              : 16,
+          right: MediaQuery.of(context).size.width > 500
+              ? 25
+              : 16),
+      child: Row(
+        mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            flex: 4,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10),
+                  height: MediaQuery.of(context)
+                              .size
+                              .width <
+                          500
+                      ? 45
+                      : 50,
+                  width: MediaQuery.of(context)
+                              .size
+                              .width <
+                          500
+                      ? MediaQuery.of(context)
+                              .size
+                              .width *
+                          .5
+                      : MediaQuery.of(context)
+                              .size
+                              .width *
+                          .4,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.circular(5),
+                    border:
+                        Border.all(color: Colors.grey),
+                  ),
+                  child: TextField(
+                    onChanged: (value) {
+                      setState(() {
+                        searchvalue = value;
+                        // The row keys are positions in the list.
+                        expandedRowIndex = null;
+                        expandedTenantIndex.clear();
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "Search here...",
+                      hintStyle: TextStyle(
+                          color: Color(0xFF8A95A8)),
+                      contentPadding:
+                          EdgeInsets.all(11),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 5,
+          ),
+          Expanded(
+            flex: 3,
+            child: SizedBox(
+              //  width: 100,
+              height: 42,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: blueColor,
+              disabledBackgroundColor: Colors.grey.shade400,
+              disabledForegroundColor: Colors.white,
+                ),
+                onPressed: hasRows ? () {} : null,
+                child: PopupMenuButton<String>(
+                  enabled: hasRows,
+                  onSelected: (value) async {
+                    // Export logic
+                    if (value == 'PDF') {
+                      generateAccountTotalReportPdf();
+                    } else if (value == 'XLSX') {
+                      generateRecurringPaymentExcel(
+                          recurringPaymentsConfiguration!
+                              .data!);
+                    } else if (value == 'CSV') {
+                      generateRecurringPaymentCsv(
+                          recurringPaymentsConfiguration!
+                              .data!);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                    const PopupMenuItem<String>(
+                        value: 'PDF',
+                        child: Text('PDF')),
+                    const PopupMenuItem<String>(
+                        value: 'XLSX',
+                        child: Text('XLSX')),
+                    const PopupMenuItem<String>(
+                        value: 'CSV',
+                        child: Text('CSV')),
+                  ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Export'),
+                      Icon(Icons.arrow_drop_down),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateProvider = Provider.of<DateProvider>(context);
@@ -208,7 +344,39 @@ class _Recurring_Payments_Configuration_ReportState
                         style: const TextStyle(color: Colors.red)))
                 : recurringPaymentsConfiguration == null ||
                         recurringPaymentsConfiguration!.data!.isEmpty
-                    ? const Center(child: Text("No Data Available"))
+                    ? Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          ReportHeader(
+                            title: "Recurring Payments Configuration",
+                          ),
+                          const SizedBox(height: 10),
+                          _buildSearchExportRow(),
+                          // The standard empty state used across reports.
+                          Expanded(
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    "assets/images/no_data_transparent.png",
+                                    height: 200,
+                                    width: 200,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    "No Data Available",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: blueColor,
+                                        fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
                     : SingleChildScrollView(
                         child: Column(
                           children: [
@@ -217,123 +385,7 @@ class _Recurring_Payments_Configuration_ReportState
                               title: "Recurring Payments Configuration",
                             ),
                             const SizedBox(height: 10),
-                            Padding(
-                              padding: EdgeInsets.only(
-                                  left: MediaQuery.of(context).size.width > 500
-                                      ? 25
-                                      : 16,
-                                  right: MediaQuery.of(context).size.width > 500
-                                      ? 25
-                                      : 16),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    flex: 4,
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10),
-                                          height: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? 45
-                                              : 50,
-                                          width: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  500
-                                              ? MediaQuery.of(context)
-                                                      .size
-                                                      .width *
-                                                  .5
-                                              : MediaQuery.of(context)
-                                                      .size
-                                                      .width *
-                                                  .4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                                BorderRadius.circular(5),
-                                            border:
-                                                Border.all(color: Colors.grey),
-                                          ),
-                                          child: TextField(
-                                            onChanged: (value) {
-                                              setState(() {
-                                                // searchvalue = value;
-                                              });
-                                            },
-                                            decoration: const InputDecoration(
-                                              border: InputBorder.none,
-                                              hintText: "Search here...",
-                                              hintStyle: TextStyle(
-                                                  color: Color(0xFF8A95A8)),
-                                              contentPadding:
-                                                  EdgeInsets.all(11),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 5,
-                                  ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: SizedBox(
-                                      //  width: 100,
-                                      height: 42,
-                                      child: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: blueColor,
-                                        ),
-                                        onPressed: () {},
-                                        child: PopupMenuButton<String>(
-                                          onSelected: (value) async {
-                                            // Export logic
-                                            if (value == 'PDF') {
-                                              generateAccountTotalReportPdf();
-                                            } else if (value == 'XLSX') {
-                                              generateRecurringPaymentExcel(
-                                                  recurringPaymentsConfiguration!
-                                                      .data!);
-                                            } else if (value == 'CSV') {
-                                              generateRecurringPaymentCsv(
-                                                  recurringPaymentsConfiguration!
-                                                      .data!);
-                                            }
-                                          },
-                                          itemBuilder: (BuildContext context) =>
-                                              <PopupMenuEntry<String>>[
-                                            const PopupMenuItem<String>(
-                                                value: 'PDF',
-                                                child: Text('PDF')),
-                                            const PopupMenuItem<String>(
-                                                value: 'XLSX',
-                                                child: Text('XLSX')),
-                                            const PopupMenuItem<String>(
-                                                value: 'CSV',
-                                                child: Text('CSV')),
-                                          ],
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text('Export'),
-                                              Icon(Icons.arrow_drop_down),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              ),
-                            ),
+                            _buildSearchExportRow(),
                             const SizedBox(height: 10),
                             Padding(
                               padding: EdgeInsets.only(
@@ -375,6 +427,8 @@ class _Recurring_Payments_Configuration_ReportState
                                       : 16),
                               child: _buildHeaders(),
                             ),
+                            if (_visibleData.isEmpty)
+                              kNoSearchResults(context),
                             Padding(
                               padding: EdgeInsets.only(
                                   left: MediaQuery.of(context).size.width > 500
@@ -384,7 +438,7 @@ class _Recurring_Payments_Configuration_ReportState
                                       ? 25
                                       : 16),
                               child: Column(
-                                children: recurringPaymentsConfiguration!.data!
+                                children: _visibleData
                                     .asMap()
                                     .entries
                                     .map((leaseData) {

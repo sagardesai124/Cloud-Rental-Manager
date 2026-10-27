@@ -54,6 +54,8 @@ import 'Additional Stats/Additional_Stats_table.dart';
 import 'package:three_zero_two_property/screens/Rental/Properties/Maintenance/maintenance_table.dart';
 import 'moveout/Moveout_properties.dart';
 import 'moveout/repository.dart';
+import 'package:three_zero_two_property/screens/Rental/Properties/moveout/moveout_form_ui.dart'
+    show confirmMoveIn;
 import 'applience/Applience_parts.dart' as applience_parts;
 import 'gallery/add_photo_screen.dart';
 import 'gallery/edit_photo_screen.dart';
@@ -8107,6 +8109,11 @@ class _Summery_pageState extends State<Summery_page>
                   String? id = prefs.getString("adminId");
                   if (_moveInBusy) return;
                   _moveInBusy = true;
+                  // Web asks first; Cancel leaves the tenant as is.
+                  if (!await confirmMoveIn(context)) {
+                    _moveInBusy = false;
+                    return;
+                  }
                   LeaseMoveoutRepository()
                       .addMoveInTenant(
                     adminId: id!,
@@ -8120,8 +8127,7 @@ class _Summery_pageState extends State<Summery_page>
                       isLoading = false;
                       // isMovedOut = true;
                     });
-
-                    Navigator.pop(context, true);
+                    // Stays on this screen and refreshes, like web.
                   }).catchError((e) {
                     setState(() {
                       isLoading = false;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:three_zero_two_property/services/csv_row.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
 import 'package:flutter/services.dart';
@@ -851,8 +852,24 @@ class _PropertyInsuranceSummaryState extends State<PropertyInsuranceSummary>
           'Company,Policy Number,Property Address,Status,Named Insured,Policy Type,Effective Date,Expiration Date,Premium Amount,Payment Terms,Deductible,Agent Name,Agent Phone,Notes');
 
       for (final insurance in filteredData) {
-        csv.writeln(
-            '${insurance.insuranceCompanyName ?? ''},${insurance.policyNumber ?? ''},${insurance.propertyAddress ?? ''},${getInsuranceStatus(insurance.expirationDate)},${insurance.namedInsured ?? ''},${insurance.policyType ?? ''},${insurance.effectiveDate ?? ''},${insurance.expirationDate ?? ''},${insurance.premiumAmount ?? ''},${insurance.paymentTerms ?? ''},${insurance.deductible ?? ''},${insurance.agentName ?? ''},${insurance.agentPhone ?? ''},${insurance.notes ?? ''}');
+        // Quoted like web's CSV, so addresses, amounts and notes with commas
+        // stay in their column.
+        csv.writeln(csvRow([
+          insurance.insuranceCompanyName ?? '',
+          insurance.policyNumber ?? '',
+          insurance.propertyAddress ?? '',
+          getInsuranceStatus(insurance.expirationDate),
+          insurance.namedInsured ?? '',
+          insurance.policyType ?? '',
+          insurance.effectiveDate ?? '',
+          insurance.expirationDate ?? '',
+          insurance.premiumAmount ?? '',
+          insurance.paymentTerms ?? '',
+          insurance.deductible ?? '',
+          insurance.agentName ?? '',
+          insurance.agentPhone ?? '',
+          insurance.notes ?? '',
+        ]));
       }
 
       // Save to temporary file

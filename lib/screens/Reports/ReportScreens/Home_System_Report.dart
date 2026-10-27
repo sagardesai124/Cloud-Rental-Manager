@@ -54,6 +54,9 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
     with NetworkRetryState {
   // Change from late Future to nullable Future
   Future<Home_system_report>? _futureRentersInsurance;
+  // Property the shown report was run for. Web clears the report when the
+  // property changes, which greys out Export until the next Run.
+  String? _reportPropertyId;
   rentrollreportmodel? rentersInsuranceModel;
   bool isLoading = true;
   String? errorMessage;
@@ -429,6 +432,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
     setState(() {
       _futureRentersInsurance =
           fetchRentersInsuranceData(id: _selectedPropertyId!);
+      _reportPropertyId = _selectedPropertyId;
     });
   }
 
@@ -1867,7 +1871,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Image.asset(
-                                    "assets/images/no_data.jpg",
+                                    "assets/images/no_data_transparent.png",
                                     height: 200,
                                     width: 200,
                                   ),
@@ -1911,7 +1915,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Image.asset(
-                                    "assets/images/no_data.jpg",
+                                    "assets/images/no_data_transparent.png",
                                     height: 200,
                                     width: 200,
                                   ),
@@ -2719,6 +2723,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                         isLoading = true;
                         _futureRentersInsurance =
                             fetchRentersInsuranceData(id: _selectedPropertyId!);
+                        _reportPropertyId = _selectedPropertyId;
                       });
                     } else {
                       Fluttertoast.showToast(
@@ -2731,53 +2736,71 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                 ),
               ),
               const SizedBox(width: 10),
-              // Export Button
-              Container(
-                height: 45,
-                width: 75,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(0),
-                  color: Colors.white,
-                ),
-                child: PopupMenuButton<String>(
-                  offset: Offset(5, 50),
-                  onSelected: handleDownload,
-                  icon: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      FaIcon(FontAwesomeIcons.download), // Download icon
-                      SizedBox(width: 5),
-                      Icon(Icons.arrow_drop_down), // Dropdown arrow icon
-                    ],
-                  ),
-                  tooltip: "Download",
-                  itemBuilder: (BuildContext context) {
-                    return downloadOptions.map((String option) {
-                      return PopupMenuItem<String>(
-                        value: option,
-                        onTap: () async {
-                          if (_futureRentersInsurance == null) {
-                            Fluttertoast.showToast(
-                              msg: "Please run the report first",
-                              toastLength: Toast.LENGTH_SHORT,
-                            );
-                            return;
-                          }
-                          final data = await _futureRentersInsurance;
-                          if (option == "PDF") {
-                            generaterentersInsurancePdf(data!);
-                          } else if (option == "Excel") {
-                            generateRentersInsuranceExcel(data!);
-                          } else if (option == "CSV") {
-                            generateRentersInsuranceCSV(data!);
-                          }
-                        },
-                        child: Text("Download as $option"),
-                      );
-                    }).toList();
-                  },
-                ),
+              // Export Button - enabled only when the report has units,
+              // like web (`applianceData.length > 0`): greyed out and not
+              // tappable before Run, while loading and after an empty result.
+              FutureBuilder<Home_system_report>(
+                future: _futureRentersInsurance,
+                builder: (context, exportSnap) {
+                  final bool hasExportData =
+                      exportSnap.connectionState == ConnectionState.done &&
+                          (exportSnap.data?.units?.isNotEmpty ?? false) &&
+                          _selectedPropertyId == _reportPropertyId;
+                  return Container(
+                    height: 45,
+                    width: 75,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(0),
+                      color: Colors.white,
+                    ),
+                    child: PopupMenuButton<String>(
+                      enabled: hasExportData,
+                      offset: Offset(5, 50),
+                      onSelected: handleDownload,
+                      icon: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          FaIcon(FontAwesomeIcons.download,
+                              color: hasExportData
+                                  ? null
+                                  : Colors.grey.shade400), // Download icon
+                          const SizedBox(width: 5),
+                          Icon(Icons.arrow_drop_down,
+                              color: hasExportData
+                                  ? null
+                                  : Colors.grey.shade400), // Dropdown arrow icon
+                        ],
+                      ),
+                      tooltip: "Download",
+                      itemBuilder: (BuildContext context) {
+                        return downloadOptions.map((String option) {
+                          return PopupMenuItem<String>(
+                            value: option,
+                            onTap: () async {
+                              if (_futureRentersInsurance == null) {
+                                Fluttertoast.showToast(
+                                  msg: "Please run the report first",
+                                  toastLength: Toast.LENGTH_SHORT,
+                                );
+                                return;
+                              }
+                              final data = await _futureRentersInsurance;
+                              if (option == "PDF") {
+                                generaterentersInsurancePdf(data!);
+                              } else if (option == "Excel") {
+                                generateRentersInsuranceExcel(data!);
+                              } else if (option == "CSV") {
+                                generateRentersInsuranceCSV(data!);
+                              }
+                            },
+                            child: Text("Download as $option"),
+                          );
+                        }).toList();
+                      },
+                    ),
+                  );
+                },
               ),
             ],
           ),

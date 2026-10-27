@@ -7,7 +7,6 @@ import 'package:three_zero_two_property/constant/constant.dart';
 import 'package:three_zero_two_property/screens/Rental/mortgage/mortgage_summery.dart';
 import '../../../widgets/appbar.dart';
 import '../../../widgets/custom_drawer.dart';
-import 'package:three_zero_two_property/widgets/titleBar.dart';
 import 'Addmortgage.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
@@ -681,13 +680,41 @@ class _MortgageTableState extends State<MortgageTable>
                   SizedBox(
                     width: 13,
                   ),
+                // Back arrow, the same as the other reports' headers.
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.black87,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Title styled like the other reports' headers.
                 Expanded(
                   flex: 3,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: titleBar(
-                      width: double.infinity,
-                      title: 'Mortgages',
+                  child: Text(
+                    'Mortgages',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: blueColor,
                     ),
                   ),
                 ),
@@ -698,8 +725,7 @@ class _MortgageTableState extends State<MortgageTable>
                     child: GestureDetector(
                       onTap: _openAddMortgageForm,
                       child: Container(
-                        height:
-                            (MediaQuery.of(context).size.width < 768) ? 50 : 60,
+                        height: 40,
                         decoration: BoxDecoration(
                           color: blueColor,
                           borderRadius: BorderRadius.circular(5),
@@ -805,27 +831,19 @@ class _MortgageTableState extends State<MortgageTable>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.inbox_outlined,
-                              size: 64,
-                              color: Colors.grey[400],
+                            // The standard empty state used across reports.
+                            Image.asset(
+                              "assets/images/no_data_transparent.png",
+                              height: 200,
+                              width: 200,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             Text(
-                              'No mortgages found',
+                              "No Data Available",
                               style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Try adjusting your search or add a new mortgage',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[500],
-                              ),
+                                  fontWeight: FontWeight.bold,
+                                  color: blueColor,
+                                  fontSize: 16),
                             ),
                           ],
                         ),

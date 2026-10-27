@@ -398,6 +398,134 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
   bool ascending1 = false;
   bool ascending2 = false;
   bool ascending3 = false;
+  /// Export row. Shown in every state of the report: with no rows it stays
+  /// in place, greyed and not tappable.
+  Widget _buildExportRow(List<CompletedWorkData> data) {
+    final bool hasRows = data.isNotEmpty;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: MediaQuery.of(context).size.width > 500
+            ? 10
+            : 0,
+        right: MediaQuery.of(context).size.width > 500
+            ? 10
+            : 0,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // // Search Box expands to available space
+          // Expanded(
+          //   child: Padding(
+          //     padding: const EdgeInsets.symmetric(
+          //         horizontal: 5.0, vertical: 5),
+          //     child: Material(
+          //       elevation: 3,
+          //       borderRadius:
+          //           BorderRadius.circular(8),
+          //       child: Container(
+          //         padding: const EdgeInsets.symmetric(
+          //             horizontal: 10),
+          //         height: MediaQuery.of(context)
+          //                     .size
+          //                     .width <
+          //                 500
+          //             ? 48
+          //             : 50,
+          //         decoration: BoxDecoration(
+          //           color: Colors.white,
+          //           borderRadius:
+          //               BorderRadius.circular(8),
+          //           border: Border.all(
+          //               color:
+          //                   const Color(0xFF8A95A8)),
+          //         ),
+          //         child: TextField(
+          //           onChanged: (value) {
+          //             setState(() {
+          //               searchvalue = value;
+          //             });
+          //           },
+          //           decoration: const InputDecoration(
+          //             border: InputBorder.none,
+          //             hintText: "Search here...",
+          //             hintStyle: TextStyle(
+          //                 color: Color(0xFF8A95A8)),
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
+
+          // Button takes only the space it needs
+          Expanded(
+            child: Align(
+            alignment: Alignment.centerRight,
+            child: FractionallySizedBox(
+              widthFactor: 0.5,
+              child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 5.0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: blueColor,
+              disabledBackgroundColor: Colors.grey.shade400,
+                minimumSize:
+                    const Size(double.infinity, 44),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 12),
+              ),
+              onPressed: hasRows ? () {} : null,
+              child: PopupMenuButton<String>(
+                          enabled: hasRows,
+                onSelected: (value) async {
+                  if (value == 'PDF') {
+                    generateWorkOrderPdf(data);
+                  } else if (value == 'XLSX') {
+                    generateWorkOrderExcel(data);
+                  } else if (value == 'CSV') {
+                    generateWorkOrderCsv(data);
+                  }
+                },
+                itemBuilder: (BuildContext context) =>
+                    <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                      value: 'PDF',
+                      child: Text('PDF')),
+                  const PopupMenuItem<String>(
+                      value: 'XLSX',
+                      child: Text('XLSX')),
+                  const PopupMenuItem<String>(
+                      value: 'CSV',
+                      child: Text('CSV')),
+                ],
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Export',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down,
+                        color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          ),
+          ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeaders() {
     var width = MediaQuery.of(context).size.width;
     return Padding(
@@ -1766,7 +1894,11 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
                               child: friendlyErrorState(snapshot.error));
                         } else if (!snapshot.hasData ||
                             snapshot.data!.isEmpty) {
-                          return Container(
+                          return Column(
+                            children: [
+                              const SizedBox(height: 10),
+                              _buildExportRow(const []),
+                              Container(
                             height: MediaQuery.of(context).size.height * .5,
                             child: Center(
                               child: Column(
@@ -1774,7 +1906,7 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Image.asset(
-                                    "assets/images/no_data.jpg",
+                                    "assets/images/no_data_transparent.png",
                                     height: 200,
                                     width: 200,
                                   ),
@@ -1791,6 +1923,8 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
                                 ],
                               ),
                             ),
+                              ),
+                            ],
                           );
                         }
 
@@ -1934,126 +2068,7 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
                               //   ),
                               // ),
                               const SizedBox(height: 10),
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  left: MediaQuery.of(context).size.width > 500
-                                      ? 10
-                                      : 0,
-                                  right: MediaQuery.of(context).size.width > 500
-                                      ? 10
-                                      : 0,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    // // Search Box expands to available space
-                                    // Expanded(
-                                    //   child: Padding(
-                                    //     padding: const EdgeInsets.symmetric(
-                                    //         horizontal: 5.0, vertical: 5),
-                                    //     child: Material(
-                                    //       elevation: 3,
-                                    //       borderRadius:
-                                    //           BorderRadius.circular(8),
-                                    //       child: Container(
-                                    //         padding: const EdgeInsets.symmetric(
-                                    //             horizontal: 10),
-                                    //         height: MediaQuery.of(context)
-                                    //                     .size
-                                    //                     .width <
-                                    //                 500
-                                    //             ? 48
-                                    //             : 50,
-                                    //         decoration: BoxDecoration(
-                                    //           color: Colors.white,
-                                    //           borderRadius:
-                                    //               BorderRadius.circular(8),
-                                    //           border: Border.all(
-                                    //               color:
-                                    //                   const Color(0xFF8A95A8)),
-                                    //         ),
-                                    //         child: TextField(
-                                    //           onChanged: (value) {
-                                    //             setState(() {
-                                    //               searchvalue = value;
-                                    //             });
-                                    //           },
-                                    //           decoration: const InputDecoration(
-                                    //             border: InputBorder.none,
-                                    //             hintText: "Search here...",
-                                    //             hintStyle: TextStyle(
-                                    //                 color: Color(0xFF8A95A8)),
-                                    //           ),
-                                    //         ),
-                                    //       ),
-                                    //     ),
-                                    //   ),
-                                    // ),
-
-                                    // Button takes only the space it needs
-                                    Expanded(
-                                      child: Align(
-                                      alignment: Alignment.centerRight,
-                                      child: FractionallySizedBox(
-                                        widthFactor: 0.5,
-                                        child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 5.0),
-                                      child: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: blueColor,
-                                          minimumSize:
-                                              const Size(double.infinity, 44),
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 10, horizontal: 12),
-                                        ),
-                                        onPressed: () {},
-                                        child: PopupMenuButton<String>(
-                                          onSelected: (value) async {
-                                            if (value == 'PDF') {
-                                              generateWorkOrderPdf(data);
-                                            } else if (value == 'XLSX') {
-                                              generateWorkOrderExcel(data);
-                                            } else if (value == 'CSV') {
-                                              generateWorkOrderCsv(data);
-                                            }
-                                          },
-                                          itemBuilder: (BuildContext context) =>
-                                              <PopupMenuEntry<String>>[
-                                            const PopupMenuItem<String>(
-                                                value: 'PDF',
-                                                child: Text('PDF')),
-                                            const PopupMenuItem<String>(
-                                                value: 'XLSX',
-                                                child: Text('XLSX')),
-                                            const PopupMenuItem<String>(
-                                                value: 'CSV',
-                                                child: Text('CSV')),
-                                          ],
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'Export',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              Icon(Icons.arrow_drop_down,
-                                                  color: Colors.white),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    ),
-                                    ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              _buildExportRow(data),
                               SizedBox(height: 8),
                               _buildHeaders(),
                               SizedBox(height: 20),
@@ -2629,7 +2644,7 @@ class _CompletedWorkOrdersState extends State<CompletedWorkOrders>
 //                             mainAxisAlignment: MainAxisAlignment.center,
 //                             crossAxisAlignment: CrossAxisAlignment.center,
 //                             children: [
-//                               Image.asset("assets/images/no_data.jpg",height: 200,width: 200,),
+//                               Image.asset("assets/images/no_data_transparent.png",height: 200,width: 200,),
 //                               SizedBox(height: 10,),
 //                               Text("No Data Available",style: TextStyle(fontWeight: FontWeight.bold,color:blueColor,fontSize: 16),)
 //                             ],

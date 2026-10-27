@@ -51,7 +51,8 @@ class WorkOrder {
     rentalAddress = json['rental_adress']??"";
     rentalUnit = json['rental_unit']??"";
     ticketNumber = json['ticket_number']??"";
-    staffMemberName = json['staffmember_name']??"N/A";
+    // Kept empty when nobody is assigned; the list shows "-" like web.
+    staffMemberName = json['staffmember_name'];
   }
 }
 
@@ -63,4 +64,11 @@ String workOrderPropertyLine(WorkOrder w) {
   if (address.isEmpty) return '-';
   final unit = (w.rentalUnit ?? '').trim();
   return unit.isEmpty ? address : '$address, $unit';
+}
+
+/// "Assigned" value for the tenant Work Orders list — web parity
+/// (TenantWork.jsx `staffmember_name || "-"`).
+String workOrderAssignedLine(WorkOrder w) {
+  final name = (w.staffMemberName ?? '').trim();
+  return name.isEmpty ? '-' : name;
 }

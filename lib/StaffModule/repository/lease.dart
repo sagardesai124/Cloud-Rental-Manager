@@ -372,6 +372,9 @@ class LeaseRepository {
     required String status,
     String sortBy = 'end_date',
     String sortOrder = 'descending',
+    // Comma-separated rental owner ids, like web's RentRoll.jsx; the server
+    // filters by them. Empty = every owner.
+    String rentalOwnerIds = '',
   }) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final adminId = prefs.getString("adminId");
@@ -379,7 +382,8 @@ class LeaseRepository {
     String? token = prefs.getString('token');
     final queryString = 'page=$page&limit=$limit'
         '&search=${Uri.encodeQueryComponent(search)}'
-        '&status=$status&sortBy=$sortBy&sortOrder=$sortOrder';
+        '&status=$status&sortBy=$sortBy&sortOrder=$sortOrder'
+        '${rentalOwnerIds.isEmpty ? '' : '&rentalOwnerIds=${Uri.encodeQueryComponent(rentalOwnerIds)}'}';
     final uri = Uri.parse('$Api_url/api/leases/leases/$adminId?$queryString');
     final response = await apiGet(
       uri,

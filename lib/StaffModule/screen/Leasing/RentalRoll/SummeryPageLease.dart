@@ -5229,6 +5229,11 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                     prefs.getString("adminId");
                                                 if (_moveInBusy) return;
                                                 _moveInBusy = true;
+                                                // Web asks first; Cancel leaves the tenant as is.
+                                                if (!await confirmMoveIn(context)) {
+                                                  _moveInBusy = false;
+                                                  return;
+                                                }
                                                 LeaseMoveoutRepository()
                                                     .addMoveInTenant(
                                                   adminId: id!,
@@ -5245,7 +5250,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                                 widget.leaseId);
                                                     isLoading = false;
                                                   });
-                                                  Navigator.pop(context, true);
+                                                  // Stays on this screen and refreshes, like web.
                                                 }).catchError((e) {
                                                   setState(() {
                                                     isLoading = false;
@@ -5561,6 +5566,11 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                         .getString("adminId");
                                                     if (_moveInBusy) return;
                                                     _moveInBusy = true;
+                                                    // Web asks first; Cancel leaves the tenant as is.
+                                                    if (!await confirmMoveIn(context)) {
+                                                      _moveInBusy = false;
+                                                      return;
+                                                    }
                                                     LeaseMoveoutRepository()
                                                         .addMoveInTenant(
                                                       adminId: id!,
@@ -5578,9 +5588,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                                                         isLoading = false;
                                                         // isMovedOut = true;
                                                       });
-
-                                                      Navigator.pop(
-                                                          context, true);
+                                                      // Stays on this screen and refreshes, like web.
                                                     }).catchError((e) {
                                                       setState(() {
                                                         isLoading = false;
@@ -6040,7 +6048,7 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
           const MoveoutInfoBanner(),
           const SizedBox(height: 14),
           MoveoutPropertyDetails(
-            address: '${tenant.rentalAddress}',
+            address: moveoutAddressLine(tenant.rentalAddress, tenant.rentalUnit),
             leaseType: '${tenant.leaseType}',
             startEnd:
                 '${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.startDate)} to ${Provider.of<DateProvider>(context, listen: false).formatCurrentDate(tenant.endDate)}',
@@ -6054,7 +6062,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
               name: '${tenant.tenantFirstName} ${tenant.tenantLastName}',
               selected: true,
               onChanged: (_) {},
-              noticeField: buildDateField(startdateController),
+              noticeField: buildDateField(startdateController,
+                  // Web: lease start to lease end.
+                  minDate: () => tenant.startDate,
+                  maxDate: tenant.endDate),
               moveOutField: Container(
                 height: 52,
                 padding: const EdgeInsets.only(left: 14, right: 14),
@@ -6174,7 +6185,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
     );
   }
 
-  Widget buildDateField(TextEditingController controller) {
+  Widget buildDateField(TextEditingController controller,
+      {String? Function()? minDate, String? maxDate}) {
     return Padding(
       padding: EdgeInsets.zero,
       child: Container(
@@ -6192,11 +6204,14 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                   icon: const Icon(Icons.calendar_today_outlined,
                       size: 20, color: MoveoutColors.muted),
                   onPressed: () async {
+                    // Web's lease move-out limits (see moveoutPickerRange).
+                    final range = moveoutPickerRange(controller.text,
+                        minDate: minDate?.call(), maxDate: maxDate);
                     DateTime? pickedDate = await showDatePicker(
                       context: context,
-                      initialDate: moveoutPickerInitialDate(controller.text),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
+                      initialDate: range.initial,
+                      firstDate: range.first,
+                      lastDate: range.last,
                       builder: (BuildContext context, Widget? child) {
                         return Theme(
                           data: ThemeData.light().copyWith(
