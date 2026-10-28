@@ -15,6 +15,7 @@ import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
+import 'package:three_zero_two_property/services/zip_code.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
@@ -2352,8 +2353,9 @@ class _Profile_screenState extends State<Profile_screen>
                                         isRequired: true,
                                       ),
                                       const SizedBox(height: 16.0),
+                                      // Display-only, like web: no required marker.
                                       const Text(
-                                        'Created Date *',
+                                        'Created Date',
                                         style: TextStyle(
                                             color: Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold),
@@ -2361,12 +2363,13 @@ class _Profile_screenState extends State<Profile_screen>
                                       const SizedBox(
                                         height: 5,
                                       ),
+                                      // Read-only and never saved, so it
+                                      // has nothing to validate (web too).
                                       buildTextField(
                                         'Created Date',
                                         _createdDate,
-                                        _validateFirstName,
+                                        null,
                                         isEnabled: false,
-                                        isRequired: true,
                                       ),
                                       const SizedBox(height: 16.0),
                                       const Text(
@@ -2387,7 +2390,7 @@ class _Profile_screenState extends State<Profile_screen>
                                       ),
                                       const SizedBox(height: 16.0),
                                       const Text(
-                                        'Postal Code',
+                                        'Zip Code',
                                         style: TextStyle(
                                             color: Color(0xFF8A95A8),
                                             fontWeight: FontWeight.bold),
@@ -2395,11 +2398,18 @@ class _Profile_screenState extends State<Profile_screen>
                                       const SizedBox(
                                         height: 5,
                                       ),
+                                      // Like web: digits only, ZIP+4 added
+                                      // as typed, and 5 digits or ZIP+4 on
+                                      // Update. isRequired only makes the
+                                      // check run; an empty zip is allowed.
                                       buildTextField(
-                                          'Postal Code',
-                                          _companyPostalCodeController,
-                                          (v) => _validateRequired(
-                                              v, 'a postal code')),
+                                        'Zip Code',
+                                        _companyPostalCodeController,
+                                        validateZipCode,
+                                        isRequired: true,
+                                        inputFormatters: [zipCodeFormatter],
+                                        keyboardType: TextInputType.number,
+                                      ),
                                       const SizedBox(height: 16.0),
                                       const Text(
                                         'City',
@@ -2547,9 +2557,17 @@ class _Profile_screenState extends State<Profile_screen>
                                                     _companyAddressController
                                                             .text !=
                                                         originalCompanyAddress ||
+                                                    // Digits only, like
+                                                    // web's `zipNorm`.
                                                     _companyPostalCodeController
-                                                            .text !=
-                                                        originalCompanyPostalCode ||
+                                                            .text
+                                                            .replaceAll(
+                                                                RegExp(r'\D'),
+                                                                '') !=
+                                                        originalCompanyPostalCode
+                                                            .replaceAll(
+                                                                RegExp(r'\D'),
+                                                                '') ||
                                                     _companyCityController
                                                             .text !=
                                                         originalCompanyCity ||
@@ -3610,6 +3628,7 @@ class _Profile_screenState extends State<Profile_screen>
     bool isEnabled = true,
     bool isRequired = false,
     List<TextInputFormatter>? inputFormatters,
+    TextInputType? keyboardType,
   }) {
     // Flat field, matching the house form style (add_tenants.dart `_input`):
     // a hairline outline instead of a drop shadow.
@@ -3633,6 +3652,7 @@ class _Profile_screenState extends State<Profile_screen>
           },
           enabled: isEnabled,
           inputFormatters: inputFormatters,
+          keyboardType: keyboardType,
           decoration: InputDecoration(
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
@@ -3645,13 +3665,6 @@ class _Profile_screenState extends State<Profile_screen>
         ),
       ),
     );
-  }
-
-  String? _validateFirstName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter a valid name';
-    }
-    return null;
   }
 
   /// Every field on this form — including Email and Phone Number — was wired

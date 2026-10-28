@@ -621,7 +621,7 @@ class _RentersInsuranceState extends State<RentersInsurance>
                   },
                   child: Row(
                     children: [
-                      Text("Insurance\n Provider",
+                      Text("Insurance\nProvider",
                           style: TextStyle(
                               color: blueColor,
                               fontWeight: FontWeight.bold,
@@ -1345,10 +1345,11 @@ class _RentersInsuranceState extends State<RentersInsurance>
     );
   }
 
-  /// Search box and Export, shown in every state of the report like web
-  /// (RentersInsurance.jsx renders them outside its loading/empty branches), so an
-  /// empty report still offers Export (a file with headings only).
+  /// Search box and Export, shown in every state of the report. Export is
+  /// greyed out and not tappable while the report has no data, like every
+  /// other report.
   Widget _buildToolbar(List<RentersInsuranceData> data) {
+    final bool hasData = data.isNotEmpty;
     return Padding(
       padding: EdgeInsets.only(
           left:
@@ -1404,6 +1405,9 @@ class _RentersInsuranceState extends State<RentersInsurance>
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: blueColor,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade400,
+              disabledForegroundColor: Colors.white,
               elevation: 0,
               minimumSize: Size(
                   0,
@@ -1422,8 +1426,9 @@ class _RentersInsuranceState extends State<RentersInsurance>
               tapTargetSize:
                   MaterialTapTargetSize.shrinkWrap,
             ),
-            onPressed: () {},
+            onPressed: hasData ? () {} : null,
             child: PopupMenuButton<String>(
+              enabled: hasData,
               onSelected: (value) async {
                 // Export logic
                 if (value == 'PDF') {

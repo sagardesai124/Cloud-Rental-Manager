@@ -2370,6 +2370,8 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   // Reset are greyed out until something differs from what is saved.
   String _savedDateFormat = '';
   String _savedTimeFormat = '';
+  // The date choice (radio) the screen opened on or last saved.
+  int _savedDateIndex = 0;
   DateProvider? _dateFormatProvider;
   int? expandedIndex;
   Set<int> expandedIndices = {};
@@ -3442,6 +3444,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         _dateFormatProvider = dateProvider;
         _savedDateFormat = dateProvider.dateFormat;
         _savedTimeFormat = dateProvider.timeFormat;
+        _savedDateIndex = dateProvider.dateformateselect;
         customdate = null;
         _loadSavedDateTimeFormat();
         DateTime now = DateTime.now();
@@ -4165,8 +4168,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       case 2:
         return 'yyyy-MMM-dd';
       default:
+        // An empty custom box is a change web does not save (see Save).
         final custom = (customdate ?? '').trim();
-        return custom.isEmpty ? dp.dateFormat : fixDateFormat(custom);
+        return custom.isEmpty ? '' : fixDateFormat(custom);
     }
   }
 
@@ -4178,6 +4182,14 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   bool _dateTimeFormatChanged(DateProvider dp) =>
       _pendingDateFormat(dp) != _savedDateFormat ||
       _pendingTimeFormat != _savedTimeFormat;
+
+  /// True once the user picked another date option (or typed a different
+  /// custom format). When it is false, Save keeps the company's saved date
+  /// format, even one the app shows as MM/DD/YYYY because it cannot show it
+  /// yet (a custom "DD/MMM/YYYY" or "M/D/YYYY").
+  bool _dateChoiceChanged(DateProvider dp) =>
+      dateformateselect != _savedDateIndex ||
+      (dateformateselect == 3 && _pendingDateFormat(dp) != _savedDateFormat);
 
   /// "HOW IT APPEARS", like web: while Custom is picked it follows what is
   /// typed, and shows "—" for a format web would reject.
@@ -4218,6 +4230,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     setState(() {
       _savedDateFormat = dp.dateFormat;
       _savedTimeFormat = dp.timeFormat;
+      _savedDateIndex = dp.dateformateselect;
       dateformateselect = dp.dateformateselect;
       timeformateselect = dp.timeformateselect;
       customdate = null;
@@ -4365,14 +4378,20 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 onTap: !dtChanged ? null : () async {
                   final dp = Provider.of<DateProvider>(context, listen: false);
                   dp.updateTimeFormatLocally('24', 0);
-                  dp.updateDateFormat('yyyy-MM-dd', 1);
+                  final saving = dp.updateDateFormat('yyyy-MM-dd', 1);
                   setState(() {
                     dateformateselect = 1;
                     timeformateselect = 0;
                     customdate = null;
                     _customDateController.text = "";
+                  });
+                  // Like web: counted as saved, and announced, only once the
+                  // server accepts it (DateProvider reports a failure).
+                  if (!await saving || !mounted) return;
+                  setState(() {
                     _savedDateFormat = 'yyyy-MM-dd';
                     _savedTimeFormat = '24';
+                    _savedDateIndex = 1;
                   });
                   Fluttertoast.showToast(
                     msg: "Date and time format reset",
@@ -4412,28 +4431,49 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 onTap: !canSave ? null : () async {
                   final savedDate = _pendingDateFormat(dateProvider);
                   final savedTime = _pendingTimeFormat;
-                  customdate = customdate != null && customdate!.isNotEmpty
-                      ? customdate
-                      : dateProvider.dateFormat;
-                  if (dateformateselect == 0) {
-                    context
-                        .read<DateProvider>()
-                        .updateDateFormat('MM/dd/yyyy', 0);
-                  } else if (dateformateselect == 1) {
-                    context
-                        .read<DateProvider>()
-                        .updateDateFormat('yyyy-MM-dd', 1);
-                  } else if (dateformateselect == 2) {
-                    context
-                        .read<DateProvider>()
-                        .updateDateFormat('yyyy-MMM-dd', 2);
-                  } else if (dateformateselect == 3 && customdate != null) {
-                    String fixedDate = fixDateFormat(customdate!);
-                    context.read<DateProvider>().updateDateFormat(fixedDate, 3);
+                  final dateChanged = _dateChoiceChanged(dateProvider);
+                  // Like web (setDateFormat): an empty custom format is
+                  // refused, not swapped for another format. The custom
+                  // box is left as it is, so it still shows DD/MMM/YYYY or
+                  // what was typed after any save.
+                  if (dateChanged &&
+                      dateformateselect == 3 &&
+                      _typedCustomFormat.isEmpty) {
+                    Fluttertoast.showToast(
+                      msg: kInvalidCustomDateFormatMessage,
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      backgroundColor: Colors.black87,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
+                    return;
                   }
+                  final savedIndex = dateformateselect;
+                  final bool ok;
+                  if (!dateChanged) {
+                    // Only the time changed: send the date format back as
+                    // the company has it saved, like web.
+                    ok = await dateProvider.updateTimeFormatKeepingDate(
+                        savedTime, timeformateselect);
+                  } else if (savedIndex == 0) {
+                    ok = await dateProvider.updateDateFormat('MM/dd/yyyy', 0);
+                  } else if (savedIndex == 1) {
+                    ok = await dateProvider.updateDateFormat('yyyy-MM-dd', 1);
+                  } else if (savedIndex == 2) {
+                    ok = await dateProvider.updateDateFormat('yyyy-MMM-dd', 2);
+                  } else {
+                    ok = await dateProvider.updateDateFormat(
+                        fixDateFormat(customdate!), 3);
+                  }
+                  // Like web: counted as saved, and announced, only once the
+                  // server accepts it. A failed save stays on screen as an
+                  // unsaved change (DateProvider reports the failure).
+                  if (!ok || !mounted) return;
                   setState(() {
                     _savedDateFormat = savedDate;
                     _savedTimeFormat = savedTime;
+                    _savedDateIndex = savedIndex;
                   });
                   Fluttertoast.showToast(
                     msg: "Date and time format updated",

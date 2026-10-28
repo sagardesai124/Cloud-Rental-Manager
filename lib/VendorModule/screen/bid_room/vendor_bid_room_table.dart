@@ -158,7 +158,9 @@ class _VendorBidRoomTableState extends State<VendorBidRoomTable>
           (request.description ?? '').toLowerCase().contains(searchLower) ||
           (request.unit?.rentalUnit ?? '')
               .toLowerCase()
-              .contains(searchLower);
+              .contains(searchLower) ||
+          // Web's search also matches the status (Open, Closed).
+          (request.status ?? '').toLowerCase().contains(searchLower);
     }).toList();
 
     // Apply sorting

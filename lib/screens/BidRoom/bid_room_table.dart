@@ -192,7 +192,9 @@ class _BidRoomTableState extends State<BidRoomTable>
             (request.description ?? '').toLowerCase().contains(searchLower) ||
             (request.unit?.rentalUnit ?? '')
                 .toLowerCase()
-                .contains(searchLower);
+                .contains(searchLower) ||
+            // Web's search also matches the status (Open, Awarded, Closed).
+            (request.status ?? '').toLowerCase().contains(searchLower);
       }
 
       // Trade type filter

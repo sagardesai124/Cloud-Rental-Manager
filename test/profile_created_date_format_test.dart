@@ -62,6 +62,23 @@ void main() {
     expect(formatProfileCreatedDate(p, 'N/A'), 'N/A');
   });
 
+  test('Created Date is display-only like web: no asterisk, no required check',
+      () {
+    final src =
+        File('lib/screens/Profile/Profile_screen.dart').readAsStringSync();
+    expect(src, isNot(contains("'Created Date *'")));
+    expect(RegExp(r"const Text\(\s*'Created Date',").hasMatch(src), isTrue,
+        reason: 'label without the required marker');
+    final start = src.indexOf("buildTextField(\n"
+        "                                        'Created Date',");
+    expect(start, isNonNegative);
+    final call = src.substring(start, src.indexOf('),', start));
+    expect(call, isNot(contains('isRequired: true')),
+        reason: 'an empty read-only date must not block Update');
+    expect(call, isNot(contains('_validate')));
+    expect(call, contains('isEnabled: false'));
+  });
+
   test('the screen formats Created Date on load and never saves it', () {
     final src =
         File('lib/screens/Profile/Profile_screen.dart').readAsStringSync();

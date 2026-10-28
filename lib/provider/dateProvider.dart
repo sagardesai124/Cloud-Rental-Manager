@@ -178,6 +178,7 @@ import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -192,9 +193,14 @@ class DateProvider with ChangeNotifier {
   String _timeFormat = '24'; // default time format (24-hour)
   int timeformateselect = 0; // default time format selection
 
+  /// The date format exactly as the company has it saved (e.g. a custom
+  /// "DD/MMM/YYYY" the app does not show yet and displays as MM/DD/YYYY).
+  String? _savedServerFormat;
+
   DateTime get currentDate => _currentDate;
   String get dateFormat => _dateFormat;
   String get timeFormat => _timeFormat;
+  String? get savedServerFormat => _savedServerFormat;
   DateProvider() {
     loadDateFormat();
   }
@@ -227,11 +233,15 @@ class DateProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _saveDateFormat() async {
+  /// Saves the date and time format. True once the server has accepted it;
+  /// the saved theme is then reloaded in the background.
+  Future<bool> _saveDateFormat({bool keepSavedDate = false}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? id = prefs.getString("adminId");
     String? token = prefs.getString('token');
-    if (token != null) {
+    final saved = _savedServerFormat?.trim() ?? '';
+    if (token == null) return false;
+    try {
       final response = await apiPost(
         Uri.parse('${Api_url}/api/themes/date-format'),
         headers: {
@@ -240,34 +250,47 @@ class DateProvider with ChangeNotifier {
           "Content-Type": "application/json"
         },
         body: jsonEncode({
-          'format': _dateFormat.toUpperCase(),
+          'format': keepSavedDate && saved.isNotEmpty
+              ? saved
+              : _dateFormat.toUpperCase(),
           'timeFormat': _timeFormat,
           'admin_id': id,
         }),
       );
-      if (response.statusCode != 200) {
-        // Handle error
-        Fluttertoast.showToast(
-          msg: 'Failed to save date format',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.black87,
-          textColor: Colors.white,
-          fontSize: 16.0,
-        );
-      } else {
-        final jsonData = jsonDecode(response.body);
-        await checkToken(token);
+      if (response.statusCode == 200) {
+        unawaited(checkToken(token));
+        return true;
       }
+    } catch (e) {
+      logError("Error saving date format: $e");
     }
+    Fluttertoast.showToast(
+      msg: 'Failed to save date format',
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.black87,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+    return false;
   }
 
-  void updateDateFormat(String newFormat, selectIndex) {
+  /// Saves [newFormat] (and the current time format); true once the server
+  /// has accepted it.
+  Future<bool> updateDateFormat(String newFormat, selectIndex) async {
     _dateFormat = newFormat;
     dateformateselect = selectIndex;
-    _saveDateFormat();
+    // What the company will have once this save lands, so a time-only save
+    // made before the reload comes back does not send the old one. Put back
+    // if the save fails.
+    final before = _savedServerFormat;
+    final sending = newFormat.toUpperCase();
+    _savedServerFormat = sending;
     _saveSelectedDateFormat();
     notifyListeners();
+    final ok = await _saveDateFormat();
+    if (!ok && _savedServerFormat == sending) _savedServerFormat = before;
+    return ok;
   }
 
   void updateDateFormatLocally(String newFormat, selectIndex) {
@@ -283,6 +306,19 @@ class DateProvider with ChangeNotifier {
     _saveDateFormat();
     _saveSelectedTimeFormat();
     notifyListeners();
+  }
+
+  /// Saves a new time format and sends the date format back exactly as the
+  /// company has it saved, a custom one included, like web (which re-sends
+  /// its loaded format). Used when only the time was changed. True once the
+  /// server has accepted it.
+  Future<bool> updateTimeFormatKeepingDate(
+      String newTimeFormat, int selectIndex) {
+    _timeFormat = newTimeFormat;
+    timeformateselect = selectIndex;
+    _saveSelectedTimeFormat();
+    notifyListeners();
+    return _saveDateFormat(keepSavedDate: true);
   }
 
   void updateTimeFormatLocally(String newTimeFormat, selectIndex) {
@@ -479,6 +515,7 @@ class DateProvider with ChangeNotifier {
         String? serverFormat = jsonData['themes']?['format']?.toString();
         String? serverTimeFormat =
             jsonData['themes']?['timeFormat']?.toString();
+        _savedServerFormat = serverFormat;
 
         if (serverFormat == "YYYY-MM-DD") {
           dateformateselect = 1;

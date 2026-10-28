@@ -19,6 +19,7 @@ import '../../constant/constant.dart';
 import '../widgets/drawer_tiles.dart';
 import '../widgets/appbar.dart';
 import 'package:three_zero_two_property/widgets/us_state_dropdown.dart';
+import 'package:three_zero_two_property/services/zip_code.dart';
 
 class Profile_screen extends StatefulWidget {
   const Profile_screen({Key? key}) : super(key: key);
@@ -482,15 +483,6 @@ class _Profile_screenState extends State<Profile_screen>
     return null;
   }
 
-  static String? _validateZipUS(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Required';
-    final trimmed = v.trim();
-    if (!RegExp(r'^\d{5}(-\d{4})?$').hasMatch(trimmed)) {
-      return 'Enter valid US zip (e.g. 12345 or 12345-6789)';
-    }
-    return null;
-  }
-
   static String? _validateDistance(String? v) {
     if (v == null || v.trim().isEmpty) return 'Required';
     if (RegExp(r'[a-zA-Z]').hasMatch(v)) return 'Numbers only';
@@ -809,17 +801,16 @@ class _Profile_screenState extends State<Profile_screen>
                                     ],
                                   ),
                                 ),
+                                // Like web (VendorProfile.jsx): digits only,
+                                // ZIP+4 hyphen added as typed, web's checks.
                                 _buildTextField(
                                   label: 'Zip Code *',
                                   controller: _zipCodeController,
-                                  hint: 'e.g. 12345 or 12345-6789',
+                                  hint: 'Enter zip code',
                                   keyboardType: TextInputType.number,
-                                  validator: _validateZipUS,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                        RegExp(r'[\d-]')),
-                                    LengthLimitingTextInputFormatter(10),
-                                  ],
+                                  validator: (v) =>
+                                      validateZipCode(v, required: true),
+                                  inputFormatters: [zipCodeFormatter],
                                 ),
                                 _buildTextField(
                                   label: 'Country *',
@@ -1047,24 +1038,24 @@ class _Profile_screenState extends State<Profile_screen>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
+                                        // Numbered from the 2nd row, like web.
                                         child: _buildTextField(
-                                          label: 'Zip Code *',
+                                          label:
+                                              'Zip Code${i > 0 ? ' ${i + 1}' : ''} *',
                                           controller:
                                               _zipDistancePairs[i].zipCode,
-                                          hint: 'e.g. 12345 or 12345-6789',
+                                          hint: 'Enter zip code',
                                           keyboardType: TextInputType.number,
-                                          validator: _validateZipUS,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter.allow(
-                                                RegExp(r'[\d-]')),
-                                            LengthLimitingTextInputFormatter(10),
-                                          ],
+                                          validator: (v) => validateZipCode(v,
+                                              required: true),
+                                          inputFormatters: [zipCodeFormatter],
                                         ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: _buildTextField(
-                                          label: 'Distance (Miles) *',
+                                          label:
+                                              'Distance (Miles)${i > 0 ? ' ${i + 1}' : ''} *',
                                           controller: _zipDistancePairs[i]
                                               .distanceMiles,
                                           hint: 'Enter distance',

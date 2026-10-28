@@ -68,6 +68,6 @@ void main() {
     expect(
         withoutRule,
         containsAll(
-            ['Email Address', 'Phone Number', 'Company Name', 'Postal Code']));
+            ['Email Address', 'Phone Number', 'Company Name', 'Zip Code']));
   });
 }
