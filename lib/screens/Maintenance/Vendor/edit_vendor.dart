@@ -1,4 +1,3 @@
-import 'package:email_validator/email_validator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -581,7 +580,7 @@ class _edit_vendorState extends State<edit_vendor> {
                                         },
                                         child: isLoading
                                             ? const Center(child: SpinKitFadingCircle(color: Colors.white, size: 55.0))
-                                            : const Text('Edit Vendor', style: TextStyle(color: Color(0xFFf7f8f9))),
+                                            : const Text('Update Vendor', style: TextStyle(color: Color(0xFFf7f8f9))),
                                       ),
                                     ),
                                   ),
@@ -1541,9 +1540,11 @@ class CustomTextFieldState extends State<CustomTextField> {
                 return '';
               }
             } else if (widget.email != null) {
-              if (!EmailValidator.validate(widget.controller!.text.trim())) {
+              // Same email rule and message as web's Add/Edit Vendor.
+              if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+                  .hasMatch(widget.controller!.text.trim())) {
                 setState(() {
-                  _errorMessage = "Email is not valid";
+                  _errorMessage = "Invalid email address";
                 });
                 return '';
               }

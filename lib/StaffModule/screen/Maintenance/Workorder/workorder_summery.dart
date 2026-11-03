@@ -2445,7 +2445,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                         Row(
                           children: [
                             Expanded(child: pill(
-                              label: 'Permission',
+                              label: 'Permission To Enter',
                               value: summery.entryAllowed == true ? 'Yes' : summery.entryAllowed == false ? 'No' : 'N/A',
                               valueColor: summery.entryAllowed == true ? const Color(0xFF1F9D55) : null,
                             )),
@@ -3575,7 +3575,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                         Row(
                           children: [
                             Expanded(child: pill(
-                              label: 'Permission',
+                              label: 'Permission To Enter',
                               value: (summery.entryAllowed ?? false) ? 'Yes' : 'No',
                               valueColor: (summery.entryAllowed ?? false) ? const Color(0xFF1F9D55) : null,
                             )),
@@ -4705,6 +4705,14 @@ class _Workorder_summeryState extends State<Workorder_summery>
   }
 
   void showUpdateDialog(BuildContext context, [WorkOrderData_summery? current]) {
+    // Like web (handleUpdateButtonClick), every Update starts with no photos.
+    // Photos picked last time used to stay here and be sent again.
+    _images.clear();
+    _uploadedFileNames.clear();
+    // The video marks go too, or a new photo would show the last video's
+    // play icon and play that video.
+    isvideo.clear();
+    videofiles.clear();
     // Same choices as web's Update (WorkOrderDetails.jsx).
     const statuses = [
       'New',
@@ -4733,6 +4741,24 @@ class _Workorder_summeryState extends State<Workorder_summery>
     }
     bool loadingStaff = staffs.isEmpty;
     bool staffFetchStarted = false;
+
+    // What the form opened with, so Save stays off until something changes.
+    final String? initialStatus = selectedStatus;
+    final String initialDueDateApi = dueDateApi;
+    final String initialStaffId = _selectedstaffId ?? '';
+    bool notesListening = false;
+
+    // Web parity (WorkOrderDetails.jsx checkFormChanges): Update stays disabled
+    // until the status, assignee or due date differs from what the form opened
+    // with, a note is typed or a photo is added. Saving an untouched form used
+    // to add a duplicate Update History row and send a notification.
+    bool hasChanges() =>
+        selectedStatus != initialStatus ||
+        dueDateApi != initialDueDateApi ||
+        (_selectedstaffId ?? '') != initialStaffId ||
+        message.text.trim().isNotEmpty ||
+        privateNotes.text.trim().isNotEmpty ||
+        _images.isNotEmpty;
 
     Future<void> reloadStaff(StateSetter setLocal) async {
       setLocal(() => loadingStaff = true);
@@ -4819,6 +4845,13 @@ class _Workorder_summeryState extends State<Workorder_summery>
                   reloadStaff(setState);
                 });
               }
+              if (!notesListening) {
+                notesListening = true;
+                // Typing a note changes whether Save is allowed, so redraw.
+                message.addListener(() => setState(() {}));
+                privateNotes.addListener(() => setState(() {}));
+              }
+              final bool canSave = hasChanges();
               return Scaffold(
                 backgroundColor: const Color(0xFFF4F6F9),
                 appBar: widget_302_Staff.App_Bar(context: context),
@@ -5257,7 +5290,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                       }).toList(),
                                       value: selectedStatus,
                                       onChanged: (value) {
-                                        selectedStatus = value;
+                                        setState(() => selectedStatus = value);
                                       },
                                       buttonStyleData: ButtonStyleData(
                                         height: 50,
@@ -5593,7 +5626,12 @@ class _Workorder_summeryState extends State<Workorder_summery>
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () async {
+                                // Off while saving too, like web's
+                                // isSubmitting, so a double tap can't send two
+                                // updates.
+                                onPressed: (isLoading || !canSave)
+                                    ? null
+                                    : () async {
                                   // Clear previous errors
                                   setState(() {
                                     assignedError = null;
@@ -5683,7 +5721,13 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: blueColor,
+                                  backgroundColor: canSave
+                                      ? blueColor
+                                      : const Color(0xFFE5E8ED),
+                                  // Stays blue behind the spinner while saving.
+                                  disabledBackgroundColor: isLoading
+                                      ? blueColor
+                                      : const Color(0xFFE5E8ED),
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
@@ -5699,10 +5743,12 @@ class _Workorder_summeryState extends State<Workorder_summery>
                                           strokeWidth: 2,
                                         ),
                                       )
-                                    : const Text(
+                                    : Text(
                                         'Save',
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: canSave
+                                              ? Colors.white
+                                              : Colors.grey[600],
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
                                         ),

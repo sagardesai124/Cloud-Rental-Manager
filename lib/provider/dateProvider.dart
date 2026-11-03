@@ -181,6 +181,7 @@ import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 import 'package:intl/intl.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -229,6 +230,7 @@ class DateProvider with ChangeNotifier {
       // If no token, set to default
       _dateFormat = 'MM/dd/yyyy';
       dateformateselect = 0;
+      AppDateFormat.set(_dateFormat);
       notifyListeners();
     }
   }
@@ -280,6 +282,7 @@ class DateProvider with ChangeNotifier {
   Future<bool> updateDateFormat(String newFormat, selectIndex) async {
     _dateFormat = newFormat;
     dateformateselect = selectIndex;
+    AppDateFormat.set(_dateFormat);
     // What the company will have once this save lands, so a time-only save
     // made before the reload comes back does not send the old one. Put back
     // if the save fails.
@@ -296,6 +299,7 @@ class DateProvider with ChangeNotifier {
   void updateDateFormatLocally(String newFormat, selectIndex) {
     _dateFormat = newFormat;
     dateformateselect = selectIndex;
+    AppDateFormat.set(_dateFormat);
     _saveSelectedDateFormat();
     notifyListeners();
   }
@@ -365,8 +369,9 @@ class DateProvider with ChangeNotifier {
     // Convert the parsed date to 'yyyy-MM-dd' format first
     String standardizedDate = DateFormat('yyyy-MM-dd').format(parsedDate);
 
-    // Format the standardized date using _dateFormat
-    return DateFormat(_dateFormat).format(DateTime.parse(standardizedDate));
+    // Format the standardized date using _dateFormat (web's moment tokens,
+    // day-of-year included, via AppDateFormat).
+    return AppDateFormat.format(DateTime.parse(standardizedDate), _dateFormat);
   }
 
   String formatCurrentDateTime(String dateTime) {
@@ -517,22 +522,22 @@ class DateProvider with ChangeNotifier {
             jsonData['themes']?['timeFormat']?.toString();
         _savedServerFormat = serverFormat;
 
-        if (serverFormat == "YYYY-MM-DD") {
+        // Like web (Settings.jsx): the three presets select their option;
+        // any other saved format, M/D/YYYY included, is the Custom option
+        // and is shown as saved. Nothing saved → web's default MM/DD/YYYY.
+        final saved = (serverFormat ?? '').trim();
+        if (saved == "YYYY-MM-DD") {
           dateformateselect = 1;
           _dateFormat = 'yyyy-MM-dd';
-        } else if (serverFormat == "YYYY-MMM-DD") {
+        } else if (saved == "YYYY-MMM-DD") {
           dateformateselect = 2;
           _dateFormat = 'yyyy-MMM-dd';
-        } else if (serverFormat == "MM/DD/YYYY") {
+        } else if (saved == "MM/DD/YYYY" || saved.isEmpty) {
           dateformateselect = 0;
           _dateFormat = 'MM/dd/yyyy';
-        } else if (serverFormat == "M/D/YYYY") {
-          dateformateselect = 0;
-          _dateFormat = 'M/d/yyyy';
         } else {
-          // Handle custom case or default
-          dateformateselect = 0;
-          _dateFormat = 'MM/dd/yyyy'; // Default to MM/dd/yyyy
+          dateformateselect = 3;
+          _dateFormat = AppDateFormat.toIntl(saved);
         }
 
         // Handle time format
@@ -549,11 +554,13 @@ class DateProvider with ChangeNotifier {
         }
 
         _dateFormat = fixDateFormat(_dateFormat);
+        AppDateFormat.set(_dateFormat);
         notifyListeners();
       } else {
         // Set default format on error
         _dateFormat = 'MM/dd/yyyy';
         dateformateselect = 0;
+        AppDateFormat.set(_dateFormat);
         notifyListeners();
       }
     } catch (e) {
@@ -579,7 +586,9 @@ class DateProvider with ChangeNotifier {
     // Same as web's "HOW IT APPEARS" preview (DateFormatSection.jsx):
     // seconds included, and a leading zero on 12-hour times.
     String timeFormatPattern = _timeFormat == '24' ? 'HH:mm:ss' : 'hh:mm:ss a';
-    String dateTimeFormat = '${dateFormat ?? _dateFormat} $timeFormatPattern';
-    return DateFormat(dateTimeFormat).format(now);
+    // Date part through AppDateFormat so moment-only tokens (DDD day of the
+    // year) render as web does; time part is plain intl.
+    final datePart = AppDateFormat.format(now, dateFormat ?? _dateFormat);
+    return '$datePart ${DateFormat(timeFormatPattern).format(now)}';
   }
 }

@@ -21,6 +21,7 @@ import 'package:three_zero_two_property/screens/Splash_Screen/splash_screen.dart
 import 'package:three_zero_two_property/services/api_client.dart';
 import 'package:three_zero_two_property/services/app_headers.dart';
 import 'package:three_zero_two_property/services/stored_password_cleanup.dart';
+import 'package:three_zero_two_property/services/stale_staff_id_cleanup.dart';
 import 'StaffModule/repository/staffpermission_provider.dart';
 import 'TenantsModule/repository/permission_provider.dart';
 import 'VendorModule/repository/vendor_permission.dart';
@@ -100,6 +101,7 @@ void main() {
     WidgetsFlutterBinding.ensureInitialized();
     await AppHeaders.init();
     await purgeStoredSessionPasswords();
+    await dropStaleStaffId();
     timeago.setLocaleMessages('en_custom', CustomTimeAgo());
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,

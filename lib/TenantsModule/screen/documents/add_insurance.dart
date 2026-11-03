@@ -24,6 +24,7 @@ import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:provider/provider.dart';
 import '../../../provider/dateProvider.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class add_insurance extends StatefulWidget {
   const add_insurance({super.key});
@@ -49,6 +50,10 @@ class _add_insuranceState extends State<add_insurance> {
 
   String _convertToApiFormat(String displayDate) {
     if (displayDate.isEmpty) return "";
+    // The company's own date format first (strict), like web, so a custom
+    // format such as "DD/MMM/YYYY" reads back correctly (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(displayDate);
+    if (inCompanyFormat != null) return inCompanyFormat;
     try {
       DateTime? parsedDate;
 

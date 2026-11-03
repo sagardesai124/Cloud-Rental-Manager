@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:csv/csv.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -14,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:three_zero_two_property/Model/RentarsInsuranceModel.dart';
+import 'package:three_zero_two_property/services/renters_insurance_csv.dart';
 import 'package:three_zero_two_property/Model/profile.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
@@ -725,7 +725,7 @@ class _RentersInsuranceState extends State<RentersInsurance>
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8.0),
-                      child: pw.Text('Tenant Name',
+                      child: pw.Text('Tenant',
                           style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     ),
                     pw.Padding(
@@ -869,14 +869,32 @@ class _RentersInsuranceState extends State<RentersInsurance>
     final dateProvider = Provider.of<DateProvider>(context, listen: false);
     final syncXlsx.Workbook workbook = syncXlsx.Workbook();
     final syncXlsx.Worksheet sheet = workbook.worksheets[0];
+    // Web's sheet name and column widths.
+    sheet.name = 'Renters Insurance';
+    const List<double> columnWidths = [25, 30, 30, 30, 30, 20, 20];
+    for (int i = 0; i < columnWidths.length; i++) {
+      sheet.getRangeByIndex(1, i + 1).columnWidth = columnWidths[i];
+    }
 
-    // Set column widths
-    sheet.getRangeByName('A1:G1').columnWidth = 30;
+    // Web's title block: the report name, "Generated on: <today>" in the
+    // account's date format, then a blank row.
+    final syncXlsx.Style titleStyle = workbook.styles.add('titleStyle');
+    titleStyle.bold = true;
+    titleStyle.fontSize = 16;
+    final syncXlsx.Style generatedStyle =
+        workbook.styles.add('generatedStyle');
+    generatedStyle.fontSize = 14;
+    sheet.getRangeByIndex(1, 1)
+      ..setText("Renter's Insurance Report")
+      ..cellStyle = titleStyle;
+    sheet.getRangeByIndex(2, 1)
+      ..setText('Generated on: ${dateProvider.formatCurrentDate(DateFormat('yyyy-MM-dd').format(DateTime.now()))}')
+      ..cellStyle = generatedStyle;
 
-    // Define headers
+    // Define headers (web's names)
     final List<String> headers = [
       'Unit',
-      'Tenant Name',
+      'Tenant',
       'Insurance Provider',
       'Policy ID',
       'Liability Coverage',
@@ -884,21 +902,29 @@ class _RentersInsuranceState extends State<RentersInsurance>
       'Expiration Date',
     ];
 
-    // Style for headers
+    // Style for headers, like web: bold and left-aligned, the amount
+    // right-aligned.
     final syncXlsx.Style headerCellStyle =
         workbook.styles.add('headerCellStyle');
     headerCellStyle.bold = true;
-    headerCellStyle.backColor = '#D3D3D3';
     headerCellStyle.hAlign = syncXlsx.HAlignType.left;
+    final syncXlsx.Style amountHeaderStyle =
+        workbook.styles.add('amountHeaderStyle');
+    amountHeaderStyle.bold = true;
+    amountHeaderStyle.hAlign = syncXlsx.HAlignType.right;
+    final syncXlsx.Style amountStyle = workbook.styles.add('amountStyle');
+    amountStyle.hAlign = syncXlsx.HAlignType.right;
 
-    // Add headers to the first row
+    // Add headers under the title block (row 4)
+    const int headerRow = 4;
     for (int i = 0; i < headers.length; i++) {
-      final cell = sheet.getRangeByIndex(1, i + 1);
+      final cell = sheet.getRangeByIndex(headerRow, i + 1);
       cell.setText(headers[i]);
-      cell.cellStyle = headerCellStyle;
+      cell.cellStyle =
+          i == 4 ? amountHeaderStyle : headerCellStyle;
     }
 
-    int rowIndex = 2; // Start from the second row
+    int rowIndex = headerRow + 1; // Rows start under the headers
     // for (var item in rentersInsurance) {
     //   // Add main row with rental address
     //   sheet.getRangeByIndex(rowIndex, 1).setText(item.unitDetails ?? '');
@@ -948,6 +974,7 @@ class _RentersInsuranceState extends State<RentersInsurance>
                 ? formatCurrency(
                     item.rentersInsurance!.liabilityCoverage.toDouble())
                 : '');
+        sheet.getRangeByIndex(rowIndex, 5).cellStyle = amountStyle;
         sheet.getRangeByIndex(rowIndex, 6).setText(
             item.rentersInsurance!.effectiveDate != null
                 ? dateProvider
@@ -988,53 +1015,10 @@ class _RentersInsuranceState extends State<RentersInsurance>
   Future<void> generateRentersInsuranceCsv(
       List<RentersInsuranceData> rentersInsurance) async {
     final dateProvider = Provider.of<DateProvider>(context, listen: false);
-    final StringBuffer csvBuffer = StringBuffer();
-    List<List<dynamic>> rows = [
-      [
-        'Unit',
-        'Tenant Name',
-        'Insurance Provider',
-        'Policy ID',
-        'Liability Coverage',
-        'Effective Date',
-        'Expiration Date'
-      ]
-    ];
-
-    for (var item in rentersInsurance) {
-      // Add main row with rental address
-      rows.add([
-        item.unitDetails ?? '',
-        item.tenantName ?? '',
-        item.rentersInsurance!.insuranceCompany ?? '',
-        item.rentersInsurance!.policyId ?? '',
-        formatCurrency(item.rentersInsurance!.liabilityCoverage.toDouble()),
-        item.rentersInsurance!.effectiveDate != null
-            ? dateProvider
-                .formatCurrentDate(item.rentersInsurance!.effectiveDate!)
-            : '',
-        item.rentersInsurance!.expirationDate != null
-            ? dateProvider
-                .formatCurrentDate(item.rentersInsurance!.expirationDate!)
-            : '',
-      ]);
-
-      // Add tenant details in subsequent rows
-      // for (var tenant in item.tenants!) {
-      //   rows.add([
-      //     '',
-      //     tenant.tenantName ?? '',
-      //     tenant.tenantInsurance?.provider ?? '',
-      //     tenant.tenantInsurance?.policyId ?? '',
-      //     tenant.tenantInsurance?.liabilityCoverage ?? '',
-      //     tenant.tenantInsurance?.effectiveDate ?? '',
-      //     tenant.tenantInsurance?.expirationDate ?? ''
-      //   ]);
-      // }
-    }
-
-    String csv = const ListToCsvConverter().convert(rows);
-    final List<int> bytes = utf8.encode(csvBuffer.toString());
+    // Web's CSV: its columns and values, written in full.
+    final String csv = buildRentersInsuranceCsv(
+        rentersInsurance, dateProvider.formatCurrentDate);
+    final List<int> bytes = utf8.encode(csv);
     // Define file name with current date and time
     final DateTime now = DateTime.now();
     final String formattedDate = DateFormat('yyyyMMddHHmmss').format(now);

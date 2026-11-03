@@ -3055,7 +3055,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                         children: [
                           const Row(
                             children: [
-                              Text('Parts And Labour :',
+                              Text('Parts and Labor :',
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16)),
@@ -3126,7 +3126,7 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
                           const SizedBox(
                             height: 10,
                           ),
-                          const Text('Vendors Note ',
+                          const Text('Vendor Notes ',
                               style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -6320,7 +6320,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                           children: [
                             const Row(
                               children: [
-                                Text('Parts And Labour ',
+                                Text('Parts and Labor ',
                                     style:
                                         TextStyle(fontWeight: FontWeight.bold)),
                               ],
@@ -6646,7 +6646,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                             const SizedBox(
                               height: 20,
                             ),
-                            const Text('Vendors Note *',
+                            const Text('Vendor Notes',
                                 style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,

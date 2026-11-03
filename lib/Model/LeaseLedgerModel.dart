@@ -47,6 +47,11 @@ class LeaseLedger {
 }
 
 class Data {
+  /// The payment's own date (its first entry's date), which web's refund
+  /// modal pre-fills (LeaseFinancialTab: entry[0].date).
+  String? get paymentDate =>
+      (entry == null || entry!.isEmpty) ? null : entry!.first.date;
+
   String? sId;
   String? chargeId;
   String? adminId;

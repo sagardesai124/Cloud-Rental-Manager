@@ -37,6 +37,7 @@ import 'package:three_zero_two_property/services/api_helpers.dart';
 import '../../../../../Model/LeaseLedgerModel.dart';
 import '../../../../../provider/dateProvider.dart';
 import '../../../../repository/tenantDetail_payment/tenant_payment_repo.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class FinancialTable extends StatefulWidget {
   final String leaseId;
@@ -161,7 +162,7 @@ class _FinancialTableState extends State<FinancialTable>
                         if (pickedDate != null) {
                           bool isfuture = pickedDate.isAfter(DateTime.now());
                           String formattedDate =
-                              "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                              AppDateFormat.format(pickedDate);
                           _dateController.text = formattedDate;
                         }
                       },
@@ -1373,6 +1374,10 @@ class _FinancialTableState extends State<FinancialTable>
   // Helper function to convert display format back to API format (yyyy-MM-dd)
   String _convertToApiFormat(String displayDate) {
     if (displayDate.isEmpty) return "";
+    // The company's own date format first (strict), like web, so a custom
+    // format such as "DD/MMM/YYYY" reads back correctly (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(displayDate);
+    if (inCompanyFormat != null) return inCompanyFormat;
     final viaReverse = reverseFormatDate(displayDate);
     if (viaReverse.isNotEmpty) return viaReverse;
     try {
@@ -2460,11 +2465,12 @@ class _FinancialTableState extends State<FinancialTable>
                                                                     .text = (data
                                                                         .totalAmount!)
                                                                     .toString();
-                                                                _dateController
-                                                                        .text =
-                                                                    formatDate(DateTime
-                                                                            .now()
-                                                                        .toString());
+                                                                // The payment's own date, like web's refund modal (today when
+                                                                // a payment has none: there is no Required check here).
+                                                                _dateController.text = AppDateFormat.format(
+                                                                    AppDateFormat.parseCalendarDate(data.paymentDate,
+                                                                            dayFirstToo: true) ??
+                                                                        DateTime.now());
                                                               });
                                                               _showRefundDialog(
                                                                   context,

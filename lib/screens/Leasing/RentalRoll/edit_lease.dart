@@ -40,6 +40,7 @@ import '../../../repository/tenants.dart';
 import '../../../widgets/custom_drawer.dart';
 import '../../../provider/dateProvider.dart';
 import 'package:three_zero_two_property/screens/Leasing/RentalRoll/add_tenant_cosigner_screen.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class Edit_lease extends StatefulWidget {
   Lease1? lease;
@@ -1753,13 +1754,13 @@ class _Edit_leaseState extends State<Edit_lease>
                                       // String formattedStartDate =
                                       //     "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
                                       String formattedStartDate =
-                                          "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                          AppDateFormat.format(pickedDate);
                                       DateTime endDate = DateTime(
                                           pickedDate.year,
                                           pickedDate.month + 1,
                                           pickedDate.day);
                                       String formattedEndDate =
-                                          "${endDate.day.toString().padLeft(2, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.year}";
+                                          AppDateFormat.format(endDate);
 
                                       // String formattedEndDate =
                                       //     "${endDate.day.toString().padLeft(2, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.year}";
@@ -1816,13 +1817,13 @@ class _Edit_leaseState extends State<Edit_lease>
                                           // String formattedStartDate =
                                           //     "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
                                           String formattedStartDate =
-                                              "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                              AppDateFormat.format(pickedDate);
                                           DateTime endDate = DateTime(
                                               pickedDate.year,
                                               pickedDate.month + 1,
                                               pickedDate.day);
                                           String formattedEndDate =
-                                              "${endDate.day.toString().padLeft(2, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.year}";
+                                              AppDateFormat.format(endDate);
 
                                           // String formattedEndDate =
                                           //     "${endDate.day.toString().padLeft(2, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.year}";
@@ -1890,7 +1891,7 @@ class _Edit_leaseState extends State<Edit_lease>
                                     // String formattedDate =
                                     //     "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
                                     String formattedDate =
-                                        "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                        AppDateFormat.format(pickedDate);
                                     setState(() {
                                       endDateController.text = formattedDate;
                                       if (_startDate != null) {
@@ -1940,7 +1941,7 @@ class _Edit_leaseState extends State<Edit_lease>
                                         // String formattedDate =
                                         //     "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
                                         String formattedDate =
-                                            "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                            AppDateFormat.format(pickedDate);
                                         setState(() {
                                           endDateController.text =
                                               formattedDate;
@@ -4772,6 +4773,9 @@ class _Edit_leaseState extends State<Edit_lease>
   }
 
   String reverseFormatDate(String inputDate) {
+    // The date boxes show the company's date format, like web's DatePicker.
+    final inCompanyFormat = AppDateFormat.parseToApi(inputDate);
+    if (inCompanyFormat != null) return inCompanyFormat;
     DateTime parsedDate;
 
     try {
@@ -4874,6 +4878,9 @@ class _Edit_leaseState extends State<Edit_lease>
 String _chargeDateToApi(BuildContext context, String display) {
   final String s = display.trim();
   if (s.isEmpty) return "";
+  // The company's own format first (strict), like web (AppDateFormat).
+  final String? inCompanyFormat = AppDateFormat.parseToApi(s);
+  if (inCompanyFormat != null) return inCompanyFormat;
   final dp = Provider.of<DateProvider>(context, listen: false);
   for (final String f in <String>[
     'yyyy-MM-dd',

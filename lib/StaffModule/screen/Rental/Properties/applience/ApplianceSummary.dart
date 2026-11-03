@@ -19,6 +19,8 @@ import '../../../../../model/unitsummery_propeties.dart';
 
 import 'AddMaintenanceHistoryDialog.dart';
 import 'AddNoteDialog.dart';
+import 'package:three_zero_two_property/StaffModule/screen/Maintenance/Workorder/workorder_summery.dart'
+    as wo;
 
 class ApplianceSummary extends StatefulWidget {
   final unit_appliance appliance;
@@ -419,7 +421,10 @@ class _ApplianceSummaryState extends State<ApplianceSummary>
                                       formatDate(history['timestamp'] ?? ''),
                                       history['event'] ?? 'Maintenance',
                                       'Vendor: ${history['vendor'] ?? ''}',
-                                      'Work Order: ${history['work_order'] ?? 'No WO'}',
+                                      // Like web, the entry links to its
+                                      // work order through `workorder_id`.
+                                      (history['workorder_id'] ?? '')
+                                          .toString(),
                                       'history_$index',
                                     );
                                   }).toList()
@@ -783,7 +788,7 @@ class _ApplianceSummaryState extends State<ApplianceSummary>
   }
 
   Widget _buildMaintenanceItem(String date, String eventType, String vendor,
-      String workOrder, String key) {
+      String workOrderId, String key) {
     bool isExpanded = _expandedItems[key] ?? false;
     final dateProvider = Provider.of<DateProvider>(context);
     return Container(
@@ -889,15 +894,44 @@ class _ApplianceSummaryState extends State<ApplianceSummary>
                         ),
                       ),
                       Expanded(
-                        child: Text(
-                          _formatValue(
-                              workOrder.replaceAll('Work Order: ', '')),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade800,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        // Like web: a linked entry opens its work order, the
+                        // rest say "No WO".
+                        child: workOrderId.isEmpty
+                            ? Text(
+                                'No WO',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade800,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              )
+                            : GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => wo.Workorder_summery(
+                                        workorder_id: workOrderId),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.open_in_new,
+                                        size: 16, color: blueColor),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        'View Work Order',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: blueColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                       ),
                     ],
                   ),

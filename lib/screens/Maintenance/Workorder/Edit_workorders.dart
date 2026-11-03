@@ -6941,7 +6941,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                 children: [
                                   const Row(
                                     children: [
-                                      Text('Parts And Labour ',
+                                      Text('Parts and Labor ',
                                           style: TextStyle(
                                               fontWeight: FontWeight.bold)),
                                     ],
@@ -7486,7 +7486,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                const Text('Vendors Note *',
+                                                const Text('Vendor Notes',
                                                     style: TextStyle(
                                                         fontSize: 13,
                                                         fontWeight:

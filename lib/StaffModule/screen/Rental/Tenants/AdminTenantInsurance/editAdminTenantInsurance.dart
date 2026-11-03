@@ -26,6 +26,7 @@ import 'package:three_zero_two_property/widgets/titleBar.dart';
 import '../../../../widgets/custom_drawer.dart';
 import 'package:provider/provider.dart';
 import '../../../../../provider/dateProvider.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class editAdminInsurance extends StatefulWidget {
   AdminTenantInsuranceModel data;
@@ -231,6 +232,10 @@ class _editAdminInsuranceState extends State<editAdminInsurance> {
 
   String _convertToApiFormat(String displayDate) {
     if (displayDate.isEmpty) return "";
+    // The company's own date format first (strict), like web, so a custom
+    // format such as "DD/MMM/YYYY" reads back correctly (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(displayDate);
+    if (inCompanyFormat != null) return inCompanyFormat;
     try {
       DateTime? parsedDate;
 

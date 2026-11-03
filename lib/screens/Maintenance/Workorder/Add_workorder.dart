@@ -6500,7 +6500,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet> {
                         children: [
                           const Row(
                             children: [
-                              Text('Parts And Labour ',
+                              Text('Parts and Labor ',
                                   style:
                                       TextStyle(fontWeight: FontWeight.bold)),
                             ],
@@ -6814,7 +6814,7 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet> {
                           const SizedBox(
                             height: 20,
                           ),
-                          const Text('Vendors Note *',
+                          const Text('Vendor Notes',
                               style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,

@@ -6014,7 +6014,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
     // enddate can be blank or, from some lists, not the lease end at all.
     moveOutDate = formatDate(tenant.endDate);
     //startdateController.text = moveOutDate;
-    startdateController.text = DateFormat('dd-MM-yyyy').format(DateTime.now());
+    // Today in the company's date format, like web's picker and the Move Out
+    // screen; the save reads it back with reverseFormatDate.
+    startdateController.text = Provider.of<DateProvider>(context, listen: false)
+        .formatCurrentDate(DateFormat('yyyy-MM-dd').format(DateTime.now()));
 
     // Web 2.2: a move-out that leaves nobody on a fixed-term lease asks
     // whether the lease ends (lease_end_decision.dart). This dialog moves out
@@ -6204,6 +6207,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                   icon: const Icon(Icons.calendar_today_outlined,
                       size: 20, color: MoveoutColors.muted),
                   onPressed: () async {
+                    final dateProvider =
+                        Provider.of<DateProvider>(context, listen: false);
                     // Web's lease move-out limits (see moveoutPickerRange).
                     final range = moveoutPickerRange(controller.text,
                         minDate: minDate?.call(), maxDate: maxDate);
@@ -6237,8 +6242,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                     if (pickedDate != null) {
                       setState(() {
                         controller.text = moveOutDate!;
+                        String apiFormatDate =
+                            DateFormat('yyyy-MM-dd').format(pickedDate);
                         controller.text =
-                            DateFormat('dd-MM-yyyy').format(pickedDate);
+                            dateProvider.formatCurrentDate(apiFormatDate);
                       });
                     }
                   },

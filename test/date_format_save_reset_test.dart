@@ -16,7 +16,7 @@ import 'package:three_zero_two_property/screens/Profile/Settings_screen.dart';
 
 /// Settings → Date Format works like web staging (DateFormatSection.jsx):
 /// - picking a time format only changes the screen; nothing is saved;
-/// - Save Changes and Reset are greyed out (do nothing) until the date or
+/// - Save and Reset are greyed out (do nothing) until the date or
 ///   time choice differs from what is saved;
 /// - Save stores the choice; Reset goes back to YYYY-MM-DD + 24-hour and
 ///   saves that, with web's "Date and time format reset".
@@ -106,33 +106,33 @@ void main() {
         // Open Settings → Date Format.
         await _tap(tester, 'Date Format');
         await _settle(tester, 20);
-        expect(find.text('Manage Date & Time Format'), findsOneWidget);
+        expect(find.text('Date & Time Format'), findsOneWidget);
 
         // Nothing changed yet: both buttons do nothing.
-        expect(_button(tester, 'Save Changes').onTap, isNull);
+        expect(_button(tester, 'Save').onTap, isNull);
         expect(_button(tester, 'Reset').onTap, isNull);
 
         // Picking 12-hour only changes the screen.
-        await _tap(tester, '12-hour format');
-        expect(_saves, isEmpty, reason: 'not saved until Save Changes');
-        expect(_button(tester, 'Save Changes').onTap, isNotNull);
+        await _tap(tester, '12-hour format (2:00 PM)');
+        expect(_saves, isEmpty, reason: 'not saved until Save');
+        expect(_button(tester, 'Save').onTap, isNotNull);
         expect(_button(tester, 'Reset').onTap, isNotNull);
 
         // Picking 24-hour again = back to what is saved: greyed out again.
-        await _tap(tester, '24-hour format');
+        await _tap(tester, '24-hour format (14:00)');
         expect(_saves, isEmpty);
-        expect(_button(tester, 'Save Changes').onTap, isNull);
+        expect(_button(tester, 'Save').onTap, isNull);
 
         // Change and Save: stored, then nothing left to save.
-        await _tap(tester, '12-hour format');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, '12-hour format (2:00 PM)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
         expect(_saves.single['timeFormat'], '12');
         expect(_saves.single['format'], 'MM/DD/YYYY');
         expect(_toasts, contains('Date and time format updated'),
             reason: "web's save message");
-        expect(_button(tester, 'Save Changes').onTap, isNull,
+        expect(_button(tester, 'Save').onTap, isNull,
             reason: 'saved, nothing left to save');
 
         // Reset (after a change): web defaults, saved.

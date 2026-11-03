@@ -50,6 +50,11 @@ class _UpdateWorkOrderVendorState extends State<UpdateWorkOrderVendor> {
   String? _dueDateError;
   String? _statusError;
 
+  // What the form opened with, so Save stays off until something changes.
+  String? _initialStatus;
+  String _initialDueDateApi = '';
+  String? _initialStaffId;
+
   static const List<String> _statusOptions = [
     'New',
     'In Progress',
@@ -81,6 +86,12 @@ class _UpdateWorkOrderVendorState extends State<UpdateWorkOrderVendor> {
       };
       _selectedStaffId = cid;
     }
+    _initialStatus = _selectedStatus;
+    _initialDueDateApi = _dueDateApi;
+    _initialStaffId = _selectedStaffId;
+    // Typing a note changes whether Save is allowed, so redraw.
+    _publicNotes.addListener(() => setState(() {}));
+    _privateNotes.addListener(() => setState(() {}));
     _loadStaff();
   }
 
@@ -91,6 +102,19 @@ class _UpdateWorkOrderVendorState extends State<UpdateWorkOrderVendor> {
     _dueDate.dispose();
     super.dispose();
   }
+
+  // Web parity (WorkOrderDetails.jsx checkFormChanges): Update stays disabled
+  // until the status, assignee or due date differs from what the form opened
+  // with, a public or private note is typed or a photo is added. Saving an
+  // untouched form used to add a duplicate Update History row and notify the
+  // admin.
+  bool get _hasChanges =>
+      _selectedStatus != _initialStatus ||
+      _dueDateApi != _initialDueDateApi ||
+      (_selectedStaffId ?? '') != (_initialStaffId ?? '') ||
+      _publicNotes.text.trim().isNotEmpty ||
+      _privateNotes.text.trim().isNotEmpty ||
+      _images.isNotEmpty;
 
   Future<void> _loadStaff() async {
     setState(() => _loadingStaff = true);
@@ -666,6 +690,7 @@ class _UpdateWorkOrderVendorState extends State<UpdateWorkOrderVendor> {
   }
 
   Widget _buttons() {
+    final bool canSave = _hasChanges;
     return Row(
       children: [
         Expanded(
@@ -688,9 +713,10 @@ class _UpdateWorkOrderVendorState extends State<UpdateWorkOrderVendor> {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: _saving ? null : _save,
+            onPressed: (_saving || !canSave) ? null : _save,
             style: ElevatedButton.styleFrom(
-              backgroundColor: blueColor,
+              backgroundColor: canSave ? blueColor : const Color(0xFFE5E8ED),
+              disabledBackgroundColor: const Color(0xFFE5E8ED),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
@@ -701,9 +727,9 @@ class _UpdateWorkOrderVendorState extends State<UpdateWorkOrderVendor> {
                     width: 20,
                     child: SpinKitFadingCircle(color: Colors.white, size: 20),
                   )
-                : const Text('Save',
+                : Text('Save',
                     style: TextStyle(
-                        color: Colors.white,
+                        color: canSave ? Colors.white : Colors.grey[600],
                         fontSize: 16,
                         fontWeight: FontWeight.bold)),
           ),

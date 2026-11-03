@@ -342,8 +342,9 @@ class _Add_WorkorderState extends State<Add_Workorder> {
           // Combine rental_id and address to create a unique key
           String key =
               '${data['rental_id']} - ${data['rental_adress']} - ${data['status']}';
-          addresses[key] =
-          '${data['rental_adress']} - ${data['status']}'; // Value remains the rental_id
+          // Shown like web (TAddWork): "123 Main St (Active)". The key
+          // above keeps its " - " form; onChanged splits it.
+          addresses[key] = '${data['rental_adress']} (${data['status']})';
         });
 
         setState(() {

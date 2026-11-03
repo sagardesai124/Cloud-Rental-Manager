@@ -33,6 +33,7 @@ import '../../constant/constant.dart';
 import '../Team_Access/team_access_section.dart';
 import '../../model/setting.dart';
 import '../../provider/dateProvider.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 import '../../widgets/CustomTableShimmer.dart';
 import '../../widgets/custom_drawer.dart';
 import '../Leasing/RentalRoll/newAddLease.dart';
@@ -3445,7 +3446,8 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         _savedDateFormat = dateProvider.dateFormat;
         _savedTimeFormat = dateProvider.timeFormat;
         _savedDateIndex = dateProvider.dateformateselect;
-        customdate = null;
+        customdate = _savedCustomText(dateProvider);
+        _customDateController.text = customdate ?? '';
         _loadSavedDateTimeFormat();
         DateTime now = DateTime.now();
         dateformate1 = DateFormat('MM/dd/yyyy').format(now);
@@ -3938,8 +3940,10 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _lateFeeLabel(
-                      calculationType == "fixed" ? "Amount" : "Percentage"),
+                  // Like web: the unit in brackets after the label.
+                  _lateFeeLabel(calculationType == "fixed"
+                      ? "Amount (\$)"
+                      : "Percentage (%)"),
                   const SizedBox(height: 8),
                   calculationType == "fixed"
                       ? _lateFeeField(controller: late_fee, dollar: true)
@@ -4210,7 +4214,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     final format = custom.isNotEmpty && isValidCustomDateFormat(custom)
         ? custom
         : kDefaultCustomDateFormat;
-    return DateFormat(fixDateFormat(format)).format(DateTime.now());
+    return AppDateFormat.format(DateTime.now(), fixDateFormat(format));
   }
 
   /// Like web's customIsInvalid: Custom is picked and what is typed would be
@@ -4233,9 +4237,16 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       _savedDateIndex = dp.dateformateselect;
       dateformateselect = dp.dateformateselect;
       timeformateselect = dp.timeformateselect;
-      customdate = null;
+      customdate = _savedCustomText(dp);
+      _customDateController.text = customdate ?? '';
     });
   }
+
+  /// Like web (Settings.jsx): a saved format that is not one of the three
+  /// presets is the Custom option, and its box shows that saved format in
+  /// web's tokens ("DD/MMM/YYYY", "M/D/YYYY"). Null for a preset.
+  String? _savedCustomText(DateProvider dp) =>
+      dp.dateformateselect == 3 ? AppDateFormat.toWeb(dp.dateFormat) : null;
 
   Widget _buildDateTimeSettings() {
     final dateProvider = Provider.of<DateProvider>(context);
@@ -4248,13 +4259,29 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
+        // Headings and labels use web's wording (DateFormatSection.jsx).
         Text(
-          "Manage Date & Time Format",
+          "Date & Time Format",
           style: TextStyle(
             color: blueColor,
             fontWeight: FontWeight.w800,
             fontSize: isNarrow ? 18 : 22,
           ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, color: blueColor, size: 19),
+            const SizedBox(width: 8),
+            Text(
+              "Select Date Format",
+              style: TextStyle(
+                color: blueColor,
+                fontWeight: FontWeight.bold,
+                fontSize: isNarrow ? 15 : 18,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
         _dtDateCard(
@@ -4293,7 +4320,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
           TextFormField(
             initialValue: customdate != null && customdate!.isNotEmpty
                 ? customdate
-                : dateProvider.dateFormat.toUpperCase(),
+                : AppDateFormat.toWeb(dateProvider.dateFormat),
             // Like web's handleCustomDateChange: only letters, / and -, in
             // capitals, so the format is sent exactly as web sends it. No
             // autocorrect, so the phone keyboard can't change it ("dd" → "did").
@@ -4309,8 +4336,8 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 customdate = value;
               });
             },
+            // No label, like web's custom box (DateFormatSection).
             decoration: InputDecoration(
-              labelText: 'Custom format (e.g. DD-MM-YYYY)',
               errorText:
                   _customFormatInvalid ? kInvalidCustomDateFormatMessage : null,
               errorMaxLines: 3,
@@ -4329,6 +4356,24 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
               ),
             ),
           ),
+          // Like web: the typed format's date under the box while it is valid.
+          if (_typedCustomFormat.isNotEmpty && !_customFormatInvalid) ...[
+            const SizedBox(height: 14),
+            Text(
+              "Formatted Date:",
+              style: TextStyle(
+                color: blueColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              AppDateFormat.format(
+                  DateTime.now(), fixDateFormat(_typedCustomFormat)),
+              style: TextStyle(color: blueColor, fontSize: 14),
+            ),
+          ],
         ],
         const SizedBox(height: 26),
         // Time Format section
@@ -4337,7 +4382,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             Icon(Icons.access_time, color: blueColor, size: 20),
             const SizedBox(width: 8),
             Text(
-              "Time Format",
+              "Select Time Format",
               style: TextStyle(
                 color: blueColor,
                 fontWeight: FontWeight.bold,
@@ -4350,8 +4395,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         _dtTimeCard(
           dateProvider: dateProvider,
           value: 0,
-          title: "24-hour format",
-          example: "e.g. 14:00:00",
+          title: "24-hour format (14:00)",
           format: '24',
           preview: timeformate1,
         ),
@@ -4359,8 +4403,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         _dtTimeCard(
           dateProvider: dateProvider,
           value: 1,
-          title: "12-hour format",
-          example: "e.g. 2:00:00 PM",
+          title: "12-hour format (2:00 PM)",
           format: '12',
           preview: timeformate2,
         ),
@@ -4368,62 +4411,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         // How it appears
         _dtHowItAppears(dateProvider),
         const SizedBox(height: 26),
-        // Action buttons
+        // Action buttons: Save, then Reset, like web.
         Row(
           children: [
-            Expanded(
-              child: GestureDetector(
-                // Like web: greyed out until something changes; resets to
-                // YYYY-MM-DD and 24-hour and saves them.
-                onTap: !dtChanged ? null : () async {
-                  final dp = Provider.of<DateProvider>(context, listen: false);
-                  dp.updateTimeFormatLocally('24', 0);
-                  final saving = dp.updateDateFormat('yyyy-MM-dd', 1);
-                  setState(() {
-                    dateformateselect = 1;
-                    timeformateselect = 0;
-                    customdate = null;
-                    _customDateController.text = "";
-                  });
-                  // Like web: counted as saved, and announced, only once the
-                  // server accepts it (DateProvider reports a failure).
-                  if (!await saving || !mounted) return;
-                  setState(() {
-                    _savedDateFormat = 'yyyy-MM-dd';
-                    _savedTimeFormat = '24';
-                    _savedDateIndex = 1;
-                  });
-                  Fluttertoast.showToast(
-                    msg: "Date and time format reset",
-                    toastLength: Toast.LENGTH_SHORT,
-                    gravity: ToastGravity.BOTTOM,
-                    backgroundColor: Colors.black87,
-                    textColor: Colors.white,
-                    fontSize: 16.0,
-                  );
-                },
-                child: Container(
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: dtChanged ? blueColor : dtDisabled, width: 1.5),
-                  ),
-                  child: Center(
-                    child: Text(
-                      "Reset",
-                      style: TextStyle(
-                        color: dtChanged ? blueColor : dtDisabled,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
             Expanded(
               child: GestureDetector(
                 // Like web: greyed out until the date or time choice changes,
@@ -4499,7 +4489,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                             size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          "Save Changes",
+                          "Save",
                           style: TextStyle(
                             color: canSave ? Colors.white : dtDisabled,
                             fontWeight: FontWeight.bold,
@@ -4507,6 +4497,59 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: GestureDetector(
+                // Like web: greyed out until something changes; resets to
+                // YYYY-MM-DD and 24-hour and saves them.
+                onTap: !dtChanged ? null : () async {
+                  final dp = Provider.of<DateProvider>(context, listen: false);
+                  dp.updateTimeFormatLocally('24', 0);
+                  final saving = dp.updateDateFormat('yyyy-MM-dd', 1);
+                  setState(() {
+                    dateformateselect = 1;
+                    timeformateselect = 0;
+                    customdate = null;
+                    _customDateController.text = "";
+                  });
+                  // Like web: counted as saved, and announced, only once the
+                  // server accepts it (DateProvider reports a failure).
+                  if (!await saving || !mounted) return;
+                  setState(() {
+                    _savedDateFormat = 'yyyy-MM-dd';
+                    _savedTimeFormat = '24';
+                    _savedDateIndex = 1;
+                  });
+                  Fluttertoast.showToast(
+                    msg: "Date and time format reset",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    backgroundColor: Colors.black87,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                },
+                child: Container(
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: dtChanged ? blueColor : dtDisabled, width: 1.5),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "Reset",
+                      style: TextStyle(
+                        color: dtChanged ? blueColor : dtDisabled,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -4627,7 +4670,6 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     required DateProvider dateProvider,
     required int value,
     required String title,
-    required String example,
     required String format,
     required String? preview,
   }) {
@@ -4636,7 +4678,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       onTap: () {
         setState(() {
           // Like web: picking a time format only changes the screen; it is
-          // saved with Save Changes.
+          // saved with Save.
           dateProvider.updateTimeFormatLocally(format, value);
           timeformateselect = value;
         });
@@ -4656,26 +4698,13 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             _dtRadioCircle(selected),
             const SizedBox(width: 14),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: blueColor,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    example,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: blueColor,
+                ),
               ),
             ),
             if (preview != null && preview.isNotEmpty)
@@ -4709,12 +4738,11 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 Icon(Icons.calendar_month, size: 18, color: blueColor),
                 const SizedBox(width: 8),
                 Text(
-                  "HOW IT APPEARS",
+                  "Formatted Date and Time Preview:",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: blueColor,
-                    letterSpacing: 1.1,
-                    fontSize: 12,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -4725,15 +4753,6 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Date & Time",
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 6),
                 Text(
                   _dateTimePreview(dateProvider),
                   style: TextStyle(

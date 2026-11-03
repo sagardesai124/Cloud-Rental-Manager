@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
@@ -227,6 +228,14 @@ String reverseFormatDate(String formattedDate) {
     // If the date is already in yyyy-MM-dd format, return it as is
     if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(cleanDate)) {
       return cleanDate;
+    }
+
+    // The company's own date format first (strict), so a custom format such
+    // as "DD/MMM/YYYY" or "MM-DD-YYYY" reads back exactly as web does and is
+    // never misread by the generic list below (e.g. "05-10-2026" swapped).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(cleanDate);
+    if (inCompanyFormat != null) {
+      return inCompanyFormat;
     }
 
     // Special handling for yyyy-MM-dd format that might have extra characters

@@ -47,6 +47,7 @@ import '../../../repository/ConvenienceFeeRepo.dart';
 import '../../../widgets/custom_drawer.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class ConvenienceFeeReports extends StatefulWidget {
   const ConvenienceFeeReports({super.key});
@@ -139,6 +140,9 @@ class _ConvenienceFeeReportsState extends State<ConvenienceFeeReports>
   }
 
   DateTime? parseDate(String dateString) {
+    // The company's own format first (strict), like web (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(dateString);
+    if (inCompanyFormat != null) return DateTime.parse(inCompanyFormat);
     // Try parsing with the expected format
     try {
       return DateTime.parse(dateString);

@@ -42,6 +42,7 @@ import 'package:three_zero_two_property/widgets/appbar.dart' show widget_302;
 import 'package:three_zero_two_property/widgets/custom_drawer.dart'
     show CustomDrawer;
 import 'package:three_zero_two_property/widgets/tenant_pets_vehicles_section.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 import 'package:three_zero_two_property/StaffModule/widgets/appbar.dart'
     show widget_302_Staff;
 import 'package:three_zero_two_property/StaffModule/widgets/custom_drawer.dart'
@@ -202,6 +203,9 @@ class _AddTenantCosignerScreenState extends State<AddTenantCosignerScreen> {
 
   String _toApiDate(String display) {
     if (display.isEmpty) return '';
+    // The company's own format first (strict), like web (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseToApi(display);
+    if (inCompanyFormat != null) return inCompanyFormat;
     for (final f in [
       'yyyy-MM-dd', 'yyyy-MMM-dd', 'MM/dd/yyyy', 'MM-dd-yyyy',
       'dd/MM/yyyy', 'dd-MM-yyyy'

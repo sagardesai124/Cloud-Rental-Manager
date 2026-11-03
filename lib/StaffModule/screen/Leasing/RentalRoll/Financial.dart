@@ -47,6 +47,7 @@ import 'package:three_zero_two_property/TenantsModule/screen/financial/AddAchAcc
 import '../scheduled_charges/ScheduledCharge.dart';
 import 'package:three_zero_two_property/StaffModule/repository/ScheduledChargesRepository.dart';
 import 'package:three_zero_two_property/Model/schduled_charge.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class FinancialTable extends StatefulWidget {
   final String leaseId;
@@ -185,7 +186,7 @@ class _FinancialTableState extends State<FinancialTable>
                         if (pickedDate != null) {
                           bool isfuture = pickedDate.isAfter(DateTime.now());
                           String formattedDate =
-                              "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                              AppDateFormat.format(pickedDate);
                           _dateController.text = formattedDate;
                         }
                       },
@@ -3275,11 +3276,12 @@ class _FinancialTableState extends State<FinancialTable>
                                                                   .text = (data
                                                                       .totalAmount!)
                                                                   .toString();
-                                                              _dateController
-                                                                      .text =
-                                                                  formatDate(DateTime
-                                                                          .now()
-                                                                      .toString());
+                                                              // The payment's own date, like web's refund modal (today when
+                                                              // a payment has none: there is no Required check here).
+                                                              _dateController.text = AppDateFormat.format(
+                                                                  AppDateFormat.parseCalendarDate(data.paymentDate,
+                                                                          dayFirstToo: true) ??
+                                                                      DateTime.now());
                                                             });
                                                             _showRefundDialog(
                                                                 context, data);

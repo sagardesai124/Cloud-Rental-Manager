@@ -25,6 +25,7 @@ import 'package:three_zero_two_property/repository/setting.dart';
 import '../../../widgets/custom_drawer.dart';
 
 import 'package:three_zero_two_property/widgets/tenant_pets_vehicles_section.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class AddTenant extends StatefulWidget {
   @override
@@ -132,6 +133,10 @@ class _AddTenantState extends State<AddTenant> {
   // Helper function to convert display format back to API format (yyyy-MM-dd)
   String _convertToApiFormat(String displayDate) {
     if (displayDate.isEmpty) return "";
+    // The company's own date format first (strict), like web, so a custom
+    // format such as "DD/MMM/YYYY" reads back correctly (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(displayDate);
+    if (inCompanyFormat != null) return inCompanyFormat;
     try {
       DateTime? parsedDate;
 

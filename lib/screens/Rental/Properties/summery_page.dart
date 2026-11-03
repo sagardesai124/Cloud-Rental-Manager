@@ -75,6 +75,7 @@ import '../../../Model/gallery_photo_model.dart';
 import '../../../services/gallery_service.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class Summery_page extends StatefulWidget {
   Rentals properties;
@@ -216,6 +217,10 @@ class _Summery_pageState extends State<Summery_page>
   // Helper function to convert display format back to API format (yyyy-MM-dd)
   String _convertToApiFormat(String displayDate) {
     if (displayDate.isEmpty) return "";
+    // The company's own date format first (strict), like web, so a custom
+    // format such as "DD/MMM/YYYY" reads back correctly (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(displayDate);
+    if (inCompanyFormat != null) return inCompanyFormat;
     try {
       DateTime? parsedDate;
 
@@ -1684,11 +1689,12 @@ class _Summery_pageState extends State<Summery_page>
     }
 
     try {
-      // Fetch tenant count
-      final data1 = await Properies_summery_Repo()
-          .fetchPropertiessummery(widget.properties.rentalId ?? "");
+      // Tenant tab count: the server's count, like web (tenants with a
+      // move-out date are not counted).
+      final tenants = await Properies_summery_Repo()
+          .fetchRentalTenantCount(widget.properties.rentalId ?? "");
       setState(() {
-        tenentCount = data1.isNotEmpty ? data1.length : 0;
+        tenentCount = tenants;
       });
     } catch (e) {
       // Handle error for fetching tenant data

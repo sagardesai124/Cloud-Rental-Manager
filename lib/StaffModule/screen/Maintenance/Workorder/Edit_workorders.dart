@@ -3018,7 +3018,7 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                         children: [
                           const Row(
                             children: [
-                              Text('Parts And Labour :',
+                              Text('Parts and Labor :',
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16)),
@@ -3089,7 +3089,7 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                           // const SizedBox(
                           //   height: 10,
                           // ),
-                          const Text('Vendors Note ',
+                          const Text('Vendor Notes ',
                               style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -6393,7 +6393,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                 children: [
                                   const Row(
                                     children: [
-                                      Text('Parts And Labour ',
+                                      Text('Parts and Labor ',
                                           style: TextStyle(
                                               fontWeight: FontWeight.bold)),
                                     ],
@@ -7002,7 +7002,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                const Text('Vendors Note *',
+                                                const Text('Vendor Notes',
                                                     style: TextStyle(
                                                         fontSize: 13,
                                                         fontWeight:

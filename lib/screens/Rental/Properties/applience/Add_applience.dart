@@ -23,6 +23,7 @@ import '../../../../repository/fetch_allcategories.dart';
 import '../../../../repository/properties_summery.dart';
 import '../../../../repository/unit_data.dart';
 import '../../../../Model/unit.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class AddApplience extends StatefulWidget {
   Rentals? properties;
@@ -354,6 +355,10 @@ class _AddApplienceState extends State<AddApplience> {
   // Helper function to convert display format back to API format (yyyy-MM-dd)
   String _convertToApiFormat(String displayDate) {
     if (displayDate.isEmpty) return "";
+    // The company's own date format first (strict), like web, so a custom
+    // format such as "DD/MMM/YYYY" reads back correctly (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(displayDate);
+    if (inCompanyFormat != null) return inCompanyFormat;
     try {
       DateTime? parsedDate;
 

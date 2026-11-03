@@ -128,8 +128,9 @@ void main() {
   testWidgets('no submitted_at: shows createdAt, like web', (tester) async {
     await openSubmission(tester, _submission({'createdAt': _createdAt}));
     expect(find.textContaining('16:34:20'), findsOneWidget);
-    // Other empty card fields also read N/A; only those 3 remain.
-    expect(find.text('N/A'), findsNWidgets(3));
+    // Only the title (no address) reads N/A; the empty Created On and Due
+    // Date read "-" like web.
+    expect(find.text('N/A'), findsNWidgets(1));
     await close(tester);
   });
 
@@ -143,8 +144,8 @@ void main() {
 
   testWidgets('neither: still N/A', (tester) async {
     await openSubmission(tester, _submission({}));
-    // The 3 other empty fields + Submitted At.
-    expect(find.text('N/A'), findsNWidgets(4));
+    // The title (no address) + Submitted At.
+    expect(find.text('N/A'), findsNWidgets(2));
     await close(tester);
   });
 }

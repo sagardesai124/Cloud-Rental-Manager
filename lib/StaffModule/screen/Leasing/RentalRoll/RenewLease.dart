@@ -25,6 +25,8 @@ import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'SummeryPageLease.dart';
 import 'newAddLease.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
+import 'package:three_zero_two_property/services/renewal_term.dart';
 
 class Renewlease extends StatefulWidget {
   LeaseSummary? lease;
@@ -69,29 +71,9 @@ class _RenewleaseState extends State<Renewlease> {
     // startDateController.text = DateFormat('yyyy-MM-dd').format(startDate);
     // endDateController.text = DateFormat('yyyy-MM-dd').format(newEndDate);
 
-    if (widget.enddate != null && widget.enddate.toString().isNotEmpty) {
-      DateTime? endDate = formatDates(widget.enddate.toString());
-
-      // Check if endDate is valid before proceeding
-      if (endDate != null) {
-        DateTime startDate = endDate;
-        DateTime newEndDate =
-            DateTime(endDate.year, endDate.month + 1, endDate.day);
-
-        startDateController.text = DateFormat('yyyy-MM-dd').format(startDate);
-        endDateController.text = DateFormat('yyyy-MM-dd').format(newEndDate);
-      } else {
-        // Handle the case where endDate could not be parsed
-        startDateController.text = "";
-        endDateController.text = "";
-        // Optionally, you could show an error message or log this issue
-      }
-    } else {
-      // Handle the case where widget.enddate is null or empty
-      startDateController.text = "";
-      endDateController.text = "";
-      endDateController.text = "";
-    }
+    // Like web: the day after the current term ends, for a year; refined
+    // with the renewals once the lease summary loads (leaseData).
+    _setDefaultRenewalTerm(renewalTermEnd(leaseEndDate: widget.enddate));
     // if(widget.renewfileName != "")
     //   _uploadedFileNames.add(widget.renewfileName!);
     rent.text = widget.rentamount ?? "";
@@ -453,6 +435,15 @@ class _RenewleaseState extends State<Renewlease> {
 
   late LeaseSummary leasegetdata;
 
+  /// Web's default renewal dates (utils/renewalTerm.js), shown in the
+  /// company's date format like web's DatePicker.
+  void _setDefaultRenewalTerm(DateTime? termEnd) {
+    final term = defaultRenewalTerm(termEnd);
+    if (term == null) return;
+    startDateController.text = AppDateFormat.format(term.start);
+    endDateController.text = AppDateFormat.format(term.end);
+  }
+
   leaseData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -469,36 +460,14 @@ class _RenewleaseState extends State<Renewlease> {
     if (response.statusCode == 200) {
       setState(() {
         leasegetdata = LeaseSummary.fromJson(jsonDecode(response.body));
-        if (determineStatus(
-            leasegetdata.data!.startDate, leasegetdata.data!.endDate)) {
-          // Lease is expired
-          startDateController.text = formatDate(DateTime.now().toString());
-
-          // Set the end date to one month from today's date
-          DateTime newEndDate = DateTime(DateTime.now().year,
-              DateTime.now().month + 1, DateTime.now().day);
-          endDateController.text = formatDate(
-              DateFormat('yyyy-MM-dd').format(newEndDate).toString());
-        }
-        if (leasegetdata.data!.renewLeases != null &&
-            leasegetdata.data!.renewLeases!.isNotEmpty) {
-          // Lease is active
-          if (!determineStatus(leasegetdata.data!.renewLeases!.last.startDate!,
-              leasegetdata.data!.renewLeases!.last.endDate!)) {
-            DateTime endDate =
-                formatDates(leasegetdata.data!.renewLeases!.last.endDate!);
-
-            // Set start date to the current lease's end date
-            startDateController.text =
-                formatDate(DateFormat('yyyy-MM-dd').format(endDate).toString());
-
-            // Extend the lease for one month from the current lease's end date
-            DateTime newEndDate =
-                DateTime(endDate.year, endDate.month + 1, endDate.day);
-            endDateController.text = formatDate(
-                DateFormat('yyyy-MM-dd').format(newEndDate).toString());
-          }
-        }
+        // Like web (currentTermEnd): the latest renewal's end, else the
+        // lease's own end.
+        _setDefaultRenewalTerm(renewalTermEnd(
+          leaseEndDate: leasegetdata.data!.endDate,
+          renewalEndDates: [
+            for (final r in leasegetdata.data!.renewLeases ?? []) r.endDate
+          ],
+        ));
       });
     } else {
       throw Exception('Failed to load lease summary');
@@ -1003,12 +972,15 @@ class _RenewleaseState extends State<Renewlease> {
                                       padding: const EdgeInsets.all(8.0),
                                       child: CustomTextField(
                                         onTap: () async {
+                                          // Like web: from the day after the lease's end date.
+                                          final range = renewPickerRange(startDateController.text,
+                                              after: AppDateFormat.parseCalendarDate(widget.enddate));
                                           DateTime? pickedDate =
                                               await showDatePicker(
                                             context: context,
-                                            initialDate: DateTime.now(),
-                                            firstDate: DateTime(2000),
-                                            lastDate: DateTime(2101),
+                                            initialDate: range.initial,
+                                            firstDate: range.first,
+                                            lastDate: range.last,
                                             locale: const Locale('en', 'US'),
                                             builder: (BuildContext context,
                                                 Widget? child) {
@@ -1050,7 +1022,7 @@ class _RenewleaseState extends State<Renewlease> {
                                             // String formattedStartDate =
                                             //     "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
                                             String formattedStartDate =
-                                                "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                                AppDateFormat.format(pickedDate);
                                             DateTime endDate = DateTime(
                                                 pickedDate.year,
                                                 pickedDate.month + 1,
@@ -1068,12 +1040,15 @@ class _RenewleaseState extends State<Renewlease> {
                                         readOnnly: true,
                                         suffixIcon: IconButton(
                                             onPressed: () async {
+                                              // Like web: from the day after the lease's end date.
+                                              final range = renewPickerRange(startDateController.text,
+                                                  after: AppDateFormat.parseCalendarDate(widget.enddate));
                                               DateTime? pickedDate =
                                                   await showDatePicker(
                                                 context: context,
-                                                initialDate: DateTime.now(),
-                                                firstDate: DateTime(2000),
-                                                lastDate: DateTime(2101),
+                                                initialDate: range.initial,
+                                                firstDate: range.first,
+                                                lastDate: range.last,
                                                 locale:
                                                     const Locale('en', 'US'),
                                                 builder: (BuildContext context,
@@ -1122,7 +1097,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                 // String formattedStartDate =
                                                 //     "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
                                                 String formattedStartDate =
-                                                    "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                                    AppDateFormat.format(pickedDate);
                                                 DateTime endDate = DateTime(
                                                     pickedDate.year,
                                                     pickedDate.month + 1,
@@ -1172,12 +1147,15 @@ class _RenewleaseState extends State<Renewlease> {
                                       padding: const EdgeInsets.all(8.0),
                                       child: CustomTextField(
                                         onTap: () async {
+                                          // Like web: from the day after the start date.
+                                          final range = renewPickerRange(endDateController.text,
+                                              after: renewBoxDay(startDateController.text));
                                           DateTime? pickedDate =
                                               await showDatePicker(
                                             context: context,
-                                            initialDate: DateTime.now(),
-                                            firstDate: DateTime(2000),
-                                            lastDate: DateTime(2101),
+                                            initialDate: range.initial,
+                                            firstDate: range.first,
+                                            lastDate: range.last,
                                             locale: const Locale('en', 'US'),
                                             builder: (BuildContext context,
                                                 Widget? child) {
@@ -1219,7 +1197,7 @@ class _RenewleaseState extends State<Renewlease> {
                                             // String formattedDate =
                                             //     "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
                                             String formattedDate =
-                                                "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                                AppDateFormat.format(pickedDate);
                                             setState(() {
                                               endDateController.text =
                                                   formattedDate;
@@ -1229,12 +1207,15 @@ class _RenewleaseState extends State<Renewlease> {
                                         readOnnly: true,
                                         suffixIcon: IconButton(
                                             onPressed: () async {
+                                              // Like web: from the day after the start date.
+                                              final range = renewPickerRange(endDateController.text,
+                                                  after: renewBoxDay(startDateController.text));
                                               DateTime? pickedDate =
                                                   await showDatePicker(
                                                 context: context,
-                                                initialDate: DateTime.now(),
-                                                firstDate: DateTime(2000),
-                                                lastDate: DateTime(2101),
+                                                initialDate: range.initial,
+                                                firstDate: range.first,
+                                                lastDate: range.last,
                                                 locale:
                                                     const Locale('en', 'US'),
                                                 builder: (BuildContext context,
@@ -1283,7 +1264,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                 // String formattedDate =
                                                 //     "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
                                                 String formattedDate =
-                                                    "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                                    AppDateFormat.format(pickedDate);
                                                 setState(() {
                                                   endDateController.text =
                                                       formattedDate;

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 
-/// Settings → Date Format → "HOW IT APPEARS" shows the time with seconds,
+/// Settings → Date Format → "Formatted Date and Time Preview" shows the time with seconds,
 /// like web (DateFormatSection.jsx: " HH:mm:ss" / " hh:mm:ss A"). Before, it
 /// showed "2026-10-23 15:45" / "3:45 PM" while the time options above it
 /// already showed seconds.

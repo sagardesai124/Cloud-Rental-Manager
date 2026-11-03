@@ -16,6 +16,7 @@ import '../../../../widgets/clearable_date_picker.dart';
 import '../../../../widgets/clearable_date_suffix.dart';
 import '../../../../widgets/custom_drawer.dart';
 import '../../../../Model/PropertyInsuranceModel.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class AddEditInsurancePolicy extends StatefulWidget {
   final String propertyId;
@@ -149,6 +150,10 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
 
   String _convertToApiFormat(String displayDate) {
     if (displayDate.isEmpty) return "";
+    // The company's own date format first (strict), like web, so a custom
+    // format such as "DD/MMM/YYYY" reads back correctly (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseShownToApi(displayDate);
+    if (inCompanyFormat != null) return '${inCompanyFormat}T00:00:00.000Z';
     try {
       DateTime? parsedDate;
 

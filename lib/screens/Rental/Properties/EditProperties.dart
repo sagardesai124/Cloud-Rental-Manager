@@ -36,6 +36,7 @@ import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import '../../../model/unitsummery_propeties.dart';
 import '../../../widgets/custom_drawer.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class Edit_properties extends StatefulWidget {
   propertytype? property;
@@ -1510,6 +1511,9 @@ class _Edit_propertiesState extends State<Edit_properties> {
   /// nothing parses so a blank field is omitted rather than sent as garbage.
   String? _toApiDate(String text) {
     if (text.trim().isEmpty) return null;
+    // The company's own format first (strict), like web (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseToApi(text);
+    if (inCompanyFormat != null) return inCompanyFormat;
     for (final format in const [
       'yyyy-MM-dd',
       'yyyy-M-d',

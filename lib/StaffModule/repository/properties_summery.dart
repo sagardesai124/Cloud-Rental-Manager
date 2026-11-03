@@ -57,6 +57,25 @@ class Properies_summery_Repo{
     }
   }
 
+  /// The "Tenant (n)" tab count, as web shows it: the `count` the server
+  /// returns with the property's tenants, which leaves out tenants with a
+  /// move-out date. Uses that same rule if a reply has no `count`.
+  Future<int> fetchRentalTenantCount(String rentalId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? id = prefs.getString("staff_id");
+    String? token = prefs.getString('token');
+    final response = await apiGet(Uri.parse('${Api_url}/api/tenant/rental_tenant/$rentalId'),
+      headers: {"authorization" : "CRM $token","id":"CRM $id",},);
+    if (response.statusCode != 200) return 0;
+    final body = json.decode(response.body);
+    final count = body['count'];
+    if (count is num) return count.toInt();
+    final List tenants = body['data'] ?? [];
+    return tenants
+        .where((t) => (t['moveout_date'] ?? '').toString().isEmpty)
+        .length;
+  }
+
   Future<Map<String, dynamic>> addUnit({
      String? adminId,
      String? unitId,

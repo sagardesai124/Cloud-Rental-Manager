@@ -28,6 +28,8 @@ import 'package:three_zero_two_property/screens/Rental/Tenants/add_tenants.dart'
 
 import 'SummeryPageLease.dart';
 import 'newAddLease.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
+import 'package:three_zero_two_property/services/renewal_term.dart';
 
 class Renewlease extends StatefulWidget {
   LeaseSummary? lease;
@@ -65,16 +67,9 @@ class _RenewleaseState extends State<Renewlease> {
     // _tabController = TabController(length: 3, vsync: this);
     _selectedLeaseType = widget.leasetype;
 
-    // Use formatDate4 to get dd-MM-yyyy format for display
-    startDateController.text = formatDate4(widget.enddate!) ?? "";
-    DateTime endDate = formatDates(widget.enddate!);
-    DateTime startDate = endDate;
-    DateTime newEndDate =
-        DateTime(endDate.year, endDate.month + 1, endDate.day);
-
-    // Use formatDate4 to get dd-MM-yyyy format for display
-    endDateController.text =
-        formatDate4(DateFormat('yyyy-MM-dd').format(newEndDate));
+    // Like web: the day after the current term ends, for a year; refined
+    // with the renewals once the lease summary loads (leaseData).
+    _setDefaultRenewalTerm(renewalTermEnd(leaseEndDate: widget.enddate));
     rent.text = widget.rentamount ?? "";
 
     // if(widget.renewfileName != "")
@@ -129,6 +124,15 @@ class _RenewleaseState extends State<Renewlease> {
     return parsedDate!;
   }
 
+  /// Web's default renewal dates (utils/renewalTerm.js), shown in the
+  /// company's date format like web's DatePicker.
+  void _setDefaultRenewalTerm(DateTime? termEnd) {
+    final term = defaultRenewalTerm(termEnd);
+    if (term == null) return;
+    startDateController.text = AppDateFormat.format(term.start);
+    endDateController.text = AppDateFormat.format(term.end);
+  }
+
   leaseData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -145,36 +149,14 @@ class _RenewleaseState extends State<Renewlease> {
     if (response.statusCode == 200) {
       setState(() {
         leasegetdata = LeaseSummary.fromJson(jsonDecode(response.body));
-        if (determineStatus(
-            leasegetdata.data!.startDate, leasegetdata.data!.endDate)) {
-          // Lease is expired
-          startDateController.text = formatDate4(DateTime.now().toString());
-
-          // Set the end date to one month from today's date
-          DateTime newEndDate = DateTime(DateTime.now().year,
-              DateTime.now().month + 1, DateTime.now().day);
-          endDateController.text =
-              formatDate4(DateFormat('yyyy-MM-dd').format(newEndDate));
-        }
-        if (leasegetdata.data!.renewLeases != null &&
-            leasegetdata.data!.renewLeases!.isNotEmpty) {
-          // Lease is active
-          if (!determineStatus(leasegetdata.data!.renewLeases!.last.startDate!,
-              leasegetdata.data!.renewLeases!.last.endDate!)) {
-            DateTime endDate =
-                formatDates(leasegetdata.data!.renewLeases!.last.endDate!);
-
-            // Set start date to the current lease's end date
-            startDateController.text =
-                formatDate4(DateFormat('yyyy-MM-dd').format(endDate));
-
-            // Extend the lease for one month from the current lease's end date
-            DateTime newEndDate =
-                DateTime(endDate.year, endDate.month + 1, endDate.day);
-            endDateController.text =
-                formatDate4(DateFormat('yyyy-MM-dd').format(newEndDate));
-          }
-        }
+        // Like web (currentTermEnd): the latest renewal's end, else the
+        // lease's own end.
+        _setDefaultRenewalTerm(renewalTermEnd(
+          leaseEndDate: leasegetdata.data!.endDate,
+          renewalEndDates: [
+            for (final r in leasegetdata.data!.renewLeases ?? []) r.endDate
+          ],
+        ));
       });
     } else {
       throw Exception('Failed to load lease summary');
@@ -1034,12 +1016,15 @@ class _RenewleaseState extends State<Renewlease> {
                                       padding: const EdgeInsets.all(8.0),
                                       child: CustomTextField(
                                         onTap: () async {
+                                          // Like web: from the day after the lease's end date.
+                                          final range = renewPickerRange(startDateController.text,
+                                              after: AppDateFormat.parseCalendarDate(widget.enddate));
                                           DateTime? pickedDate =
                                               await showDatePicker(
                                             context: context,
-                                            initialDate: DateTime.now(),
-                                            firstDate: DateTime(2000),
-                                            lastDate: DateTime(2101),
+                                            initialDate: range.initial,
+                                            firstDate: range.first,
+                                            lastDate: range.last,
                                             locale: const Locale('en', 'US'),
                                             builder: (BuildContext context,
                                                 Widget? child) {
@@ -1079,7 +1064,7 @@ class _RenewleaseState extends State<Renewlease> {
 
                                           if (pickedDate != null) {
                                             String formattedStartDate =
-                                                "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                                AppDateFormat.format(pickedDate);
                                             DateTime endDate = DateTime(
                                                 pickedDate.year,
                                                 pickedDate.month + 1,
@@ -1095,12 +1080,15 @@ class _RenewleaseState extends State<Renewlease> {
                                         readOnnly: true,
                                         suffixIcon: IconButton(
                                             onPressed: () async {
+                                              // Like web: from the day after the lease's end date.
+                                              final range = renewPickerRange(startDateController.text,
+                                                  after: AppDateFormat.parseCalendarDate(widget.enddate));
                                               DateTime? pickedDate =
                                                   await showDatePicker(
                                                 context: context,
-                                                initialDate: DateTime.now(),
-                                                firstDate: DateTime(2000),
-                                                lastDate: DateTime(2101),
+                                                initialDate: range.initial,
+                                                firstDate: range.first,
+                                                lastDate: range.last,
                                                 locale:
                                                     const Locale('en', 'US'),
                                                 builder: (BuildContext context,
@@ -1147,7 +1135,7 @@ class _RenewleaseState extends State<Renewlease> {
 
                                               if (pickedDate != null) {
                                                 String formattedStartDate =
-                                                    "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                                    AppDateFormat.format(pickedDate);
                                                 DateTime endDate = DateTime(
                                                     pickedDate.year,
                                                     pickedDate.month + 1,
@@ -1195,12 +1183,15 @@ class _RenewleaseState extends State<Renewlease> {
                                       padding: const EdgeInsets.all(8.0),
                                       child: CustomTextField(
                                         onTap: () async {
+                                          // Like web: from the day after the start date.
+                                          final range = renewPickerRange(endDateController.text,
+                                              after: renewBoxDay(startDateController.text));
                                           DateTime? pickedDate =
                                               await showDatePicker(
                                             context: context,
-                                            initialDate: DateTime.now(),
-                                            firstDate: DateTime(2000),
-                                            lastDate: DateTime(2101),
+                                            initialDate: range.initial,
+                                            firstDate: range.first,
+                                            lastDate: range.last,
                                             locale: const Locale('en', 'US'),
                                             builder: (BuildContext context,
                                                 Widget? child) {
@@ -1250,35 +1241,25 @@ class _RenewleaseState extends State<Renewlease> {
                                           // }
 
                                           if (pickedDate != null) {
-                                            String formattedStartDate =
-                                                "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
-
-                                            // Calculate the end date by adding one month
-                                            DateTime endDate = DateTime(
-                                                pickedDate.year,
-                                                pickedDate.month + 1,
-                                                pickedDate.day);
-                                            String formattedEndDate =
-                                                "${endDate.day.toString().padLeft(2, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.year}";
-
+                                            // The End Date picker sets only the end date, like web
+                                            // and Staff (it used to move the Start Date too).
                                             setState(() {
-                                              startDateController.text =
-                                                  formattedStartDate;
-                                              endDateController.text =
-                                                  formattedEndDate; // Set the end date
-                                              _startDate = pickedDate;
+                                              endDateController.text = AppDateFormat.format(pickedDate);
                                             });
                                           }
                                         },
                                         readOnnly: true,
                                         suffixIcon: IconButton(
                                             onPressed: () async {
+                                              // Like web: from the day after the start date.
+                                              final range = renewPickerRange(endDateController.text,
+                                                  after: renewBoxDay(startDateController.text));
                                               DateTime? pickedDate =
                                                   await showDatePicker(
                                                 context: context,
-                                                initialDate: DateTime.now(),
-                                                firstDate: DateTime(2000),
-                                                lastDate: DateTime(2101),
+                                                initialDate: range.initial,
+                                                firstDate: range.first,
+                                                lastDate: range.last,
                                                 locale:
                                                     const Locale('en', 'US'),
                                                 builder: (BuildContext context,
@@ -1335,23 +1316,10 @@ class _RenewleaseState extends State<Renewlease> {
                                               // }
 
                                               if (pickedDate != null) {
-                                                String formattedStartDate =
-                                                    "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
-
-                                                // Calculate the end date by adding one month
-                                                DateTime endDate = DateTime(
-                                                    pickedDate.year,
-                                                    pickedDate.month + 1,
-                                                    pickedDate.day);
-                                                String formattedEndDate =
-                                                    "${endDate.day.toString().padLeft(2, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.year}";
-
+                                                // The End Date picker sets only the end date, like web
+                                                // and Staff (it used to move the Start Date too).
                                                 setState(() {
-                                                  startDateController.text =
-                                                      formattedStartDate;
-                                                  endDateController.text =
-                                                      formattedEndDate; // Set the end date
-                                                  _startDate = pickedDate;
+                                                  endDateController.text = AppDateFormat.format(pickedDate);
                                                 });
                                               }
                                             },

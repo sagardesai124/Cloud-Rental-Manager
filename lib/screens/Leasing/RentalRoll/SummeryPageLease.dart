@@ -5441,10 +5441,13 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
         moveoutDateControllers[t.tenantId!] = TextEditingController();
       }
 
-      // Set default values for each tenant
-      startDateControllers[t.tenantId!]!.text =
-          DateFormat('yyyy-MM-dd').format(DateTime.now());
-      moveoutDateControllers[t.tenantId!]!.text = formatDate(t.endDate!);
+      // Set default values for each tenant, in the company's date format
+      // like web's pickers and the Move Out screen.
+      final dateProvider = Provider.of<DateProvider>(context, listen: false);
+      startDateControllers[t.tenantId!]!.text = dateProvider
+          .formatCurrentDate(DateFormat('yyyy-MM-dd').format(DateTime.now()));
+      moveoutDateControllers[t.tenantId!]!.text =
+          dateProvider.formatCurrentDate(t.endDate!);
 
       // Set default selection
       t!.isSelected = (t.tenantId == tenant.tenantId);
@@ -5591,8 +5594,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                 List<Map<String, dynamic>> multipletenant = [];
                 for (tenant in selectedTenants) {
                   if (tenant.isSelected!) {
-                    // A picked date is dd-MM-yyyy; the server reads
-                    // "05-10-2026" as May 10, so send yyyy-MM-dd.
+                    // The boxes show the company's date format; the server
+                    // reads "05-10-2026" as May 10, so send yyyy-MM-dd.
                     String moveoutNoticeGivenDate = reverseFormatDate(
                         startDateControllers[tenant.tenantId!]!.text);
                     String moveoutdate = reverseFormatDate(
@@ -5683,6 +5686,8 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                   icon: const Icon(Icons.calendar_today_outlined,
                       size: 20, color: MoveoutColors.muted),
                   onPressed: () async {
+                    final dateProvider =
+                        Provider.of<DateProvider>(context, listen: false);
                     // Web's lease move-out limits (see moveoutPickerRange).
                     final range = moveoutPickerRange(controller.text,
                         minDate: minDate?.call(), maxDate: maxDate);
@@ -5716,8 +5721,10 @@ class _SummeryPageLeaseState extends State<SummeryPageLease>
                     if (pickedDate != null) {
                       // setState(() {
                       controller.text = moveOutDate!;
+                      String apiFormatDate =
+                          DateFormat('yyyy-MM-dd').format(pickedDate);
                       controller.text =
-                          DateFormat('dd-MM-yyyy').format(pickedDate);
+                          dateProvider.formatCurrentDate(apiFormatDate);
                       //  });
                       onPicked?.call();
                     }

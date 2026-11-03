@@ -16,7 +16,7 @@ import 'package:three_zero_two_property/provider/notification_provider.dart';
 import 'package:three_zero_two_property/screens/Profile/Settings_screen.dart';
 
 /// Settings → Date Format → Custom works like web staging
-/// (DateFormatSection.jsx): "HOW IT APPEARS" follows the custom format while
+/// (DateFormatSection.jsx): "Formatted Date and Time Preview" follows the custom format while
 /// it is typed, and shows "—" for a format web would reject
 /// (Settings.jsx isValidDateFormat). Before, the preview kept showing the
 /// saved format until Save.
@@ -54,7 +54,7 @@ Future<void> _tap(WidgetTester tester, String label) async {
   await _settle(tester, 20);
 }
 
-/// The "HOW IT APPEARS" text: the only Text ending in a seconds time.
+/// The "Formatted Date and Time Preview" text: the only Text ending in a seconds time.
 String _preview(WidgetTester tester) {
   final texts = tester
       .widgetList<Text>(find.byType(Text))
@@ -147,18 +147,20 @@ void main() {
         final webDefault = DateFormat('dd/MMM/yyyy').format(now);
         expect(find.text(webDefault), findsOneWidget);
         await _tap(tester, 'Custom (DD/MMM/YYYY)');
-        final field = find.widgetWithText(
-            TextFormField, 'Custom format (e.g. DD-MM-YYYY)');
+        final field = find.byType(TextFormField);
         expect(field, findsOneWidget);
+        expect(find.text('Custom format (e.g. DD-MM-YYYY)'), findsNothing,
+            reason: 'web shows the custom box without a label');
         expect(_preview(tester), startsWith('$webDefault '));
 
-        // A valid custom format shows straight away, in the preview and on
-        // the Custom option.
+        // A valid custom format shows straight away, in the preview, on the
+        // Custom option and under "Formatted Date:" (web shows both too).
         await tester.enterText(field, 'DD-MM-YYYY');
         await _settle(tester, 5);
         expect(_preview(tester),
             startsWith('${DateFormat('dd-MM-yyyy').format(now)} '));
-        expect(find.text(DateFormat('dd-MM-yyyy').format(now)), findsOneWidget);
+        expect(find.text(DateFormat('dd-MM-yyyy').format(now)), findsNWidgets(2));
+        expect(find.text('Formatted Date:'), findsOneWidget);
 
         // Lower case is read as upper case, as web does.
         await tester.enterText(field, 'yyyy/mm/dd');
@@ -199,7 +201,7 @@ void main() {
     };
     GestureDetector saveButton() => tester.widget(find
         .ancestor(
-            of: find.text('Save Changes'),
+            of: find.text('Save'),
             matching: find.byType(GestureDetector))
         .first);
     try {
@@ -218,8 +220,7 @@ void main() {
         await _tap(tester, 'Date Format');
         await _settle(tester, 20);
         await _tap(tester, 'Custom (DD/MMM/YYYY)');
-        final field = find.widgetWithText(
-            TextFormField, 'Custom format (e.g. DD-MM-YYYY)');
+        final field = find.byType(TextFormField);
         String typed() => tester
             .widget<EditableText>(
                 find.descendant(of: field, matching: find.byType(EditableText)))
@@ -227,7 +228,7 @@ void main() {
             .text;
 
         // Like web: the box starts with DD/MMM/YYYY, and picking Custom is a
-        // change, so Save Changes turns on.
+        // change, so Save turns on.
         expect(typed(), kDefaultCustomDateFormat);
         expect(saveButton().onTap, isNotNull);
 
@@ -257,7 +258,7 @@ void main() {
         await _settle(tester, 5);
         expect(find.text(kInvalidCustomDateFormatMessage), findsNothing);
         expect(saveButton().onTap, isNotNull);
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
         expect(_saves.single, {

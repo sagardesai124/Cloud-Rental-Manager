@@ -1,4 +1,3 @@
-import 'package:email_validator/email_validator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1945,10 +1944,11 @@ class CustomTextFieldState extends State<CustomTextField> {
                       return '';
                     }
                   } else if (widget.email != null) {
-                    if (!EmailValidator.validate(
-                        widget.controller!.text.trim())) {
+                    // Same email rule and message as web's Add/Edit Vendor.
+                    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+                        .hasMatch(widget.controller!.text.trim())) {
                       setState(() {
-                        _errorMessage = "Email is not valid";
+                        _errorMessage = "Invalid email address";
                       });
                       return '';
                     }

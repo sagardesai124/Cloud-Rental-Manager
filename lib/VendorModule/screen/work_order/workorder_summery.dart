@@ -2179,7 +2179,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                         Row(
                           children: [
                             Expanded(child: pill(
-                              label: 'Permission',
+                              label: 'Permission To Enter',
                               value: summery.entryAllowed == true ? 'Yes' : summery.entryAllowed == false ? 'No' : 'N/A',
                               valueColor: summery.entryAllowed == true ? const Color(0xFF1F9D55) : null,
                             )),
@@ -3569,7 +3569,7 @@ class _Workorder_summeryState extends State<Workorder_summery>
                             Row(
                               children: [
                                 Expanded(child: pill(
-                                  label: 'Permission',
+                                  label: 'Permission To Enter',
                                   value: summery.entryAllowed == true ? 'Yes' : summery.entryAllowed == false ? 'No' : 'N/A',
                                   valueColor: summery.entryAllowed == true ? const Color(0xFF1F9D55) : null,
                                 )),

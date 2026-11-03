@@ -17,7 +17,7 @@ import 'package:three_zero_two_property/screens/Profile/Settings_screen.dart';
 
 /// QA (Android 1.0.245+248): a company saved with a custom date format
 /// (web: Custom "DD/MMM/YYYY") shows as MM/DD/YYYY in the app, which cannot
-/// show custom formats yet. Changing only the time and tapping Save Changes
+/// show custom formats yet. Changing only the time and tapping Save
 /// used to send format "MM/DD/YYYY" and replace the custom format.
 /// Like web (Settings.jsx setDateFormat re-sends the format it loaded), a
 /// time-only save now sends the date format back exactly as it is saved;
@@ -127,7 +127,7 @@ Future<void> _withDateFormat(WidgetTester tester, String format, String time,
       await _settle(tester, 40);
       await _tap(tester, 'Date Format');
       await _settle(tester, 20);
-      expect(find.text('Manage Date & Time Format'), findsOneWidget);
+      expect(find.text('Date & Time Format'), findsOneWidget);
       await body();
     }, () => _server);
     await tester.pumpWidget(const SizedBox());
@@ -163,10 +163,10 @@ void main() {
         'custom DD/MMM/YYYY: opens with Save greyed; changing only the time keeps it',
         (tester) async {
       await _withDateFormat(tester, 'DD/MMM/YYYY', '12', () async {
-        expect(_button(tester, 'Save Changes').onTap, isNull,
+        expect(_button(tester, 'Save').onTap, isNull,
             reason: 'nothing changed yet');
-        await _tap(tester, '24-hour format');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, '24-hour format (14:00)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
         expect(_saves.single, {
@@ -174,7 +174,7 @@ void main() {
           'timeFormat': '24',
           'admin_id': 'ADMIN-1'
         });
-        expect(_button(tester, 'Save Changes').onTap, isNull,
+        expect(_button(tester, 'Save').onTap, isNull,
             reason: 'saved, nothing left to save');
       });
     });
@@ -182,8 +182,8 @@ void main() {
     testWidgets('M/D/YYYY (custom on web): a time-only save keeps it',
         (tester) async {
       await _withDateFormat(tester, 'M/D/YYYY', '24', () async {
-        await _tap(tester, '12-hour format');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, '12-hour format (2:00 PM)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
         expect(_saves.single['format'], 'M/D/YYYY');
@@ -194,8 +194,8 @@ void main() {
     testWidgets('preset YYYY-MMM-DD: a time-only save keeps it, as before',
         (tester) async {
       await _withDateFormat(tester, 'YYYY-MMM-DD', '24', () async {
-        await _tap(tester, '12-hour format');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, '12-hour format (2:00 PM)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
         expect(_saves.single['format'], 'YYYY-MMM-DD');
@@ -208,9 +208,11 @@ void main() {
         (tester) async {
       await _withDateFormat(tester, 'DD/MMM/YYYY', '12', () async {
         await _tap(tester, 'YYYY-MM-DD');
-        await _tap(tester, 'MM/DD/YYYY');
-        await _tap(tester, '24-hour format');
-        await _tap(tester, 'Save Changes');
+        // Back to the saved option: Custom (the company's format now shows
+        // as Custom DD/MMM/YYYY, like web).
+        await _tap(tester, 'Custom (DD/MMM/YYYY)');
+        await _tap(tester, '24-hour format (14:00)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
         expect(_saves.single['format'], 'DD/MMM/YYYY');
@@ -222,8 +224,8 @@ void main() {
         (tester) async {
       await _withDateFormat(tester, 'DD/MMM/YYYY', '12', () async {
         await _tap(tester, 'YYYY-MM-DD');
-        await _tap(tester, '24-hour format');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, '24-hour format (14:00)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
         expect(_saves.single['format'], 'YYYY-MM-DD');
@@ -234,7 +236,7 @@ void main() {
     testWidgets('custom format + Reset: web defaults YYYY-MM-DD and 24-hour',
         (tester) async {
       await _withDateFormat(tester, 'DD/MMM/YYYY', '12', () async {
-        await _tap(tester, '24-hour format');
+        await _tap(tester, '24-hour format (14:00)');
         await _tap(tester, 'Reset');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
@@ -252,9 +254,9 @@ void main() {
       // before the first save's reload comes back.
       _slowAuth = true;
       await _quickTap(tester, 'YYYY-MM-DD');
-      await _quickTap(tester, 'Save Changes');
-      await _quickTap(tester, '12-hour format');
-      await _quickTap(tester, 'Save Changes');
+      await _quickTap(tester, 'Save');
+      await _quickTap(tester, '12-hour format (2:00 PM)');
+      await _quickTap(tester, 'Save');
       await _settle(tester, 100);
       expect(_saves, hasLength(2));
       expect(_saves[0]['format'], 'YYYY-MM-DD');
@@ -271,13 +273,13 @@ void main() {
         (tester) async {
       await _withDateFormat(tester, 'YYYY-MM-DD', '24', () async {
         _failSaves = true;
-        await _tap(tester, '12-hour format');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, '12-hour format (2:00 PM)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1), reason: 'the save was tried once');
         expect(_toasts, contains('Failed to save date format'));
         expect(_toasts, isNot(contains('Date and time format updated')));
-        expect(_button(tester, 'Save Changes').onTap, isNotNull,
+        expect(_button(tester, 'Save').onTap, isNotNull,
             reason: 'not saved, so it can be tried again');
       });
     });
@@ -286,7 +288,7 @@ void main() {
         (tester) async {
       await _withDateFormat(tester, 'YYYY-MMM-DD', '12', () async {
         _failSaves = true;
-        await _tap(tester, '24-hour format');
+        await _tap(tester, '24-hour format (14:00)');
         await _tap(tester, 'Reset');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
@@ -302,12 +304,13 @@ void main() {
       await _withDateFormat(tester, 'DD/MMM/YYYY', '12', () async {
         _failSaves = true;
         await _tap(tester, 'YYYY-MM-DD');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         _failSaves = false;
-        await _tap(tester, 'MM/DD/YYYY');
-        await _tap(tester, '24-hour format');
-        await _tap(tester, 'Save Changes');
+        // Back to the saved option (Custom DD/MMM/YYYY, like web).
+        await _tap(tester, 'Custom (DD/MMM/YYYY)');
+        await _tap(tester, '24-hour format (14:00)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(2));
         expect(_saves.last['format'], 'DD/MMM/YYYY',
@@ -318,13 +321,54 @@ void main() {
     });
   });
 
+  testWidgets('labels and buttons use web staging wording (DateFormatSection.jsx)',
+      (tester) async {
+    await _withDateFormat(tester, 'YYYY-MM-DD', '24', () async {
+      for (final label in [
+        'Date & Time Format',
+        'Select Date Format',
+        'Select Time Format',
+        '24-hour format (14:00)',
+        '12-hour format (2:00 PM)',
+        'Formatted Date and Time Preview:',
+        'Save',
+        'Reset',
+      ]) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      for (final old in [
+        'Manage Date & Time Format',
+        'Time Format',
+        'e.g. 14:00:00',
+        'e.g. 2:00:00 PM',
+        'HOW IT APPEARS',
+        'Save Changes',
+      ]) {
+        expect(find.text(old), findsNothing, reason: old);
+      }
+      // Save first, then Reset, like web.
+      expect(tester.getCenter(find.text('Save')).dx,
+          lessThan(tester.getCenter(find.text('Reset')).dx));
+
+      // Custom: like web, "Formatted Date:" shows the typed format's date
+      // while it is valid, and hides for an invalid one.
+      expect(find.text('Formatted Date:'), findsNothing);
+      await _tap(tester, 'Custom (DD/MMM/YYYY)');
+      expect(find.text('Formatted Date:'), findsOneWidget);
+      expect(find.text(_customSample), findsWidgets);
+      await tester.enterText(_customBox, 'ABC');
+      await _settle(tester, 10);
+      expect(find.text('Formatted Date:'), findsNothing);
+    });
+  });
+
   group('Custom option after a save, like web', () {
     testWidgets(
         'saving another format leaves the Custom box at DD/MMM/YYYY',
         (tester) async {
       await _withDateFormat(tester, 'YYYY-MM-DD', '24', () async {
-        await _tap(tester, '12-hour format');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, '12-hour format (2:00 PM)');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(1));
         // The Custom card's sample still uses DD/MMM/YYYY …
@@ -340,12 +384,12 @@ void main() {
         (tester) async {
       await _withDateFormat(tester, 'YYYY-MM-DD', '24', () async {
         await _tap(tester, 'Custom (DD/MMM/YYYY)');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves.last['format'], 'DD/MMM/YYYY');
         await tester.enterText(_customBox, 'DD-MM-YYYY');
         await _settle(tester, 10);
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, hasLength(2));
         expect(_saves.last['format'], 'DD-MM-YYYY');
@@ -362,10 +406,10 @@ void main() {
         await _tap(tester, 'Custom (DD/MMM/YYYY)');
         await tester.enterText(_customBox, '');
         await _settle(tester, 10);
-        await _tap(tester, '24-hour format');
-        expect(_button(tester, 'Save Changes').onTap, isNotNull,
+        await _tap(tester, '24-hour format (14:00)');
+        expect(_button(tester, 'Save').onTap, isNotNull,
             reason: 'like web, Save stays active and explains on tap');
-        await _tap(tester, 'Save Changes');
+        await _tap(tester, 'Save');
         await _settle(tester, 20);
         expect(_saves, isEmpty, reason: 'the custom format is not replaced');
         expect(_toasts, contains(kInvalidCustomDateFormatMessage));

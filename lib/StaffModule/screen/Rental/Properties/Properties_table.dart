@@ -759,7 +759,8 @@ class _PropertiesTableState extends State<PropertiesTable>
                 },
                 child: Row(
                   children: [
-                    Text("Accepting\nApplication",
+                    // "Accepting / Applications" on two lines, like web.
+                    Text("Accepting\nApplications",
                         style: TextStyle(
                             color: blueColor,
                             fontWeight: FontWeight.bold,

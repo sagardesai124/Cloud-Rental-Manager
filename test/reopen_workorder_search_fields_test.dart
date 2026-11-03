@@ -134,6 +134,24 @@ void main() {
     });
   });
 
+  testWidgets(
+      'a date typed as the table shows it (slashes, full or partial) matches, '
+      'as well as the raw saved date', (tester) async {
+    await run(tester, () async {
+      // Company format MM/DD/YYYY: the table shows 2026-09-07 as 09/07/2026.
+      expect(await shown(tester, '09/07/2026'), {'DD444'}, reason: 'due date');
+      expect(await shown(tester, '09/07'), {'DD444'}, reason: 'partial');
+      expect(await shown(tester, '09/08/2026'), {'EE555'},
+          reason: 'reopen date');
+      expect(await shown(tester, '09/09/2026'), {'FF666'},
+          reason: 'created date');
+      expect(await shown(tester, '2026-09-07'), {'DD444'},
+          reason: 'the raw date web matches still matches');
+      expect(await shown(tester, '/2026'), hasLength(9),
+          reason: 'every row shows a /2026 date');
+    });
+  });
+
   testWidgets('existing fields still match and no match shows nothing',
       (tester) async {
     await run(tester, () async {

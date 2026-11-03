@@ -46,6 +46,7 @@ import 'package:three_zero_two_property/widgets/titleBar.dart';
 import '../../../widgets/custom_drawer.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class ExpiringInsurance extends StatefulWidget {
   @override
@@ -222,6 +223,9 @@ class _ExpiringInsuranceState extends State<ExpiringInsurance>
   }
 
   String convertToApiFormat(String dateStr) {
+    // The company's own format first (strict), like web (AppDateFormat).
+    final inCompanyFormat = AppDateFormat.parseToApi(dateStr);
+    if (inCompanyFormat != null) return inCompanyFormat;
     try {
       final date = DateFormat('dd-MM-yyyy').parse(dateStr);
       return DateFormat('yyyy-MM-dd').format(date);

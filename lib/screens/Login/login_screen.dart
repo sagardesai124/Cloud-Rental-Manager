@@ -4310,6 +4310,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/screens/Signup/signup_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
+import 'package:three_zero_two_property/services/stale_staff_id_cleanup.dart';
 
 import '../../StaffModule/repository/staffpermission_provider.dart';
 import '../../StaffModule/screen/dashboard.dart';
@@ -6156,6 +6157,7 @@ class _Login_ScreenState extends State<Login_Screen> {
 
       prefs.setString('companyName', companyName ?? "");
       prefs.setString("role", "Admin");
+      await dropStaleStaffId();
       prefs.setString('first_name', jsonData['first_name'] ?? "");
       prefs.setString('last_name', jsonData['last_name'] ?? "");
       prefs.setString('email', jsonData['email'] ?? "");
@@ -6346,6 +6348,7 @@ class _Login_ScreenState extends State<Login_Screen> {
       // String? adminId = jsonData['data']['admin_id'];
       // print('Admin ID: $adminId');
       prefs.setString("role", "Tenant");
+      await dropStaleStaffId();
       prefs.setString('companyName', selectedCompany);
       prefs.setString("tenant_id", jsonData["tenant_id"]);
       prefs.setString('checkedToken', token);
@@ -6426,6 +6429,7 @@ class _Login_ScreenState extends State<Login_Screen> {
       prefs.setString('vendor_name', stafffirstname);
       prefs.setString('companyName', selectedCompany);
       prefs.setString("role", "Vendor");
+      await dropStaleStaffId();
       prefs.setString("vendor_id", jsonData["vendor_id"]);
       prefs.setString('checkedToken', token);
       //  prefs.setString('user_id', jsonData['user_id']);

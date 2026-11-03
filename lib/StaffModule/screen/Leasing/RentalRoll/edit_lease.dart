@@ -45,6 +45,7 @@ import '../../../repository/tenants.dart';
 import '../../../widgets/custom_drawer.dart';
 import '../../../../provider/dateProvider.dart';
 import 'package:three_zero_two_property/screens/Leasing/RentalRoll/add_tenant_cosigner_screen.dart';
+import 'package:three_zero_two_property/services/app_date_format.dart';
 
 class Edit_lease extends StatefulWidget {
   Lease1? lease;
@@ -1736,7 +1737,7 @@ class _Edit_leaseState extends State<Edit_lease>
                                     // String formattedDate =
                                     //     "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
                                     String formattedDate =
-                                        "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                        AppDateFormat.format(pickedDate);
                                     setState(() {
                                       endDateController.text = formattedDate;
                                     });
@@ -1774,7 +1775,7 @@ class _Edit_leaseState extends State<Edit_lease>
                                         // String formattedDate =
                                         //     "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
                                         String formattedDate =
-                                            "${pickedDate.day.toString().padLeft(2, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.year}";
+                                            AppDateFormat.format(pickedDate);
                                         setState(() {
                                           endDateController.text =
                                               formattedDate;
@@ -4950,6 +4951,9 @@ class _Edit_leaseState extends State<Edit_lease>
 String _chargeDateToApi(BuildContext context, String display) {
   final String s = display.trim();
   if (s.isEmpty) return "";
+  // The company's own format first (strict), like web (AppDateFormat).
+  final String? inCompanyFormat = AppDateFormat.parseToApi(s);
+  if (inCompanyFormat != null) return inCompanyFormat;
   final dp = Provider.of<DateProvider>(context, listen: false);
   for (final String f in <String>[
     'yyyy-MM-dd',

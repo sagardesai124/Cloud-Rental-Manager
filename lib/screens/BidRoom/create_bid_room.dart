@@ -744,7 +744,9 @@ class _CreateBidRoomState extends State<CreateBidRoom> {
                   ),
                   child: titleBar(
                     width: double.infinity,
-                    title: _isEditMode ? 'Update Bid Room' : 'Create Bid Room',
+                    // Heading like web: "Edit Bid Room"; only the submit
+                    // button says "Update Bid Room".
+                    title: _isEditMode ? 'Edit Bid Room' : 'Create Bid Room',
                   ),
                 ),
                 const SizedBox(height: 24),

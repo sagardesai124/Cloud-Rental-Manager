@@ -236,7 +236,8 @@ class _BidRoomTableState extends State<BidRoomTable>
   }
 
   String _formatDate(BuildContext context, String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return 'N/A';
+    // Web (BidRequests.jsx) shows "-" when the date is empty.
+    if (dateStr == null || dateStr.isEmpty) return '-';
     try {
       return Provider.of<DateProvider>(context, listen: false)
           .formatCurrentDate(dateStr);

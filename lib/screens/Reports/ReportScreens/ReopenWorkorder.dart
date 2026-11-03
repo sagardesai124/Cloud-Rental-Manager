@@ -236,6 +236,13 @@ class _ReopenWorkorderState extends State<ReopenWorkorder>
     // Search filter
     if (searchvalue.isNotEmpty) {
       String searchTerm = searchvalue.toLowerCase();
+      // The dates as the table shows them (company format), so a date typed
+      // the way the column reads ("11/01/2026", "11/01") matches as well as
+      // the raw saved date web matches ("2026-11-01").
+      final dateProvider = Provider.of<DateProvider>(context, listen: false);
+      String shown(String? raw) => (raw == null || raw.isEmpty)
+          ? ''
+          : dateProvider.formatCurrentDate(raw).toLowerCase();
       filtered = filtered
           .where((order) =>
               order.ticketNumber?.toLowerCase().contains(searchTerm) == true ||
@@ -249,7 +256,10 @@ class _ReopenWorkorderState extends State<ReopenWorkorder>
               order.rentalUnit?.toLowerCase().contains(searchTerm) == true ||
               order.date?.toLowerCase().contains(searchTerm) == true ||
               order.reopenDate?.toLowerCase().contains(searchTerm) == true ||
-              order.createdAt?.toLowerCase().contains(searchTerm) == true)
+              order.createdAt?.toLowerCase().contains(searchTerm) == true ||
+              shown(order.date).contains(searchTerm) ||
+              shown(order.reopenDate).contains(searchTerm) ||
+              shown(order.createdAt).contains(searchTerm))
           .toList();
     }
 

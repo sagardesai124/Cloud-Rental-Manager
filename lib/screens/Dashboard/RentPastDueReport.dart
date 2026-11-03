@@ -35,6 +35,7 @@ import 'package:three_zero_two_property/widgets/drawer_tiles.dart';
 import 'package:three_zero_two_property/screens/Rental/Properties/summery_page.dart';
 import '../../../model/properties.dart';
 import 'package:three_zero_two_property/widgets/titleBar.dart';
+import 'package:three_zero_two_property/widgets/dashboard_pagination_footer.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show rootBundle;
@@ -1231,10 +1232,7 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                               children: [
                                 filters(),
                                 const SizedBox(height: 20),
-                                Text(
-                                  'No data available',
-                                  style: TextStyle(fontSize: 16),
-                                ),
+                                _noDataAvailable(),
                               ],
                             ),
                           );
@@ -1396,6 +1394,32 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
     );
   }
 
+  // The same "No Data Available" picture and wording as the other reports.
+  Widget _noDataAvailable() {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * .5,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Image.asset(
+              "assets/images/no_data_transparent.png",
+              height: 200,
+              width: 200,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "No Data Available",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: blueColor, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   chargeTable(List<Transaction> chargedata, double total,
       {Pagination? pagination}) {
     // Use backend pagination data
@@ -1440,16 +1464,15 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
               ],
             ),
             const SizedBox(height: 5),
-            _buildHeaders(),
+            // Like web: an empty report shows only the empty state, without
+            // the table header.
+            if (currentPageData.isNotEmpty) _buildHeaders(),
             if (currentPageData.length == 0)
               // An empty page during a search means "nothing matched", which
               // reads differently from a report with no data at all.
               searchvalue.trim().isNotEmpty
                   ? kNoSearchResults(context)
-                  : const Padding(
-                      padding: EdgeInsets.all(15.0),
-                      child: Text("No data available"),
-                    ),
+                  : _noDataAvailable(),
             if (currentPageData.length > 0)
               Container(
                 // decoration: BoxDecoration(
@@ -1603,95 +1626,47 @@ class _RentPastDueReportsState extends State<RentPastDueReports>
                   }).toList(),
                 ),
               ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Row(
-                  children: [
-                    const SizedBox(width: 10),
-                    Material(
-                      elevation: 3,
-                      child: Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: itemsPerPage,
-                            items: itemsPerPageOptions.map((int value) {
-                              return DropdownMenuItem<int>(
-                                value: value,
-                                child: Text(value.toString()),
-                              );
-                            }).toList(),
-                            onChanged: (newValue) {
-                              if (newValue != null) {
-                                setState(() {
-                                  itemsPerPage = newValue;
-                                  currentPage =
-                                      1; // Reset to first page when items per page change (1-indexed)
-                                  isLoading = true;
-                                });
-                                // Fetch new data with updated limit
-                                futurePastRentDue =
-                                    fetchRentPastDueData(report: true);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: FaIcon(
-                        FontAwesomeIcons.circleChevronLeft,
-                        color: currentPage <= 1 ? Colors.grey : blueColor,
-                      ),
-                      onPressed: currentPage <= 1
-                          ? null
-                          : () {
-                              setState(() {
-                                currentPage--;
-                                isLoading = true;
-                              });
-                              // Fetch previous page data from backend
-                              futurePastRentDue =
-                                  fetchRentPastDueData(report: true);
-                            },
-                    ),
-                    // A search that matches nothing returns totalPages 0 while
-                    // currentPage is still 1, which read as "Page 1 of 0".
-                    Text(totalPages < 1
-                        ? 'Page 0 of 0'
-                        : 'Page $currentPage of $totalPages'),
-                    IconButton(
-                      icon: FaIcon(
-                        FontAwesomeIcons.circleChevronRight,
-                        color:
-                            currentPage >= totalPages ? Colors.grey : blueColor,
-                      ),
-                      onPressed: currentPage >= totalPages
-                          ? null
-                          : () {
-                              setState(() {
-                                currentPage++;
-                                isLoading = true;
-                              });
-                              // Fetch next page data from backend
-                              futurePastRentDue =
-                                  fetchRentPastDueData(report: true);
-                            },
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            // Like web: no page row when the report has no rows. With rows it
+            // is the same pagination footer the Dashboard uses.
+            if (currentPageData.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              DashboardPaginationFooter(
+                currentPage: currentPage,
+                totalPages: totalPages,
+                rowsPerPage: itemsPerPage,
+                rowsPerPageOptions: itemsPerPageOptions,
+                onRowsPerPageChanged: (newValue) {
+                  setState(() {
+                    itemsPerPage = newValue;
+                    currentPage =
+                        1; // Reset to first page when items per page change (1-indexed)
+                    isLoading = true;
+                  });
+                  // Fetch new data with updated limit
+                  futurePastRentDue = fetchRentPastDueData(report: true);
+                },
+                onPrev: currentPage <= 1
+                    ? null
+                    : () {
+                        setState(() {
+                          currentPage--;
+                          isLoading = true;
+                        });
+                        // Fetch previous page data from backend
+                        futurePastRentDue = fetchRentPastDueData(report: true);
+                      },
+                onNext: currentPage >= totalPages
+                    ? null
+                    : () {
+                        setState(() {
+                          currentPage++;
+                          isLoading = true;
+                        });
+                        // Fetch next page data from backend
+                        futurePastRentDue = fetchRentPastDueData(report: true);
+                      },
+              ),
+            ],
           ],
         ),
       ),
