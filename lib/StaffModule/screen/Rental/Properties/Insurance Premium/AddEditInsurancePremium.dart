@@ -1,7 +1,7 @@
 import 'package:three_zero_two_property/services/app_log.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:three_zero_two_property/services/insurance_edit_changes.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'dart:convert';
@@ -38,6 +38,11 @@ class _AddEditInsurancePremiumState extends State<AddEditInsurancePremium> {
   final _premiumAmountController = TextEditingController();
 
   bool _isLoading = false;
+  // Like web: what an edited premium was opened with, so Update stays
+  // greyed out until something changes.
+  String? _originalYear;
+  String _originalCarrier = '';
+  String _originalPremium = '';
   bool _hasValidated = false;
   String? _generalError;
   List<Map<String, dynamic>> _existingPremiums = [];
@@ -66,7 +71,27 @@ class _AddEditInsurancePremiumState extends State<AddEditInsurancePremium> {
       _selectedYear = DateTime.now().year.toString();
     }
     _loadExistingPremiums();
+    // Typing in a box re-checks whether Update can be used.
+    _carrierController.addListener(_refreshUpdateButton);
+    _premiumAmountController.addListener(_refreshUpdateButton);
   }
+
+  void _refreshUpdateButton() {
+    if (mounted) setState(() {});
+  }
+
+  /// Like web: adding can always be saved; editing only once something
+  /// differs from what was opened.
+  bool get _hasChanges =>
+      widget.premiumId == null ||
+      insurancePremiumChanged(
+        year: _selectedYear,
+        carrier: _carrierController.text,
+        premium: _premiumAmountController.text,
+        originalYear: _originalYear,
+        originalCarrier: _originalCarrier,
+        originalPremium: _originalPremium,
+      );
 
   @override
   void dispose() {
@@ -127,15 +152,22 @@ class _AddEditInsurancePremiumState extends State<AddEditInsurancePremium> {
     setState(() {
       _selectedYear = premiumData['year']?.toString();
       _carrierController.text = premiumData['carrier']?.toString() ?? '';
-      // Remove $ and format for editing
+      // The saved premium, shown like web: rounded to cents with no
+      // trailing zeros (2 as "2", not "2.00").
       String premium = premiumData['insurance_premium']?.toString() ?? '';
-      if (premiumData['formatted_premium'] != null) {
+      if (premium.isEmpty && premiumData['formatted_premium'] != null) {
         premium = premiumData['formatted_premium']
             .toString()
             .replaceAll('\$', '')
             .replaceAll(',', '');
       }
-      _premiumAmountController.text = premium;
+      _premiumAmountController.text = insurancePremiumBoxText(premium);
+      _originalYear = _selectedYear;
+      _originalCarrier = _carrierController.text;
+      // The stored amount, like web: a sub-cent premium shown rounded
+      // counts as a change.
+      _originalPremium =
+          premiumData['insurance_premium']?.toString() ?? premium;
     });
   }
 
@@ -626,9 +658,10 @@ class _AddEditInsurancePremiumState extends State<AddEditInsurancePremium> {
                               controller: _premiumAmountController,
                               keyboardType:
                                   const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                    RegExp(r'^\d+\.?\d{0,2}')),
+                              // Commas while typing, like web ("1,500").
+                              inputFormatters: const [
+                                InsuranceAmountInputFormatter(
+                                    max: insurancePremiumMaxAmount),
                               ],
                               onChanged: (value) {
                                 state.didChange(value);
@@ -731,7 +764,7 @@ class _AddEditInsurancePremiumState extends State<AddEditInsurancePremium> {
                         const SizedBox(width: 16),
                         // Save Button
                         ElevatedButton(
-                          onPressed: _isLoading ? null : _saveForm,
+                          onPressed: (_isLoading || !_hasChanges) ? null : _saveForm,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: blueColor,
                             padding: const EdgeInsets.symmetric(
@@ -751,7 +784,7 @@ class _AddEditInsurancePremiumState extends State<AddEditInsurancePremium> {
                                   ),
                                 )
                               : Text(
-                                  'Save',
+                                  isEditMode ? 'Update' : 'Save',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,

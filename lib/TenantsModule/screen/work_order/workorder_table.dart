@@ -227,15 +227,8 @@ class _WorkOrderTableState extends State<WorkOrderTable>
     );
   }
 
-  final List<String> items = [
-    "All",
-    "Closed",
-    "Completed",
-    "In Progress",
-    "New",
-    "On Hold",
-    "Over Due",
-  ];
+  // Web's options and order, including "Open" (TenantWork.jsx).
+  final List<String> items = tenantWorkOrderStatusOptions;
   String? selectedValue;
   String searchvalue = "";
 
@@ -1051,60 +1044,11 @@ class _WorkOrderTableState extends State<WorkOrderTable>
                     // used to be exclusive else-if branches, so a search silently
                     // discarded the selected status (and "All" discarded the
                     // search).
-                    var data = snapshot.data!;
-                    if (selectedValue != null && selectedValue != "All") {
-                      if (selectedValue == "Over Due") {
-                        data = data.where((element) {
-                          if (element.date == null) return false;
-                          // Overdue = not in a terminal status AND the due day
-                          // is strictly before today (calendar day, not the
-                          // current time). Matches the web/server rule so
-                          // anything due today or already Closed/Completed is
-                          // not counted as overdue.
-                          final DateTime now = DateTime.now();
-                          final DateTime todayDay =
-                              DateTime(now.year, now.month, now.day);
-                          final DateTime dueDate =
-                              parseDate(element.date.toString());
-                          final DateTime dueDay = DateTime(
-                              dueDate.year, dueDate.month, dueDate.day);
-                          final bool isTerminal = const {
-                            'Completed',
-                            'Complete',
-                            'Closed'
-                          }.contains(element.status);
-                          return !isTerminal && dueDay.isBefore(todayDay);
-                        }).toList();
-                      } else {
-                        data = data
-                            .where((property) => property.status == selectedValue)
-                            .toList();
-                      }
-                    }
-                    if (searchvalue!.isNotEmpty) {
-                      data = data
-                          .where((workorder) =>
-                      (workorder.workSubject?.toLowerCase() ?? '')
-                          .contains(searchvalue!.toLowerCase()) ||
-                          (workorder.status?.toLowerCase() ?? '')
-                              .contains(searchvalue!.toLowerCase()) ||
-                          (workorder.isBillable?.toString() ?? '')
-                              .toLowerCase()
-                              .contains(
-                              searchvalue!.toLowerCase()) ||
-                          (workorder.rentalAddress?.toLowerCase() ?? '')
-                              .contains(
-                              searchvalue!.toLowerCase()) ||
-                          (workorder.createdAt?.toString() ?? '')
-                              .toLowerCase()
-                              .contains(
-                              searchvalue!.toLowerCase()) ||
-                          (workorder.workCategory?.toLowerCase() ?? '')
-                              .contains(searchvalue!.toLowerCase()) ||
-                          (workorder.staffMemberName?.toLowerCase() ?? '')
-                              .contains(searchvalue.toLowerCase()))
-                          .toList();
-                    }
+                    // Like web (TenantWork.jsx): the status filter (with
+                    // "Open" and "Over Due") and then the search, the same on
+                    // the phone and wide layouts.
+                    var data = filterTenantWorkOrders(snapshot.data!,
+                        status: selectedValue, search: searchvalue);
 
                     data = data.reversed.toList();
                     if (data.length == 0) {
@@ -1704,23 +1648,11 @@ class _WorkOrderTableState extends State<WorkOrderTable>
                     // (when one is chosen and it isn't "All"), then search what
                     // remains. They used to sit in exclusive else-if branches,
                     // so typing a search silently dropped the chosen status.
-                    _tableData = snapshot.data!;
-                    if (selectedValue != null && selectedValue != "All") {
-                      _tableData = _tableData
-                          .where((property) => property.status == selectedValue)
-                          .toList();
-                    }
-                    if (searchvalue.isNotEmpty) {
-                      _tableData = _tableData
-                          .where((property) =>
-                              (property.workSubject ?? '')
-                                  .toLowerCase()
-                                  .contains(searchvalue.toLowerCase()) ||
-                              (property.rentalAddress ?? '')
-                                  .toLowerCase()
-                                  .contains(searchvalue.toLowerCase()))
-                          .toList();
-                    }
+                    // Same web filter and search as the phone layout; this
+                    // one used to search only the subject and address and
+                    // looked for a status literally named "Over Due".
+                    _tableData = filterTenantWorkOrders(snapshot.data!,
+                        status: selectedValue, search: searchvalue);
                     totalrecords = _tableData.length;
                     return SingleChildScrollView(
                       child: Column(

@@ -98,6 +98,28 @@ String? reminderDurationProblem(
   return null;
 }
 
+/// Web's message under an empty Number of Grace Period Days (Settings.jsx
+/// latefeeFormik `duration ... .required("Required")`).
+const String kLateFeeGraceRequiredMessage = 'Required';
+
+/// null when the grace period can be saved, otherwise web's message. Like
+/// web, a late fee rule, company-wide or a Property Owner override, can't be
+/// saved without it (the server would store an empty one as 0 days).
+String? lateFeeGraceProblem(String text) =>
+    text.trim().isEmpty ? kLateFeeGraceRequiredMessage : null;
+
+/// null when the late fee can be saved, otherwise web's message for the
+/// selected calculation: "Percentage ..." for percent, "Amount ..." otherwise
+/// (Settings.jsx latefeeFormik `late_fee` .when("calculation_type")). The
+/// server would store an empty fee as 0.
+String? lateFeeAmountProblem(String text, {required String calculationType}) {
+  final name = calculationType == 'percent' ? 'Percentage' : 'Amount';
+  final value = text.trim().replaceAll(',', '');
+  if (value.isEmpty) return '$name is required';
+  if (double.tryParse(value) == null) return '$name must be a number';
+  return null;
+}
+
 /// Custom date format check, as on web (Settings.jsx isValidDateFormat, the
 /// same rule the server applies): needs Y, M and D, only / - or space between
 /// them, and at most 32 characters.
@@ -180,6 +202,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   List<PropertyOwnerOverride> propertyOwners = [];
   String selectedPropertyOwnerId = "";
   bool isLoadingPropertyOwners = false;
+  // Set once Save is tapped with a missing grace period or fee: from then on
+  // web's message shows under each missing box (and clears as it is filled).
+  bool _showLateFeeErrors = false;
   // Original values for Late Fee Charge change tracking
   String _originalDuration = "";
   String _originalLateFee = "";
@@ -824,6 +849,24 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     }
   }
 
+  /// Like web (Settings.jsx latefeeFormik), a late fee rule needs its grace
+  /// period and its fee: when either is missing, show web's message under it
+  /// and save nothing. Used by the company-wide save and the Property Owner
+  /// override alike.
+  /// Web's message under the late fee box once Save was tapped with it
+  /// missing; it follows the selected calculation and clears when filled.
+  String? _lateFeeAmountError() => _showLateFeeErrors
+      ? lateFeeAmountProblem(late_fee.text, calculationType: calculationType)
+      : null;
+
+  bool _lateFeeReadyToSave() {
+    final ready = lateFeeGraceProblem(duration.text) == null &&
+        lateFeeAmountProblem(late_fee.text, calculationType: calculationType) ==
+            null;
+    if (!ready) setState(() => _showLateFeeErrors = true);
+    return ready;
+  }
+
   Future<void> updateLatefee() async {
     // Settings are view-only for staff — never send a late-fee change.
     if (!_canEditSettings) return;
@@ -831,6 +874,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     if (!_hasLateFeeChanges()) {
       return; // No changes made, don't proceed with update
     }
+    if (!_lateFeeReadyToSave()) return;
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -919,6 +963,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     if (!_hasLateFeeChanges()) {
       return; // No changes made, don't proceed with add
     }
+    if (!_lateFeeReadyToSave()) return;
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -983,6 +1028,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   Future<void> saveLateFeeOverride() async {
     // Settings are view-only for staff — never send a late-fee override.
     if (!_canEditSettings) return;
+    // Same rule as the company-wide late fee: web runs the owner override
+    // save through the same check (Settings.jsx handleLateFeeSubmit).
+    if (!_lateFeeReadyToSave()) return;
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? adminId = prefs.getString('adminId');
     try {
@@ -3668,12 +3716,15 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     bool numeric = true,
     bool decimal = true,
     String hint = '',
+    // Web's message under the box (red border too), or null for none.
+    String? errorText,
   }) {
-    return Container(
+    final field = Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+            color: errorText != null ? Colors.red : Colors.grey.shade300),
       ),
       child: TextField(
         controller: controller,
@@ -3737,6 +3788,21 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
           ),
         ),
       ),
+    );
+    if (errorText == null) return field;
+    // Like web (LateFeeSection.jsx): the message in red under the box.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        field,
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            errorText,
+            style: const TextStyle(color: Colors.red, fontSize: 12),
+          ),
+        ),
+      ],
     );
   }
 
@@ -3952,7 +4018,13 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
         const SizedBox(height: 20),
         _lateFeeLabel("Number of Grace Period Days"),
         const SizedBox(height: 8),
-        _lateFeeField(controller: duration, decimal: false, hint: '0'),
+        _lateFeeField(
+            controller: duration,
+            decimal: false,
+            hint: '0',
+            errorText: _showLateFeeErrors
+                ? lateFeeGraceProblem(duration.text)
+                : null),
         const SizedBox(height: 20),
         _lateFeeLabel("Late Fee Calculation"),
         const SizedBox(height: 8),
@@ -3977,8 +4049,14 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                       : "Percentage (%)"),
                   const SizedBox(height: 8),
                   calculationType == "fixed"
-                      ? _lateFeeField(controller: late_fee, dollar: true)
-                      : _lateFeeField(controller: late_fee, percent: true),
+                      ? _lateFeeField(
+                          controller: late_fee,
+                          dollar: true,
+                          errorText: _lateFeeAmountError())
+                      : _lateFeeField(
+                          controller: late_fee,
+                          percent: true,
+                          errorText: _lateFeeAmountError()),
                 ],
               ),
             ),

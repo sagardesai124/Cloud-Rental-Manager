@@ -32,6 +32,7 @@ import '../../../../repository/lease.dart';
 import '../../../../repository/lease_rental_insurance_repo.dart';
 import '../../../../widgets/custom_drawer.dart';
 import 'package:three_zero_two_property/services/app_date_format.dart';
+import 'package:three_zero_two_property/services/renters_insurance_changes.dart';
 
 class EditRentersInsurance extends StatefulWidget {
   final String tenantid;
@@ -62,12 +63,41 @@ class _EditRentersInsuranceState extends State<EditRentersInsurance> {
   TextEditingController liablity = TextEditingController();
   GlobalKey<ScaffoldState> key = GlobalKey<ScaffoldState>();
 
+  // What the form was opened with, once the saved policy has loaded. Like
+  // web, Update Insurance with nothing changed says so instead of saving.
+  String? _openedWith;
+  bool _showNoChanges = false;
+
+  String _formSnapshot() => rentersInsuranceFormSnapshot(
+        provider: company.text,
+        phone: number.text,
+        policyId: policy.text,
+        coverage: liablity.text,
+        effectiveDate: effective.text,
+        expirationDate: expiration.text,
+        tenants: selectedTenants,
+        document:
+            _uploadedFileNames.isNotEmpty ? _uploadedFileNames.first : '',
+      );
+
+  bool get _hasChanges => _openedWith == null || _formSnapshot() != _openedWith;
+
+  // Typing in a box hides the message again, like web.
+  void _hideNoChangesOnEdit() {
+    if (_showNoChanges && _hasChanges && mounted) {
+      setState(() => _showNoChanges = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
 
     fetchTenants();
     fetchRentersDetails(widget.renters_insurance_id);
+    for (final box in [company, number, policy, effective, expiration, liablity]) {
+      box.addListener(_hideNoChangesOnEdit);
+    }
   }
 
   Future<void> fetchRentersDetails(String renters_insurance_id) async {
@@ -131,6 +161,9 @@ class _EditRentersInsuranceState extends State<EditRentersInsurance> {
 
       if (fetchedDetails.insurancePolicyDocument!.isNotEmpty)
         _uploadedFileNames.add(fetchedDetails.insurancePolicyDocument!);
+      // Like web, a later Update Insurance is compared with what the form
+      // opened with.
+      _openedWith = _formSnapshot();
     });
   }
 
@@ -561,6 +594,9 @@ class _EditRentersInsuranceState extends State<EditRentersInsurance> {
 
   @override
   Widget build(BuildContext context) {
+    // Like web, the "No changes" message goes away once anything is changed
+    // (covered tenants and the document change through setState).
+    if (_showNoChanges && _hasChanges) _showNoChanges = false;
     return Scaffold(
         appBar: widget_302.App_Bar(context: context),
         backgroundColor: Colors.white,
@@ -912,6 +948,17 @@ class _EditRentersInsuranceState extends State<EditRentersInsurance> {
                       ),
                     ),
                   ),
+                  if (_showNoChanges)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          rentersInsuranceNoChangesMessage,
+                          style: TextStyle(color: Colors.red, fontSize: 14),
+                        ),
+                      ),
+                    ),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
@@ -932,6 +979,13 @@ class _EditRentersInsuranceState extends State<EditRentersInsurance> {
                               // once a save is in flight, on top of the same
                               // check inside addinsurance() itself.
                               onPressed: isLoading ? null : () {
+                                // Like web (UpdateInsuranceDialog.jsx): with nothing
+                                // changed, say so above the buttons, keep the form open
+                                // and save nothing.
+                                if (!_hasChanges) {
+                                  setState(() => _showNoChanges = true);
+                                  return;
+                                }
                                 if (_formkey.currentState!.validate()) {
                                   final dateError = validateInsuranceDateRange(
                                       effectiveDate, expirationDate);

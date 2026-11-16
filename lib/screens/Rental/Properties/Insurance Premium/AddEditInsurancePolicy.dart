@@ -1,6 +1,7 @@
 import 'package:email_validator/email_validator.dart';
 import 'package:three_zero_two_property/services/app_log.dart';
 import 'package:flutter/material.dart';
+import 'package:three_zero_two_property/services/insurance_edit_changes.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
@@ -145,6 +146,9 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
   ];
 
   bool _isLoading = false;
+  // Like web: what an edited policy was opened with, so Update stays
+  // greyed out until a field changes.
+  Map<String, String?> _originalValues = const {};
   bool _hasValidated = false;
   String? _generalError;
 
@@ -200,7 +204,67 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
     if (_selectedPolicyType != null) {
       _updateFormNumberOptions(_selectedPolicyType);
     }
+    if (widget.policyId != null) _originalValues = _currentValues();
+    // Typing in a box re-checks whether Update can be used.
+    for (final c in [
+      _insuranceCompanyNameController,
+      _policyNumberController,
+      _namedInsuredController,
+      _mailingAddressController,
+      _additionalInsuredController,
+      _effectiveDateController,
+      _expirationDateController,
+      _cancellationNoticeDateController,
+      _premiumAmountController,
+      _deductibleController,
+      _claimsContactInfoController,
+      _agentNameController,
+      _agentPhoneController,
+      _agentEmailController,
+      _brokerNameController,
+      _underwritingOfficeController,
+      _notesController,
+    ]) {
+      c.addListener(_refreshUpdateButton);
+    }
   }
+
+  // Every field on the form as shown, like web's hasInsuranceChanges.
+  Map<String, String?> _currentValues() => {
+        'insurance_company_name': _insuranceCompanyNameController.text,
+        'policy_number': _policyNumberController.text,
+        'policy_type': _selectedPolicyType,
+        'form_number': _selectedFormNumber,
+        'named_insured': _namedInsuredController.text,
+        'mailing_address': _mailingAddressController.text,
+        'additional_insured': _additionalInsuredController.text,
+        'effective_date': _effectiveDateController.text,
+        'expiration_date': _expirationDateController.text,
+        'cancellation_notice_date': _cancellationNoticeDateController.text,
+        // Amounts without commas, as web compares them.
+        'premium_amount': _premiumAmountController.text.replaceAll(',', ''),
+        'deductible': _deductibleController.text.replaceAll(',', ''),
+        'payment_terms': _selectedPaymentTerms,
+        'claims_contact_info': _claimsContactInfoController.text,
+        'agent_name': _agentNameController.text,
+        'agent_phone': _agentPhoneController.text,
+        'agent_email': _agentEmailController.text,
+        'broker_name': _brokerNameController.text,
+        'underwriting_office': _underwritingOfficeController.text,
+        'status': _selectedStatus,
+        'notes': _notesController.text,
+      };
+
+  void _refreshUpdateButton() {
+    if (mounted) setState(() {});
+  }
+
+  /// Like web: adding can always be saved; editing only once a field
+  /// differs from what was opened.
+  bool get _hasChanges =>
+      widget.policyId == null ||
+      formValuesChanged(_currentValues(), _originalValues);
+
 
   @override
   void dispose() {
@@ -286,8 +350,11 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
       _namedInsuredController.text = policy.namedInsured ?? '';
       _mailingAddressController.text = policy.mailingAddress ?? '';
       _additionalInsuredController.text = policy.additionalInsured ?? '';
-      _premiumAmountController.text = policy.premiumAmount?.toString() ?? '';
-      _deductibleController.text = policy.deductible?.toString() ?? '';
+      // Shown like web: 3 as "3" (not "3.0"), 1500 as "1,500".
+      _premiumAmountController.text =
+          insurancePolicyAmountBoxText(policy.premiumAmount);
+      _deductibleController.text =
+          insurancePolicyAmountBoxText(policy.deductible);
       // Validate that payment terms exists in options before setting it
       if (policy.paymentTerms != null && 
           _paymentTermsOptions.contains(policy.paymentTerms)) {
@@ -1390,9 +1457,8 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
                         required: true,
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d+\.?\d{0,2}')),
+                        inputFormatters: const [
+                          InsuranceAmountInputFormatter(),
                         ],
                         prefixText: '\$ ',
                       ),
@@ -1446,9 +1512,8 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
                         hint: 'Enter deductible amount',
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d+\.?\d{0,2}')),
+                        inputFormatters: const [
+                          InsuranceAmountInputFormatter(),
                         ],
                         prefixText: '\$ ',
                       ),
@@ -1574,7 +1639,7 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
                           const SizedBox(width: 16),
                           // Save Button
                           ElevatedButton(
-                            onPressed: _isLoading ? null : _saveForm,
+                            onPressed: (_isLoading || !_hasChanges) ? null : _saveForm,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: blueColor,
                               padding: const EdgeInsets.symmetric(
@@ -1593,8 +1658,8 @@ class _AddEditInsurancePolicyState extends State<AddEditInsurancePolicy> {
                                           Colors.white),
                                     ),
                                   )
-                                : const Text(
-                                    'Save',
+                                : Text(
+                                    isEditMode ? 'Update' : 'Save',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,

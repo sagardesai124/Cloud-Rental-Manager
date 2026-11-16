@@ -20,6 +20,7 @@ import 'package:provider/provider.dart';
 import 'EditProperties.dart' show Edit_properties;
 import '../../../repository/staffpermission_provider.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
+import 'package:three_zero_two_property/services/purchase_info_check.dart';
 import 'package:three_zero_two_property/services/unit_edit_check.dart';
 import 'package:three_zero_two_property/widgets/delete_unit_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5739,7 +5740,7 @@ class _Summery_pageState extends State<Summery_page>
                                 purchaseDateController.text = '';
                               }
                               purchasePriceController.text =
-                                  purchaseRental.purchasePrice?.toString() ?? '';
+                                  purchasePriceBoxText(purchaseRental.purchasePrice);
                               parcelNumberController.text =
                                   purchaseRental.parcelNumber ?? '';
                               selectedDate = (purchaseRental.purchaseDate !=
@@ -5961,6 +5962,23 @@ class _Summery_pageState extends State<Summery_page>
                                                       minimumSize: Size(double.infinity, 45),
                                                     ),
                                                     onPressed: () async {
+                                                      // Like web (PropDetails.jsx handlePurchaseInfoSave): at least one
+                                                      // field must be filled in and something must change; otherwise
+                                                      // say so and keep this window open.
+                                                      final purchaseProblem = purchaseInfoSaveProblem(
+                                                        date: selectedDate != null
+                                                            ? DateFormat('yyyy-MM-dd').format(selectedDate!)
+                                                            : _convertToApiFormat(purchaseDateController.text),
+                                                        price: purchasePriceController.text,
+                                                        parcel: parcelNumberController.text,
+                                                        savedDate: purchaseRental.purchaseDate,
+                                                        savedPrice: purchaseRental.purchasePrice,
+                                                        savedParcel: purchaseRental.parcelNumber,
+                                                      );
+                                                      if (purchaseProblem != null) {
+                                                        Fluttertoast.showToast(msg: purchaseProblem);
+                                                        return;
+                                                      }
                                               SharedPreferences prefs =
                                                   await SharedPreferences
                                                       .getInstance();
@@ -5993,11 +6011,8 @@ class _Summery_pageState extends State<Summery_page>
                                                     "purchase_date":
                                                         purchaseDateApi,
                                                     "purchase_price":
-                                                        double.tryParse(
-                                                                purchasePriceController
-                                                                    .text
-                                                                    .trim()) ??
-                                                            0,
+                                                        purchasePriceForSave(
+                                                            purchasePriceController.text),
                                                     "parcel_number":
                                                         parcelNumberController
                                                             .text
