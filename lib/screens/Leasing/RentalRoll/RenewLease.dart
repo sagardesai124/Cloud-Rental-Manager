@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:three_zero_two_property/widgets/account_form_web_rules.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -399,15 +400,8 @@ class _RenewleaseState extends State<Renewlease> {
   bool _isInvalid = true;
   List<String> items = []; // Example items
 
-  List<String> accountTypeItems = [
-    'Income',
-    'Non Operating Income ',
-    'Liability Account',
-  ]; // Example items
-  List<String> fundTypeItems = [
-    'Reverse',
-    'Operating',
-  ]; // Example items
+  List<String> accountTypeItems = List.of(kAccountTypeOptions); // Example items
+  List<String> fundTypeItems = List.of(kFundTypeOptions); // Example items
 
   List<String> accounts = [];
   //for upload file
@@ -1779,6 +1773,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                     onTap: () {
                                                                       Navigator.pop(
                                                                           context);
+                                                                      bool accountSubmitted = false;
                                                                       showDialog(
                                                                         context:
                                                                             context,
@@ -1823,6 +1818,9 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                           ),
                                                                                           const SizedBox(height: 5),
                                                                                           CustomTextField(
+                                                                                            requiredMessage: kAccountNameRequiredMessage,
+                                                                                            redBorderOnError: true,
+                                                                                            onChanged: (_) => setState(() {}),
                                                                                             validator: (value) {
                                                                                               if (value == null || value.isEmpty) {
                                                                                                 return 'Please enter Account Name';
@@ -1835,7 +1833,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                           ),
                                                                                           const SizedBox(height: 10),
                                                                                           Text(
-                                                                                            'Account Type',
+                                                                                            'Account Type *',
                                                                                             style: TextStyle(
                                                                                               fontSize: 14,
                                                                                               fontWeight: FontWeight.bold,
@@ -1844,9 +1842,10 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                           ),
                                                                                           const SizedBox(height: 5),
                                                                                           CustomDropdown(
+                                                                                            errorBorderOnly: true,
                                                                                             validator: (value) {
                                                                                               if (_selectedAccountType == null || _selectedAccountType!.isEmpty) {
-                                                                                                return 'Please select a Account Type';
+                                                                                                return kSelectAccountTypeMessage;
                                                                                               }
                                                                                               return null;
                                                                                             },
@@ -1861,7 +1860,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                           ),
                                                                                           const SizedBox(height: 10),
                                                                                           Text(
-                                                                                            'Fund Type',
+                                                                                            'Fund Type *',
                                                                                             style: TextStyle(
                                                                                               fontSize: 14,
                                                                                               fontWeight: FontWeight.bold,
@@ -1870,9 +1869,10 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                           ),
                                                                                           const SizedBox(height: 5),
                                                                                           CustomDropdown(
+                                                                                            errorBorderOnly: true,
                                                                                             validator: (value) {
                                                                                               if (_selectedFundType == null || _selectedFundType!.isEmpty) {
-                                                                                                return 'Please select a Fund Type';
+                                                                                                return kSelectFundTypeMessage;
                                                                                               }
                                                                                               return null;
                                                                                             },
@@ -1896,12 +1896,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                           ),
                                                                                           const SizedBox(height: 5),
                                                                                           CustomTextField(
-                                                                                            validator: (value) {
-                                                                                              if (value == null || value.isEmpty) {
-                                                                                                return 'Please enter Notes';
-                                                                                              }
-                                                                                              return null;
-                                                                                            },
+                                                                                            optional: true,
                                                                                             keyboardType: TextInputType.text,
                                                                                             hintText: 'Enter Notes',
                                                                                             controller: _notesController,
@@ -1913,7 +1908,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                             text: TextSpan(
                                                                                               children: <TextSpan>[
                                                                                                 const TextSpan(
-                                                                                                  text: 'We stores this information ',
+                                                                                                  text: 'We store this information ',
                                                                                                   style: TextStyle(
                                                                                                     fontSize: 12,
                                                                                                     fontWeight: FontWeight.bold,
@@ -1921,7 +1916,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                                   ),
                                                                                                 ),
                                                                                                 TextSpan(
-                                                                                                  text: ' Privately ',
+                                                                                                  text: 'privately',
                                                                                                   style: TextStyle(
                                                                                                     fontSize: 12,
                                                                                                     fontWeight: FontWeight.bold,
@@ -1937,7 +1932,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                                   ),
                                                                                                 ),
                                                                                                 TextSpan(
-                                                                                                  text: ' Securely ',
+                                                                                                  text: 'securely.',
                                                                                                   style: TextStyle(
                                                                                                     fontSize: 12,
                                                                                                     fontWeight: FontWeight.bold,
@@ -1950,6 +1945,17 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                           const SizedBox(
                                                                                             height: 20,
                                                                                           ),
+                                                                                          if (accountSubmitted &&
+                                                                                              (_accountNameController.text.trim().isEmpty ||
+                                                                                                  _selectedAccountType == null ||
+                                                                                                  _selectedFundType == null))
+                                                                                            const Padding(
+                                                                                              padding: EdgeInsets.only(bottom: 12),
+                                                                                              child: Text(
+                                                                                                kAccountFixRedBoxesMessage,
+                                                                                                style: TextStyle(color: Colors.red, fontSize: 14),
+                                                                                              ),
+                                                                                            ),
                                                                                           Row(
                                                                                             mainAxisAlignment: MainAxisAlignment.end,
                                                                                             children: [
@@ -1967,7 +1973,10 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                                           ? null
                                                                                                           : () async {
                                                                                                         if (isLoading) return;
-                                                                                                        if (_selectedAccountType == null || _accountNameController.text.isEmpty || _selectedFundType == null || _notesController.text.isEmpty) {
+                                                                                                        // Like web: tapping Add turns empty required boxes red.
+                                                                                                        setState(() => accountSubmitted = true);
+                                                                                                        _subFormKey.currentState?.validate();
+                                                                                                        if (_selectedAccountType == null || _accountNameController.text.trim().isEmpty || _selectedFundType == null) {
                                                                                                           setState(() {
                                                                                                             isError = true;
                                                                                                           });
@@ -1992,9 +2001,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                                             Navigator.pop(context, true);
                                                                                                             _refreshAccounts();
                                                                                                           } catch (e) {
-                                                                                                            setState(() {
-                                                                                                              isError = true;
-                                                                                                            });
+                                                                                                            // The server's own message is already shown (like web).
                                                                                                           } finally {
                                                                                                             setState(() {
                                                                                                               isLoading = false;
@@ -2028,15 +2035,7 @@ class _RenewleaseState extends State<Renewlease> {
                                                                                                       ))),
                                                                                             ],
                                                                                           ),
-                                                                                          if (isError)
-                                                                                            const Padding(
-                                                                                              padding: EdgeInsets.only(top: 8.0),
-                                                                                              child: Text(
-                                                                                                'Please fill all fields',
-                                                                                                style: TextStyle(color: Colors.red),
-                                                                                              ),
-                                                                                            ),
-                                                                                        ],
+                                                                                                                                                                                  ],
                                                                                       ),
                                                                                     ),
                                                                                   ),

@@ -198,6 +198,11 @@ class DateProvider with ChangeNotifier {
   /// "DD/MMM/YYYY" the app does not show yet and displays as MM/DD/YYYY).
   String? _savedServerFormat;
 
+  /// True once the server has answered with the company's saved formats, so
+  /// a blank [savedServerFormat] then means the company never saved a Date
+  /// Format (rather than "not loaded yet").
+  bool _serverFormatLoaded = false;
+
   DateTime get currentDate => _currentDate;
   String get dateFormat => _dateFormat;
   String get timeFormat => _timeFormat;
@@ -448,6 +453,32 @@ class DateProvider with ChangeNotifier {
         .format(dateTime.toLocal());
   }
 
+  /// Exactly web's `formatDateTime` (TenantDetailPage.jsx): the date in the
+  /// company Date Format, a space, then `HH:mm:ss`, or `hh:mm:ss A` when the
+  /// Time Format is 12-hour (hour zero-padded, e.g. "06:22:35 PM"), in local
+  /// time like moment. E.g. "2026-07-15 18:22:35" / "07/15/2026 06:22:35 PM".
+  ///
+  /// When the company never saved a Date Format, that page falls back to
+  /// "YYYY-MM-DD" (`themes.format || "YYYY-MM-DD"`), not the MM/DD/YYYY the
+  /// rest of the app uses (like web Settings), so the same happens here.
+  String formatWebDateTime(DateTime dateTime) => webDateTime(dateTime,
+      dateFormat:
+          _serverFormatLoaded && (_savedServerFormat ?? '').trim().isEmpty
+              ? 'yyyy-MM-dd'
+              : _dateFormat,
+      timeFormat: _timeFormat);
+
+  /// [formatWebDateTime] for a given format pair: [dateFormat] in intl tokens
+  /// (as [dateFormat] holds it), [timeFormat] "12" or "24" (anything but "12"
+  /// is 24-hour, like web).
+  static String webDateTime(DateTime dateTime,
+      {required String dateFormat, required String timeFormat}) {
+    final local = dateTime.toLocal();
+    final time = timeFormat == '12' ? 'hh:mm:ss a' : 'HH:mm:ss';
+    return '${AppDateFormat.format(local, dateFormat)} '
+        '${DateFormat(time).format(local)}';
+  }
+
   // Future<void> checkToken(String token) async {
   //   try {
   //     final prefs = await SharedPreferences.getInstance();
@@ -521,6 +552,7 @@ class DateProvider with ChangeNotifier {
         String? serverTimeFormat =
             jsonData['themes']?['timeFormat']?.toString();
         _savedServerFormat = serverFormat;
+        _serverFormatLoaded = true;
 
         // Like web (Settings.jsx): the three presets select their option;
         // any other saved format, M/D/YYYY included, is the Custom option

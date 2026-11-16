@@ -18,6 +18,9 @@ import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'EditProperties.dart' show Edit_properties;
 import 'package:rflutter_alert/rflutter_alert.dart';
+import 'package:three_zero_two_property/services/unit_edit_check.dart';
+import 'package:three_zero_two_property/widgets/delete_unit_dialog.dart';
+import 'package:three_zero_two_property/services/history_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
@@ -7917,6 +7920,22 @@ class _Summery_pageState extends State<Summery_page>
                                                                               true;
                                                                         });
                                                                       } else {
+                                                                        // Like web (isUnitEditUnchanged): nothing changed, so nothing
+                                                                        // is sent and the form stays open.
+                                                                        if (isUnitEditUnchanged(data.first,
+                                                                            sqft: sqft3.text,
+                                                                            address: street3.text,
+                                                                            bed: bed3.text,
+                                                                            bath: bath3.text,
+                                                                            bedOptions: roomsArray,
+                                                                            bathOptions: bathArray,
+                                                                            newPhotos: _uploadedFileNames.isNotEmpty)) {
+                                                                          setState(() {
+                                                                            iserror = false;
+                                                                          });
+                                                                          Fluttertoast.showToast(msg: unitEditNoChangesMessage);
+                                                                          return;
+                                                                        }
                                                                         setState(
                                                                             () {
                                                                           isLoading =
@@ -8337,6 +8356,17 @@ class _Summery_pageState extends State<Summery_page>
                                                                               true;
                                                                         });
                                                                       } else {
+                                                                        // Like web (isUnitEditUnchanged): nothing changed, so nothing
+                                                                        // is sent and the form stays open.
+                                                                        if (isUnitEditUnchanged(data.first,
+                                                                            sqft: sqft3.text,
+                                                                            newPhotos: _uploadedFileNames.isNotEmpty)) {
+                                                                          setState(() {
+                                                                            iserror = false;
+                                                                          });
+                                                                          Fluttertoast.showToast(msg: unitEditNoChangesMessage);
+                                                                          return;
+                                                                        }
                                                                         setState(
                                                                             () {
                                                                           isLoading =
@@ -11616,6 +11646,23 @@ class _Summery_pageState extends State<Summery_page>
                                                                                           iserror = true;
                                                                                         });
                                                                                       } else {
+                                                                                        // Like web (isUnitEditUnchanged): nothing changed, so nothing
+                                                                                        // is sent and the form stays open.
+                                                                                        if (isUnitEditUnchanged(Propertytype,
+                                                                                            unitNumber: unitnum.text,
+                                                                                            address: street3.text,
+                                                                                            sqft: sqft3.text,
+                                                                                            bed: bed3.text,
+                                                                                            bath: bath3.text,
+                                                                                            bedOptions: roomsArray,
+                                                                                            bathOptions: bathArray,
+                                                                                            photos: _imageUrls)) {
+                                                                                          setState(() {
+                                                                                            iserror = false;
+                                                                                          });
+                                                                                          Fluttertoast.showToast(msg: unitEditNoChangesMessage);
+                                                                                          return;
+                                                                                        }
                                                                                         setState(() {
                                                                                           isLoading = true;
                                                                                           iserror = false;
@@ -12158,7 +12205,7 @@ class _Summery_pageState extends State<Summery_page>
                                                                               Row(
                                                                                 children: [
                                                                                   Text(
-                                                                                    "Edid Unit Details",
+                                                                                    "Edit Unit Details",
                                                                                     style: TextStyle(
                                                                                       color: blueColor,
                                                                                       fontWeight: FontWeight.bold,
@@ -12477,6 +12524,19 @@ class _Summery_pageState extends State<Summery_page>
                                                                                           iserror = true;
                                                                                         });
                                                                                       } else {
+                                                                                        // Like web (isUnitEditUnchanged): nothing changed, so nothing
+                                                                                        // is sent and the form stays open.
+                                                                                        if (isUnitEditUnchanged(Propertytype,
+                                                                                            unitNumber: unitnum.text,
+                                                                                            address: street3.text,
+                                                                                            sqft: sqft3.text,
+                                                                                            photos: _imageUrls)) {
+                                                                                          setState(() {
+                                                                                            iserror = false;
+                                                                                          });
+                                                                                          Fluttertoast.showToast(msg: unitEditNoChangesMessage);
+                                                                                          return;
+                                                                                        }
                                                                                         setState(() {
                                                                                           isLoading = true;
                                                                                           iserror = false;
@@ -13310,6 +13370,23 @@ class _Summery_pageState extends State<Summery_page>
                                                                                             iserror = true;
                                                                                           });
                                                                                         } else {
+                                                                                          // Like web (isUnitEditUnchanged): nothing changed, so nothing
+                                                                                          // is sent and the form stays open.
+                                                                                          if (isUnitEditUnchanged(tappedUnit,
+                                                                                              unitNumber: unitnum.text,
+                                                                                              address: street3.text,
+                                                                                              sqft: sqft3.text,
+                                                                                              bed: bed3.text,
+                                                                                              bath: bath3.text,
+                                                                                              bedOptions: roomsArray,
+                                                                                              bathOptions: bathArray,
+                                                                                              photos: _imageUrls)) {
+                                                                                            setState(() {
+                                                                                              iserror = false;
+                                                                                            });
+                                                                                            Fluttertoast.showToast(msg: unitEditNoChangesMessage);
+                                                                                            return;
+                                                                                          }
                                                                                           setState(() {
                                                                                             isLoading = true;
                                                                                             iserror = false;
@@ -13649,6 +13726,19 @@ class _Summery_pageState extends State<Summery_page>
                                                                                             iserror = true;
                                                                                           });
                                                                                         } else {
+                                                                                          // Like web (isUnitEditUnchanged): nothing changed, so nothing
+                                                                                          // is sent and the form stays open.
+                                                                                          if (isUnitEditUnchanged(tappedUnit,
+                                                                                              unitNumber: unitnum.text,
+                                                                                              address: street3.text,
+                                                                                              sqft: sqft3.text,
+                                                                                              photos: _imageUrls)) {
+                                                                                            setState(() {
+                                                                                              iserror = false;
+                                                                                            });
+                                                                                            Fluttertoast.showToast(msg: unitEditNoChangesMessage);
+                                                                                            return;
+                                                                                          }
                                                                                           setState(() {
                                                                                             isLoading = true;
                                                                                             iserror = false;
@@ -13869,6 +13959,12 @@ class _Summery_pageState extends State<Summery_page>
                                     borderRadius: BorderRadius.circular(12.0))),
                             onPressed: () async {
                               if (deleting) return;
+                              // Like web (Units.jsx): "Are you sure?" with a
+                              // reason first. Cancel keeps the unit as it was.
+                              final reason = await confirmDeleteUnit(context);
+                              if (reason == null || !mounted || deleting) {
+                                return;
+                              }
                               deleting = true;
                               // The repository toasts the server's own reason
                               // and then throws when the delete is rejected.
@@ -13877,7 +13973,26 @@ class _Summery_pageState extends State<Summery_page>
                               // been shown.
                               try {
                                 var data = await Properies_summery_Repo()
-                                    .Deleteunit(unitId: unit?.unitId!);
+                                    .Deleteunit(
+                                        unitId: unit?.unitId!, reason: reason);
+                                // Like web (PropertyUnitsTab.jsx): log the
+                                // delete in the property's History. A failed
+                                // log never stops the delete.
+                                await HistoryService.saveHistory(
+                                  entityType: 'property',
+                                  entityId: widget.properties.rentalId ?? '',
+                                  actionType: 'deleted',
+                                  description: unitDeletedDescription(
+                                      unitNumber: unit?.rentalunit,
+                                      unitId: unit?.unitId),
+                                  category: 'Unit',
+                                  metadata: {
+                                    if (unit?.unitId != null)
+                                      'unit_id': unit?.unitId,
+                                    if (unit?.rentalunit != null)
+                                      'unit_number': unit?.rentalunit,
+                                  },
+                                );
                                 if (!mounted) return;
                                 // Only refresh when the delete actually succeeded.
                                 setState(() {
@@ -13887,6 +14002,8 @@ class _Summery_pageState extends State<Summery_page>
                                   showdetails = false;
                                   // Update unit count after deletion
                                   unitCount = unitCount > 0 ? unitCount - 1 : 0;
+                                  // Like web's triggerHistoryRefresh.
+                                  _historyRefreshKey++;
                                 });
                                 //Navigator.pop(context);
                               } catch (_) {
@@ -13894,7 +14011,7 @@ class _Summery_pageState extends State<Summery_page>
                               }
                             },
                             child: Text(
-                              'Delete unit',
+                              'Delete Unit',
                               style: TextStyle(
                                   fontSize:
                                       MediaQuery.of(context).size.width < 500

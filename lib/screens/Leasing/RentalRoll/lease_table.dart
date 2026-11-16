@@ -263,11 +263,34 @@ class _Lease_tableState extends State<Lease_table>
   }
 
   void _maybeReloadAfterSortTap() {
+    // Like web (RentRoll.jsx sortData calls setCurrentPage(1); the new look
+    // drops the page on a new sort): sorting starts again from page 1.
+    if (currentPage != 0) setState(() => currentPage = 0);
     if (_useServerLeasePagination()) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _scheduleLeaseLoad();
       });
     }
+  }
+
+  /// The sort arrow, like web (RentRoll.jsx): only the column the list is
+  /// sorted by shows it, ▲ ascending and ▼ descending. It follows the sort sent
+  /// to the server, so with no column tapped it is on Lease End ▼ (web's
+  /// default order, newest end date first).
+  Widget _sortArrow(String sortKey) {
+    final sort = _leaseApiSortParams();
+    if (sort.key != sortKey) return const SizedBox.shrink();
+    final ascending = sort.value == 'ascending';
+    return Padding(
+      padding: ascending
+          ? const EdgeInsets.only(top: 7, left: 2)
+          : const EdgeInsets.only(bottom: 7, left: 2),
+      child: FaIcon(
+        ascending ? FontAwesomeIcons.sortUp : FontAwesomeIcons.sortDown,
+        size: 20,
+        color: blueColor,
+      ),
+    );
   }
 
   Widget _buildHeaders() {
@@ -323,23 +346,8 @@ class _Lease_tableState extends State<Lease_table>
                                 color: blueColor, fontWeight: FontWeight.bold,fontSize: 14.0,)),
                     // Text("Property", style: TextStyle(color: Colors.white)),
                     const SizedBox(width: 3),
-                    ascending1
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 7, left: 2),
-                            child: FaIcon(
-                              FontAwesomeIcons.sortUp,
-                              size: 20,
-                              color: blueColor,
-                            ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.only(bottom: 7, left: 2),
-                            child: FaIcon(
-                              FontAwesomeIcons.sortDown,
-                              size: 20,
-                              color: blueColor,
-                            ),
-                          ),
+                    // Only the sorted column shows the arrow, like web.
+                    _sortArrow('rental_adress'),
                   ],
                 ),
               ),
@@ -369,33 +377,24 @@ class _Lease_tableState extends State<Lease_table>
                   });
                   _maybeReloadAfterSortTap();
                 },
-                child: Row(
-                  children: [
-                    Text(" Rent Cycle",
-                        style: TextStyle(
-                          color: blueColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize:14.0,
-                        )),
-                    // const SizedBox(width: 5),
-                    /*  ascending2
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 7, left: 2),
-                            child: FaIcon(
-                              FontAwesomeIcons.sortUp,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.only(bottom: 7, left: 2),
-                            child: FaIcon(
-                              FontAwesomeIcons.sortDown,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                          ),*/
-                  ],
+                // Shrinks instead of overflowing on a narrow phone when
+                // the sort arrow shows next to the label.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Lease Start, like web (this column sorts by start_date).
+                      Text(" Lease Start",
+                          style: TextStyle(
+                            color: blueColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.0,
+                          )),
+                      _sortArrow('start_date'),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -425,33 +424,23 @@ class _Lease_tableState extends State<Lease_table>
                   });
                   _maybeReloadAfterSortTap();
                 },
-                child: Row(
-                  children: [
-                    Text("Lease End",
-                        style: TextStyle(
-                          color: blueColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize:14.0,
-                        )),
-                    // const SizedBox(width: 5),
-                    /*  ascending3
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 7, left: 2),
-                            child: FaIcon(
-                              FontAwesomeIcons.sortUp,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.only(bottom: 7, left: 2),
-                            child: FaIcon(
-                              FontAwesomeIcons.sortDown,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                          ),*/
-                  ],
+                // Shrinks instead of overflowing on a narrow phone when
+                // the sort arrow shows next to the label.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("Lease End",
+                          style: TextStyle(
+                            color: blueColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.0,
+                          )),
+                      _sortArrow('end_date'),
+                    ],
+                  ),
                 ),
               ),
            
@@ -1513,7 +1502,9 @@ class _Lease_tableState extends State<Lease_table>
                                                         flex:
                                                             2, // Smaller size for the second field
                                                         child: Text(
-                                                          lease.rentCycle!,
+                                                          _formatDateSafely(
+                                                              lease.startDate,
+                                                              dateProvider),
                                                           style: TextStyle(
                                                             color: blueColor,
                                                             fontWeight:
@@ -1588,8 +1579,10 @@ class _Lease_tableState extends State<Lease_table>
                                                                       _getDisplayValue(
                                                                           lease
                                                                               .remainingDays),
-                                                                      '',
-                                                                      ''),
+                                                                      // Rent Cycle is plain text here, like web.
+                                                                      'Rent Cycle:',
+                                                                      _getDisplayValue(
+                                                                          lease.rentCycle)),
                                                                   //_buildTableRow('Current Balance:', _getDisplayValue("${formattedBalance}"), '', '')
                                                                 ],
                                                               ),

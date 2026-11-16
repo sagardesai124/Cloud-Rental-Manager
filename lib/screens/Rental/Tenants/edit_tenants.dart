@@ -1,6 +1,6 @@
 import 'package:three_zero_two_property/services/app_log.dart';
 import 'dart:convert';
-import 'package:email_validator/email_validator.dart';
+import 'package:three_zero_two_property/services/web_email.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:three_zero_two_property/services/api_helpers.dart';
@@ -577,6 +577,7 @@ class _EditTenantsState extends State<EditTenants> {
     List<TextInputFormatter>? inputFormatters,
     TextEditingController? otherController,
     TextEditingController? alterController,
+    String? sameEmailMessage,
     TextEditingController? telephoneController,
   }) {
     return CustomTextField(
@@ -593,6 +594,7 @@ class _EditTenantsState extends State<EditTenants> {
       inputFormatters: inputFormatters,
       otherController: otherController,
       alterController: alterController,
+      sameEmailMessage: sameEmailMessage,
       telephoneController: telephoneController,
       showElevation: false,
       borderColor: outlineClr,
@@ -724,6 +726,7 @@ class _EditTenantsState extends State<EditTenants> {
           email: true,
           // Web parity: alternative email must differ from the primary email.
           alterController: email,
+          sameEmailMessage: 'Alternative email cannot be the same as the primary email',
         ),
         const SizedBox(height: 16),
         _fieldLabel('Date of Birth'),
@@ -868,6 +871,7 @@ class _EditTenantsState extends State<EditTenants> {
             email: true,
             // Web parity: emergency email must differ from the tenant's email.
             alterController: email,
+            sameEmailMessage: "Emergency email cannot be the same as the tenant's email",
           ),
           const SizedBox(height: 14),
           _fieldLabel('Phone Number'),
@@ -1458,6 +1462,8 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController? businessController;
   final TextEditingController? telephoneController;
   final TextEditingController? alterController;
+  /// The message when this email matches [alterController], like web.
+  final String? sameEmailMessage;
   final TextEditingController? emrgencyController;
   final bool? samephonenumber;
   final bool? isInRow; // NEW PARAMETER FOR ROW LAYOUT
@@ -1498,6 +1504,7 @@ class CustomTextField extends StatefulWidget {
       this.businessController,
       this.telephoneController,
       this.alterController,
+      this.sameEmailMessage,
       this.emrgencyController,
       this.samephonenumber = false,
       this.isInRow = false, // DEFAULT TO FALSE FOR SINGLE COLUMN LAYOUT
@@ -1522,7 +1529,8 @@ class CustomTextFieldState extends State<CustomTextField> {
   late FocusNode _focusNode;
   @override
   void dispose() {
-    //  _textController.dispose(); // Dispose the controller when not needed anymore
+    //  _textController.dispose(); // Dispose the controller when not needed anymore.
+    //dis
     super.dispose();
     _focusNode.dispose();
   }
@@ -1597,22 +1605,24 @@ class CustomTextFieldState extends State<CustomTextField> {
   }
 
   void _validateEmail(String value) {
-    // Validate email format using EmailValidator
-    if (!EmailValidator.validate(value)) {
+    // Same email rule as web's tenant form (tenantFormConfig.js).
+    if (!isWebEmail(value)) {
       setState(() {
-        _errorMessage = "Email is not valid";
+        _errorMessage = webInvalidEmailMessage;
       });
     } else {
       // Check if email is not the same as another email (example: other controllers)
       if (widget.alterController != null &&
-          widget.alterController?.text == value) {
+          widget.alterController?.text.trim() == value) {
         setState(() {
-          _errorMessage = 'Email cannot be the same';
+          _errorMessage =
+              widget.sameEmailMessage ?? 'Email cannot be the same';
         });
       } else if (widget.emrgencyController != null &&
           widget.emrgencyController?.text == value) {
         setState(() {
-          _errorMessage = 'Email cannot be the same';
+          _errorMessage =
+              widget.sameEmailMessage ?? 'Email cannot be the same';
         });
       } else {
         setState(() {
@@ -1693,10 +1703,9 @@ class CustomTextFieldState extends State<CustomTextField> {
                       });
                     }
                   } else if (widget.email != null) {
-                    if (!EmailValidator.validate(
-                        widget.controller!.text.trim())) {
+                    if (!isWebEmail(widget.controller!.text.trim())) {
                       setState(() {
-                        _errorMessage = "Email is not valid";
+                        _errorMessage = webInvalidEmailMessage;
                       });
                       return '';
                     }

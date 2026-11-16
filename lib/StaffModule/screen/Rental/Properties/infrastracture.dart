@@ -137,6 +137,9 @@ class _InfrastructurePartState extends State<InfrastructurePart>
       if (widget.units != null && widget.units!.isNotEmpty) {
         selectedUnit = widget.units!.first;
       }
+      // Back to page 1, as on a unit switch.
+      _currentPage = 0;
+      currentPage = 0;
       futureAppliences = _getAllAppliancesFuture();
     }
   }
@@ -460,12 +463,12 @@ class _InfrastructurePartState extends State<InfrastructurePart>
   void sortData(List<unit_appliance> data) {
     if (sorting1) {
       data.sort((a, b) => ascending1
-          ? a.applianceName!.compareTo(b.applianceName!)
-          : b.applianceName!.compareTo(a.applianceName!));
+          ? (a.applianceName ?? '').compareTo((b.applianceName ?? ''))
+          : (b.applianceName ?? '').compareTo((a.applianceName ?? '')));
     } else if (sorting2) {
       data.sort((a, b) => ascending2
-          ? a.applianceDescription!.compareTo(b.applianceDescription!)
-          : b.applianceDescription!.compareTo(a.applianceDescription!));
+          ? (a.applianceDescription ?? '').compareTo((b.applianceDescription ?? ''))
+          : (b.applianceDescription ?? '').compareTo((a.applianceDescription ?? '')));
     }
   }
 
@@ -724,6 +727,10 @@ class _InfrastructurePartState extends State<InfrastructurePart>
                                   onChanged: (unit) {
                                     setState(() {
                                       selectedUnit = unit;
+                                      // Back to page 1: the new unit may
+                                      // have fewer rows than the page shown.
+                                      _currentPage = 0;
+                                      currentPage = 0;
                                       _filterAppliancesByUnit();
                                     });
                                   },
@@ -1004,7 +1011,9 @@ class _InfrastructurePartState extends State<InfrastructurePart>
                                                           ),
                                                           const SizedBox(height: 6),
                                                           Text(
-                                                            '${rentals.categoryName}',
+                                                            (rentals.categoryName ?? '').trim().isEmpty
+                                                                ? 'N/A' // like web
+                                                                : rentals.categoryName!,
                                                             style: TextStyle(
                                                               color: Colors.grey
                                                                   .shade800,
@@ -1038,11 +1047,10 @@ class _InfrastructurePartState extends State<InfrastructurePart>
                                                           ),
                                                           const SizedBox(height: 6),
                                                           Text(
-                                                            dateProvider
-                                                                .formatCurrentDate(
-                                                                '${ formatDate(rentals
-                                                                    .installedDate ??
-                                                                    '')}'),
+                                                            (rentals.installedDate ?? '').isEmpty
+                                                                ? 'N/A' // like web: no Installed Date
+                                                                : dateProvider.formatCurrentDate(
+                                                                    formatDate(rentals.installedDate!)),
                                                             style: TextStyle(
                                                               color: Colors.grey
                                                                   .shade800,
@@ -1343,14 +1351,14 @@ class _InfrastructurePartState extends State<InfrastructurePart>
                                           BoxDecoration(border: Border.all()),
                                       children: [
                                         _buildHeader('Name', 0,
-                                            (rental) => rental.applianceName!),
+                                            (rental) => rental.applianceName ?? ''),
                                         _buildHeader(
                                             'Description',
                                             1,
                                             (rental) =>
-                                                rental.applianceDescription!),
+                                                rental.applianceDescription ?? ''),
                                         _buildHeader('InstalledDate', 2,
-                                            (rental) => rental.installedDate!),
+                                            (rental) => rental.installedDate ?? ''),
                                         _buildHeader('Actions', 3, null),
                                       ],
                                     ),
@@ -1378,11 +1386,12 @@ class _InfrastructurePartState extends State<InfrastructurePart>
                                         ),
                                         children: [
                                           _buildDataCell(
-                                              _pagedData[i].applianceName!),
+                                              _pagedData[i].applianceName ?? ''),
                                           _buildDataCell(_pagedData[i]
-                                              .applianceDescription!),
-                                          _buildDataCell(formatDate(
-                                              _pagedData[i].installedDate!)),
+                                              .applianceDescription ?? ''),
+                                          _buildDataCell((_pagedData[i].installedDate ?? '').isEmpty
+                                              ? 'N/A' // like web: no Installed Date
+                                              : formatDate(_pagedData[i].installedDate!)),
                                           _buildActionsCell(_pagedData[i]),
                                         ],
                                       ),

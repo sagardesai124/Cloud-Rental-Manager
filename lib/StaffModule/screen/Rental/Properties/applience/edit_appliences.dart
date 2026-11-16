@@ -483,9 +483,8 @@ class _Edit_applienceState extends State<Edit_applience> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton2<String>(
                         isExpanded: true,
@@ -504,15 +503,7 @@ class _Edit_applienceState extends State<Edit_applience> {
                             showFiltersSection = false;
                           });
                         },
-                        buttonStyleData: ButtonStyleData(
-                          height: 45,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          elevation: 2,
-                        ),
+                        buttonStyleData: _boxLikeTextField(),
                         iconStyleData: const IconStyleData(
                           icon: Icon(Icons.arrow_drop_down),
                           iconSize: 24,
@@ -541,10 +532,9 @@ class _Edit_applienceState extends State<Edit_applience> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(height: 4),
                   //categories dropdwoun
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton2<allcategories_model>(
                         isExpanded: true,
@@ -568,8 +558,7 @@ class _Edit_applienceState extends State<Edit_applience> {
                                   _selectedDropdownCategory = newValue;
 
                                   // Reset filters if changing from/to HVAC
-                                  if (_selectedDropdownCategory?.name !=
-                                      'HVAC') {
+                                  if (_selectedDropdownCategory?.isHvac != true) {
                                     showFiltersSection = false;
                                     for (var controllers in filterControllers) {
                                       controllers['name']?.dispose();
@@ -579,15 +568,7 @@ class _Edit_applienceState extends State<Edit_applience> {
                                   }
                                 });
                               },
-                        buttonStyleData: ButtonStyleData(
-                          height: 45,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          elevation: 2,
-                        ),
+                        buttonStyleData: _boxLikeTextField(),
                         iconStyleData: const IconStyleData(
                           icon: Icon(Icons.arrow_drop_down),
                           iconSize: 24,
@@ -622,7 +603,7 @@ class _Edit_applienceState extends State<Edit_applience> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton2<String>(
                         isExpanded: true,
@@ -642,15 +623,7 @@ class _Edit_applienceState extends State<Edit_applience> {
                             if (newValue != 'Other') _customBrand.clear();
                           });
                         },
-                        buttonStyleData: ButtonStyleData(
-                          height: 45,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          elevation: 2,
-                        ),
+                        buttonStyleData: _boxLikeTextField(),
                         iconStyleData: const IconStyleData(
                           icon: Icon(Icons.arrow_drop_down),
                           iconSize: 24,
@@ -759,7 +732,7 @@ class _Edit_applienceState extends State<Edit_applience> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton2<String>(
                         isExpanded: true,
@@ -778,15 +751,7 @@ class _Edit_applienceState extends State<Edit_applience> {
                             _selectedStatus = newValue;
                           });
                         },
-                        buttonStyleData: ButtonStyleData(
-                          height: 45,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          elevation: 2,
-                        ),
+                        buttonStyleData: _boxLikeTextField(),
                         iconStyleData: const IconStyleData(
                           icon: Icon(Icons.arrow_drop_down),
                           iconSize: 24,
@@ -827,7 +792,7 @@ class _Edit_applienceState extends State<Edit_applience> {
                     keyboardType: TextInputType.text,
                   ),
                   // Add this after your Status dropdown
-                  if (_selectedDropdownCategory?.name == 'HVAC') ...[
+                  if (_selectedDropdownCategory?.isHvac == true) ...[
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -1085,16 +1050,24 @@ class _Edit_applienceState extends State<Edit_applience> {
                             ),
                           ),
                           onPressed: () async {
-                            if (_name.text.isEmpty ||
-                                _description.text.isEmpty ||
-                                _installedDate.text.isEmpty ||
-                                _selectedSystemType == null ||
-                                _selectedDropdownCategory == null ||
-                                _selectedStatus == null ||
-                                _selectedBrand == null ||
-                                (_selectedBrand == 'Other' &&
-                                    _customBrand.text.trim().isEmpty)) {
+                            // Like web: only Type and Category are required
+                            // (editing never needs the custom brand).
+                            if (_selectedSystemType == null ||
+                                _selectedDropdownCategory == null) {
                               setState(() => iserror = true);
+                            } else if (_selectedDropdownCategory?.isHvac == true &&
+                                showFiltersSection &&
+                                filterControllers.any((c) =>
+                                    (c['name']?.text.trim() ?? '').isEmpty ||
+                                    (c['size']?.text.trim() ?? '').isEmpty)) {
+                              // Like web: every HVAC filter needs a name and a size.
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Filter name and size are required for all filters'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
                             } else {
                               setState(() {
                                 isLoading = true;
@@ -1108,7 +1081,7 @@ class _Edit_applienceState extends State<Edit_applience> {
 
                                 // Generate filters list based on category
                                 List<Map<String, dynamic>> finalFilters = [];
-                                if (_selectedDropdownCategory?.name == 'HVAC' &&
+                                if (_selectedDropdownCategory?.isHvac == true &&
                                     showFiltersSection) {
                                   for (int i = 0;
                                       i < filterControllers.length;
@@ -1228,10 +1201,8 @@ class _Edit_applienceState extends State<Edit_applience> {
 
   Widget dateField(String label, TextEditingController controller,
       BuildContext context, StateSetter setState) {
-    // Warranty Expiry / Last Maintenance Date are optional, so they offer a
-    // Clear action (web parity). Installed Date is required — no Clear.
-    final bool clearable = label != 'Installed Date';
-
+    // Every date is optional, like web (Installed Date too), so each one
+    // offers a Clear action.
     void clearDate() {
       setState(() {
         controller.clear();
@@ -1239,47 +1210,21 @@ class _Edit_applienceState extends State<Edit_applience> {
     }
 
     Future<void> openPicker() async {
-      if (clearable) {
-        final ClearableDatePickerResult? result = await showClearableDatePicker(
-          context: context,
-          initialDate: DateTime.now(),
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-          helpText: 'Select $label',
-        );
-        if (result == null) return; // cancelled — keep the current value
-        if (result.cleared) {
-          clearDate();
-          return;
-        }
-        setState(() {
-          controller.text = formatDate(result.date!.toString());
-        });
-        return;
-      }
-
-      final DateTime? date = await showDatePicker(
+      final ClearableDatePickerResult? result = await showClearableDatePicker(
         context: context,
         initialDate: DateTime.now(),
         firstDate: DateTime(2000),
         lastDate: DateTime(2100),
-        builder: (context, child) {
-          return Theme(
-            data: ThemeData.light().copyWith(
-              colorScheme: ColorScheme.light(
-                primary: blueColor,
-                onSurface: Colors.black,
-              ),
-            ),
-            child: child!,
-          );
-        },
+        helpText: 'Select $label',
       );
-      if (date != null) {
-        setState(() {
-          controller.text = formatDate(date.toString());
-        });
+      if (result == null) return; // cancelled — keep the current value
+      if (result.cleared) {
+        clearDate();
+        return;
       }
+      setState(() {
+        controller.text = formatDate(result.date!.toString());
+      });
     }
 
     return CustomTextFormField(
@@ -1289,18 +1234,30 @@ class _Edit_applienceState extends State<Edit_applience> {
       keyboardType: TextInputType.datetime,
       readOnly: true,
       onTap: openPicker,
-      suffixIcon: clearable
-          ? ClearableDateSuffix(
-              controller: controller,
-              onPick: openPicker,
-              onClear: clearDate,
-              icon: Icons.calendar_today,
-              iconColor: Colors.grey,
-            )
-          : null,
+      suffixIcon: ClearableDateSuffix(
+        controller: controller,
+        onPick: openPicker,
+        onClear: clearDate,
+        icon: Icons.calendar_today,
+        iconColor: Colors.grey,
+      ),
     );
   }
 }
+
+/// The dropdown boxes look like [CustomTextFormField]: white, a grey border,
+/// corners 12, no shadow and the same height (52 + the 1.2 border top and
+/// bottom). dropdown_button2 adds the menu item padding (14) before the text,
+/// so 2 + 14 = 16, the same text start as the text boxes.
+ButtonStyleData _boxLikeTextField() => ButtonStyleData(
+      height: 54.4,
+      padding: const EdgeInsets.only(left: 2, right: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300, width: 1.2),
+      ),
+    );
 
 class CustomTextFormField extends StatefulWidget {
   final String labelText;

@@ -29,6 +29,7 @@ import '../../../widgets/drawer_tiles.dart';
 import '../../../../widgets/titleBar.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
+import 'package:three_zero_two_property/constant/workorder_parts_limits.dart';
 
 import '../../Rental/Tenants/add_tenants.dart';
 import '../../../widgets/custom_drawer.dart';
@@ -288,14 +289,23 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                     TextEditingController(text: data.amount!.toString());
                 TextEditingController subtotalcontroller =
                     TextEditingController();
-                qtyController.addListener(() {
+                // Only when the Quantity or Price text changes: tapping into a
+                // box also notifies (the cursor moves), and must not rewrite
+                // the saved Total ("11" → "11.00"), which would turn on Update.
+                var lastQty = qtyController.text;
+                var lastPrice = priceController.text;
+                void recalculate() {
+                  if (qtyController.text == lastQty &&
+                      priceController.text == lastPrice) {
+                    return;
+                  }
+                  lastQty = qtyController.text;
+                  lastPrice = priceController.text;
                   calculateTotal(qtyController, priceController,
                       totalController, subtotalcontroller);
-                });
-                priceController.addListener(() {
-                  calculateTotal(qtyController, priceController,
-                      totalController, subtotalcontroller);
-                });
+                }
+                qtyController.addListener(recalculate);
+                priceController.addListener(recalculate);
                 return {
                   "parts_id": data.partsId,
                   "qtyController": qtyController,
@@ -763,6 +773,12 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
             hintText: 'Quantity',
             controller: partsAndLabor[index]['qtyController'],
             keyboardType: TextInputType.number,
+            // Like web: digits only, at least 1 ("Quantity must be at least 1"),
+            // and "Quantity cannot exceed 9,999".
+            inputFormatters: partsQtyInputFormatters,
+            maxValue: partsQtyMax,
+            maxValueMessage: partsQtyMaxMessage,
+            numberCheck: partsQtyCheck,
             showElevation: false,
             borderColor: const Color(0xFFCED4DA),
             borderWidth: 1.5,
@@ -865,6 +881,14 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
             hintText: 'Price',
             controller: partsAndLabor[index]['priceController'],
             keyboardType: TextInputType.number,
+            // Like web: decimal keypad, digits and "." only, a number with
+            // at most 2 decimals, above 0 ("Price is required"), and "Price
+            // cannot exceed $999,999.99".
+            decimalPad: true,
+            inputFormatters: partsPriceInputFormatters,
+            maxValue: partsPriceMax,
+            maxValueMessage: partsPriceMaxMessage,
+            numberCheck: partsPriceCheck,
             showElevation: false,
             borderColor: const Color(0xFFCED4DA),
             borderWidth: 1.5,
@@ -3737,7 +3761,10 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
       if (_normDirty(c['priceController']?.text) != _normDirty(w['price'])) {
         return true;
       }
-      if (_normDirty(c['totalController']?.text) != _normDirty(w['total'])) {
+      // Total is worked out from Quantity x Price ("11.00"), so compare it as
+      // a number: a changed-and-restored row still matches the saved "11".
+      if ((double.tryParse(_normDirty(c['totalController']?.text)) ?? 0) !=
+          (double.tryParse(_normDirty(w['total'])) ?? 0)) {
         return true;
       }
     }
@@ -4047,14 +4074,23 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                     TextEditingController(text: data.amount!.toString());
                 TextEditingController subtotalcontroller =
                     TextEditingController();
-                qtyController.addListener(() {
+                // Only when the Quantity or Price text changes: tapping into a
+                // box also notifies (the cursor moves), and must not rewrite
+                // the saved Total ("11" → "11.00"), which would turn on Update.
+                var lastQty = qtyController.text;
+                var lastPrice = priceController.text;
+                void recalculate() {
+                  if (qtyController.text == lastQty &&
+                      priceController.text == lastPrice) {
+                    return;
+                  }
+                  lastQty = qtyController.text;
+                  lastPrice = priceController.text;
                   calculateTotal(qtyController, priceController,
                       totalController, subtotalcontroller);
-                });
-                priceController.addListener(() {
-                  calculateTotal(qtyController, priceController,
-                      totalController, subtotalcontroller);
-                });
+                }
+                qtyController.addListener(recalculate);
+                priceController.addListener(recalculate);
                 return {
                   "parts_id": data.partsId,
                   "qtyController": qtyController,
@@ -4518,6 +4554,12 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
             hintText: 'Quantity',
             controller: partsAndLabor[index]['qtyController'],
             keyboardType: TextInputType.number,
+            // Like web: digits only, at least 1 ("Quantity must be at least 1"),
+            // and "Quantity cannot exceed 9,999".
+            inputFormatters: partsQtyInputFormatters,
+            maxValue: partsQtyMax,
+            maxValueMessage: partsQtyMaxMessage,
+            numberCheck: partsQtyCheck,
             showElevation: false,
             borderColor: const Color(0xFFCED4DA),
             borderWidth: 1.5,
@@ -4618,6 +4660,14 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
             hintText: 'Price',
             controller: partsAndLabor[index]['priceController'],
             keyboardType: TextInputType.number,
+            // Like web: decimal keypad, digits and "." only, a number with
+            // at most 2 decimals, above 0 ("Price is required"), and "Price
+            // cannot exceed $999,999.99".
+            decimalPad: true,
+            inputFormatters: partsPriceInputFormatters,
+            maxValue: partsPriceMax,
+            maxValueMessage: partsPriceMaxMessage,
+            numberCheck: partsPriceCheck,
             showElevation: false,
             borderColor: const Color(0xFFCED4DA),
             borderWidth: 1.5,
@@ -6516,6 +6566,12 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                                   ['qtyController'],
                                               keyboardType:
                                                   TextInputType.number,
+                                              // Like web: digits only, at least 1 ("Quantity must be at least 1"),
+                                              // and "Quantity cannot exceed 9,999".
+                                              inputFormatters: partsQtyInputFormatters,
+                                              maxValue: partsQtyMax,
+                                              maxValueMessage: partsQtyMaxMessage,
+                                              numberCheck: partsQtyCheck,
                                               showElevation: false,
                                               borderColor:
                                                   const Color(0xFFCED4DA),
@@ -6628,6 +6684,14 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                                   ['priceController'],
                                               keyboardType:
                                                   TextInputType.number,
+                                              // Like web: decimal keypad, digits and "." only, a number with
+                                              // at most 2 decimals, above 0 ("Price is required"), and "Price
+                                              // cannot exceed $999,999.99".
+                                              decimalPad: true,
+                                              inputFormatters: partsPriceInputFormatters,
+                                              maxValue: partsPriceMax,
+                                              maxValueMessage: partsPriceMaxMessage,
+                                              numberCheck: partsPriceCheck,
                                               showElevation: false,
                                               borderColor:
                                                   const Color(0xFFCED4DA),
@@ -7477,7 +7541,8 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                           ),
                                         )
                                       : Text(
-                                          'Edit Work Order',
+                                          // Like web (and the phone layout): "Update Work Order".
+                                          'Update Work Order',
                                           style: TextStyle(
                                               color: canSave
                                                   ? const Color(0xFFf7f8f9)
@@ -7589,7 +7654,10 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
       if (_normDirty(c['priceController']?.text) != _normDirty(w['price'])) {
         return true;
       }
-      if (_normDirty(c['totalController']?.text) != _normDirty(w['total'])) {
+      // Total is worked out from Quantity x Price ("11.00"), so compare it as
+      // a number: a changed-and-restored row still matches the saved "11".
+      if ((double.tryParse(_normDirty(c['totalController']?.text)) ?? 0) !=
+          (double.tryParse(_normDirty(w['total'])) ?? 0)) {
         return true;
       }
     }

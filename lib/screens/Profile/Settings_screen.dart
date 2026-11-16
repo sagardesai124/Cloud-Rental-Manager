@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:three_zero_two_property/widgets/account_form_web_rules.dart';
 import 'package:flutter/widgets.dart';
 //import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -73,6 +74,30 @@ bool isValidReplyToEmail(String email) {
 const String kInvalidReplyToEmailMessage =
     'Please enter a valid email address.';
 
+/// Rent Due Reminder "Duration (days before rent due)", as on web
+/// (MailServiceSection.jsx `/^\d*\.?\d*$/`): digits and one decimal point.
+/// Any other keystroke or paste is refused and the text stays as it was.
+final TextInputFormatter reminderDurationFormatter =
+    TextInputFormatter.withFunction((oldValue, newValue) =>
+        RegExp(r'^\d*\.?\d*$').hasMatch(newValue.text) ? newValue : oldValue);
+
+/// What web shows for its empty `required` Duration box (the browser's own
+/// message).
+const String kReminderDurationRequiredMessage = 'Please fill out this field.';
+
+/// null when the reminder Duration can be saved, otherwise the message to
+/// show under it. Like web, it is only needed while the reminder is on (the
+/// box is hidden and 0 is saved when it is off).
+String? reminderDurationProblem(
+    {required bool reminderOn, required String text}) {
+  if (!reminderOn) return null;
+  final value = text.trim();
+  if (value.isEmpty || num.tryParse(value) == null) {
+    return kReminderDurationRequiredMessage;
+  }
+  return null;
+}
+
 /// Custom date format check, as on web (Settings.jsx isValidDateFormat, the
 /// same rule the server applies): needs Y, M and D, only / - or space between
 /// them, and at most 32 characters.
@@ -129,7 +154,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   TextEditingController late_fee = TextEditingController();
   TextEditingController duration = TextEditingController();
   TextEditingController grace_balance = TextEditingController();
-  TextEditingController durationmail = TextEditingController();
+  // Like web (Settings.jsx `useState(0)`): 0 until the saved setting loads,
+  // so a company with nothing saved yet can turn the reminder on and save.
+  TextEditingController durationmail = TextEditingController(text: '0');
   TextEditingController description = TextEditingController();
   TextEditingController replyToEmail = TextEditingController();
   TextEditingController categories = TextEditingController();
@@ -170,8 +197,15 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
   // Original values for Mail Service change tracking
   String _originalReplyToEmail = "";
   String? _replyToEmailError;
-  String _originalDurationMail = "";
+  String? _durationMailError;
+  String _originalDurationMail = "0";
   bool _originalRentDueReminderEmail = false;
+
+  /// Like web's hasMailSettingsChanged: anything differs from what is saved.
+  bool _hasMailChanges() =>
+      replyToEmail.text.trim() != _originalReplyToEmail ||
+      rentDueReminderEmail != _originalRentDueReminderEmail ||
+      durationmail.text.trim() != _originalDurationMail.trim();
   bool isLoadingAccounts = false;
   bool mailupdate = false;
   bool issurge = false;
@@ -1070,11 +1104,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     try {
       Map<String, dynamic> data = {
         "admin_id": id,
-        "duration": rentDueReminderEmail
-            ? (durationmail.text.trim().isNotEmpty
-                ? double.tryParse(durationmail.text.trim())
-                : null)
-            : 0,
+        // Checked before saving: a number while the reminder is on.
+        "duration":
+            rentDueReminderEmail ? num.tryParse(durationmail.text.trim()) : 0,
         "replyToEmail": replyToEmail.text.trim(),
         "remindermail": rentDueReminderEmail,
       };
@@ -1148,11 +1180,10 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       Map<String, dynamic> data = {
         "admin_id": id,
         "replyToEmail": replyToEmail.text.trim(),
-        "duration": rentDueReminderEmail
-            ? (durationmail.text.trim().isNotEmpty
-                ? int.tryParse(durationmail.text.trim())
-                : null)
-            : 0,
+        // Checked before saving: a number while the reminder is on. Decimals
+        // such as 2.5 are kept, like web (the first save used to drop them).
+        "duration":
+            rentDueReminderEmail ? num.tryParse(durationmail.text.trim()) : 0,
         "remindermail": rentDueReminderEmail,
       };
 
@@ -5272,11 +5303,12 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                     currentpage: "Settings",
                     dropdown: false,
                   )),
-        // drawer:
+
+        // drawer::
         // CustomDrawer(
         //   currentpage: "Settings",
         //   dropdown: false,
-        // ),
+        // )
         body: !isOffline
             ? (_showSettingsMenu
                 ? _buildSettingsMenu()
@@ -8552,6 +8584,10 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
 
   Widget _buildMailServiceSection() {
     final bool isSmall = MediaQuery.of(context).size.width < 500;
+    // Like web (MailServiceSection.jsx `disabled={mailData &&
+    // !hasMailSettingsChanged()}`): the first save is always allowed; after
+    // that, only when something changed.
+    final bool canSaveMail = !mailupdate || _hasMailChanges();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -8626,8 +8662,19 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 _buildMailTextField(
                   controller: durationmail,
                   hint: "1",
-                  keyboardType: TextInputType.number,
+                  // Shows the "." key on iPhone too; web takes 2.5.
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [reminderDurationFormatter],
                 ),
+                if (_durationMailError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      _durationMailError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
             ],
           ),
@@ -8643,6 +8690,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                     replyToEmail.text = _originalReplyToEmail;
                     _replyToEmailError = null;
                     durationmail.text = _originalDurationMail;
+                    _durationMailError = null;
                     rentDueReminderEmail = _originalRentDueReminderEmail;
                   });
                 },
@@ -8669,7 +8717,20 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             const SizedBox(width: 14),
             Expanded(
               child: GestureDetector(
-                onTap: () async {
+                // Like web: once settings are saved, Update stays greyed out
+                // (does nothing) until something differs from them.
+                onTap: !canSaveMail
+                    ? null
+                    : () async {
+                  // Like web (the Duration input is `required` while the
+                  // reminder is on): without a Duration nothing is saved.
+                  final durationProblem = reminderDurationProblem(
+                      reminderOn: rentDueReminderEmail,
+                      text: durationmail.text);
+                  if (durationProblem != null) {
+                    setState(() => _durationMailError = durationProblem);
+                    return;
+                  }
                   // Like web: an invalid Reply-To address blocks the save.
                   if (!isValidReplyToEmail(replyToEmail.text)) {
                     setState(() =>
@@ -8687,25 +8748,34 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                 child: Container(
                   height: isSmall ? 44 : 52,
                   decoration: BoxDecoration(
-                    color: blueColor,
+                    // Same greyed-out look as Save in Date Format.
+                    color: canSaveMail ? blueColor : const Color(0xFFE3E6EA),
                     borderRadius: BorderRadius.circular(8),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.grey,
-                        offset: Offset(0.0, 1.0),
-                        blurRadius: 6.0,
-                      ),
-                    ],
+                    boxShadow: canSaveMail
+                        ? const [
+                            BoxShadow(
+                              color: Colors.grey,
+                              offset: Offset(0.0, 1.0),
+                              blurRadius: 6.0,
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.check, color: Colors.white, size: 20),
+                      Icon(Icons.check,
+                          color: canSaveMail
+                              ? Colors.white
+                              : const Color(0xFFB8BEC8),
+                          size: 20),
                       const SizedBox(width: 8),
                       Text(
                         "Save Changes",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: canSaveMail
+                              ? Colors.white
+                              : const Color(0xFFB8BEC8),
                           fontWeight: FontWeight.bold,
                           fontSize: isSmall ? 16 : 20,
                         ),
@@ -8774,6 +8844,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     required TextEditingController controller,
     required String hint,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       height: 50,
@@ -8785,9 +8856,18 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         cursorColor: const Color.fromRGBO(21, 43, 81, 1),
         onChanged: (value) {
-          setState(() {});
+          setState(() {
+            // Editing a box clears its message, like web.
+            if (identical(controller, durationmail)) {
+              _durationMailError = null;
+            }
+            if (identical(controller, replyToEmail)) {
+              _replyToEmailError = null;
+            }
+          });
         },
         decoration: InputDecoration(
           hintText: hint,
@@ -8812,6 +8892,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
             onChanged: (value) {
               setState(() {
                 rentDueReminderEmail = value;
+                _durationMailError = null;
               });
             },
             activeColor: blueColor, // Color when switch is on
@@ -8838,15 +8919,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     'Recurring Charge',
     'One Time Charge',
   ];
-  final List<String> accounttypeitems = [
-    'Income',
-    'Non Operating Income',
-    'Liability Account',
-  ];
-  final List<String> fundtypeitems = [
-    'Reserve',
-    'Operating',
-  ];
+  // Same options, in the same order, as web's account form.
+  final List<String> accounttypeitems = List.of(kAccountTypeOptions);
+  final List<String> fundtypeitems = List.of(kFundTypeOptions);
 
   String? _selectedAccount;
   String? _selectedAccounttype;
@@ -9106,11 +9181,13 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     );
   }
 
-  InputDecoration _acctInputDecoration({String? hintText}) {
+  // `error` draws web's red box around an empty required field.
+  InputDecoration _acctInputDecoration({String? hintText, bool error = false}) {
     OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: c, width: w),
         );
+    final Color idle = error ? kAccountErrorRed : const Color(0xFFE4E8EF);
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(color: Color(0xFF9AA5B5), fontSize: 15),
@@ -9119,9 +9196,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       fillColor: Colors.white,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      enabledBorder: border(const Color(0xFFE4E8EF), 1.2),
-      border: border(const Color(0xFFE4E8EF), 1.2),
-      focusedBorder: border(blueColor, 1.4),
+      enabledBorder: border(idle, 1.2),
+      border: border(idle, 1.2),
+      focusedBorder: border(error ? kAccountErrorRed : blueColor, 1.4),
     );
   }
 
@@ -9130,6 +9207,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     required String hint,
     int maxLines = 1,
     ValueChanged<String>? onChanged,
+    bool error = false,
   }) {
     return TextField(
       controller: controller,
@@ -9137,7 +9215,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
       onChanged: onChanged,
       cursorColor: blueColor,
       style: TextStyle(color: blueColor, fontSize: 15),
-      decoration: _acctInputDecoration(hintText: hint),
+      decoration: _acctInputDecoration(hintText: hint, error: error),
     );
   }
 
@@ -9145,6 +9223,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     required String? value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
+    bool error = false,
   }) {
     final String? safeValue =
         (value != null && items.contains(value)) ? value : null;
@@ -9156,7 +9235,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
           style: TextStyle(color: Color(0xFF9AA5B5), fontSize: 15)),
       style: TextStyle(color: blueColor, fontSize: 15),
       dropdownColor: Colors.white,
-      decoration: _acctInputDecoration(),
+      decoration: _acctInputDecoration(error: error),
       items: items
           .map((e) => DropdownMenuItem<String>(
                 value: e,
@@ -9234,6 +9313,20 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     );
   }
 
+  // Web's red text under an empty Account Name.
+  Widget _acctFieldError(String text) => Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(text,
+            style: const TextStyle(color: kAccountErrorRed, fontSize: 12)),
+      );
+
+  // Web's line above the buttons while a required box is red.
+  Widget _acctFixRedBoxes() => const Padding(
+        padding: EdgeInsets.only(top: 12.0),
+        child: Text(kAccountFixRedBoxesMessage,
+            style: TextStyle(color: Colors.red, fontSize: 14)),
+      );
+
 
   void _showAccount(BuildContext context) {
     // Always open blank — no carryover from a previous add or cancel.
@@ -9242,6 +9335,8 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     _selectedAccounttype = null;
     _selectedFundtype = null;
     isError = false;
+    // Like web: required boxes turn red only after Add is tapped.
+    bool submitted = false;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -9258,7 +9353,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _acctDialogHeader(context, 'Add Account', Icons.credit_card),
+                  _acctDialogHeader(context, 'Add account', Icons.credit_card),
                   Flexible(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
@@ -9268,12 +9363,18 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                           _acctFieldLabel('Account Name'),
                           _acctTextInput(
                               controller: accountname,
-                              hint: 'Enter account name'),
+                              hint: 'Enter account name',
+                              error: submitted &&
+                                  accountname.text.trim().isEmpty,
+                              onChanged: (_) => setState(() {})),
+                          if (submitted && accountname.text.trim().isEmpty)
+                            _acctFieldError(kAccountNameRequiredMessage),
                           const SizedBox(height: 16),
                           _acctFieldLabel('Account Type'),
                           _acctDropdownInput(
                             value: _selectedAccounttype,
                             items: accounttypeitems,
+                            error: submitted && _selectedAccounttype == null,
                             onChanged: (value) {
                               setState(() {
                                 _selectedAccounttype = value;
@@ -9285,6 +9386,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                           _acctDropdownInput(
                             value: _selectedFundtype,
                             items: fundtypeitems,
+                            error: submitted && _selectedFundtype == null,
                             onChanged: (value) {
                               setState(() {
                                 _selectedFundtype = value;
@@ -9292,28 +9394,25 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                             },
                           ),
                           const SizedBox(height: 16),
-                          _acctFieldLabel('Note', required: false),
+                          _acctFieldLabel('Notes', required: false),
                           _acctTextInput(
                               controller: note,
                               hint: 'Enter notes',
                               maxLines: 4),
                           const SizedBox(height: 16),
                           _acctPrivacyNote(),
-                          if (isError)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 12.0),
-                              child: Text(
-                                'Please fill all fields',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ),
+                          if (submitted &&
+                              (accountname.text.trim().isEmpty ||
+                                  _selectedAccounttype == null ||
+                                  _selectedFundtype == null))
+                            _acctFixRedBoxes(),
                           const SizedBox(height: 20),
                           Row(
                             children: [
                               _acctCancelButton(context),
                               const SizedBox(width: 14),
                               _acctPrimaryButton(
-                                label: 'Add Account',
+                                label: 'Add',
                                 loading: isLoading,
                                 // Disabled while a save is in flight so rapid
                                 // taps cannot submit the same account more than
@@ -9326,11 +9425,14 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                                         if (_selectedAccounttype == null ||
                                             accountname.text.trim().isEmpty ||
                                             _selectedFundtype == null) {
+                                          // Like web: every empty required
+                                          // box turns red.
                                           setState(() {
-                                            isError = true;
+                                            submitted = true;
                                           });
                                         } else {
                                           setState(() {
+                                            submitted = true;
                                             isLoading = true;
                                             isError = false;
                                           });
@@ -9353,9 +9455,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                                             Navigator.pop(context);
                                             _refreshAccounts();
                                           } catch (e) {
-                                            setState(() {
-                                              isError = true;
-                                            });
+                                            // The server's own message is
+                                            // already shown (like web); the
+                                            // form stays open to fix it.
                                           } finally {
                                             setState(() {
                                               isLoading = false;
@@ -9395,7 +9497,8 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
     String? editSelectedAccounttype = account.accountType;
     String? editSelectedFundtype = account.fundType;
     bool editIsLoading = false;
-    bool editIsError = false;
+    // Like web: required boxes turn red only after Update is tapped.
+    bool editSubmitted = false;
 
     showDialog(
       context: context,
@@ -9420,7 +9523,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _acctDialogHeader(context, 'Edit Account', Icons.credit_card),
+                  _acctDialogHeader(context, 'Edit account', Icons.credit_card),
                   Flexible(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
@@ -9431,12 +9534,19 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                           _acctTextInput(
                               controller: editAccountName,
                               hint: 'Enter account name',
+                              error: editSubmitted &&
+                                  editAccountName.text.trim().isEmpty,
                               onChanged: (_) => setState(() {})),
+                          if (editSubmitted &&
+                              editAccountName.text.trim().isEmpty)
+                            _acctFieldError(kAccountNameRequiredMessage),
                           const SizedBox(height: 16),
                           _acctFieldLabel('Account Type'),
                           _acctDropdownInput(
                             value: editSelectedAccounttype,
                             items: accounttypeitems,
+                            error: editSubmitted &&
+                                editSelectedAccounttype == null,
                             onChanged: (value) {
                               setState(() {
                                 editSelectedAccounttype = value;
@@ -9448,6 +9558,8 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                           _acctDropdownInput(
                             value: editSelectedFundtype,
                             items: fundtypeitems,
+                            error:
+                                editSubmitted && editSelectedFundtype == null,
                             onChanged: (value) {
                               setState(() {
                                 editSelectedFundtype = value;
@@ -9455,7 +9567,7 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                             },
                           ),
                           const SizedBox(height: 16),
-                          _acctFieldLabel('Note', required: false),
+                          _acctFieldLabel('Notes', required: false),
                           _acctTextInput(
                               controller: editNote,
                               hint: 'Enter notes',
@@ -9463,21 +9575,18 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                               onChanged: (_) => setState(() {})),
                           const SizedBox(height: 16),
                           _acctPrivacyNote(),
-                          if (editIsError)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 12.0),
-                              child: Text(
-                                'Please fill all fields',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ),
+                          if (editSubmitted &&
+                              (editAccountName.text.trim().isEmpty ||
+                                  editSelectedAccounttype == null ||
+                                  editSelectedFundtype == null))
+                            _acctFixRedBoxes(),
                           const SizedBox(height: 20),
                           Row(
                             children: [
                               _acctCancelButton(context),
                               const SizedBox(width: 14),
                               _acctPrimaryButton(
-                                label: 'Update Account',
+                                label: 'Update',
                                 loading: editIsLoading,
                                 enabled: hasChanges,
                                 onTap: (!hasChanges || editIsLoading)
@@ -9488,8 +9597,10 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                                                 .trim()
                                                 .isEmpty ||
                                             editSelectedFundtype == null) {
+                                          // Like web: every empty required
+                                          // box turns red.
                                           setState(() {
-                                            editIsError = true;
+                                            editSubmitted = true;
                                           });
                                         } else {
                                           final String currentAccountName =
@@ -9499,7 +9610,6 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
 
                                           setState(() {
                                             editIsLoading = true;
-                                            editIsError = false;
                                           });
 
                                           try {
@@ -9517,9 +9627,9 @@ class _TabBarExampleState extends State<TabBarExample> with NetworkRetryState {
                                             Navigator.pop(context);
                                             _refreshAccounts();
                                           } catch (e) {
-                                            setState(() {
-                                              editIsError = true;
-                                            });
+                                            // The server's own message is
+                                            // already shown (like web); the
+                                            // form stays open to fix it.
                                           } finally {
                                             setState(() {
                                               editIsLoading = false;

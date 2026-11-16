@@ -128,7 +128,7 @@ class _Signup2State extends State<Signup2> {
                   // ),
                   // SizedBox(height: MediaQuery.of(context).size.height * 0.013),
                   Text(
-                    "Sign up for your free trial account",
+                    "Sign up for a free account",
                     style: TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
@@ -821,7 +821,7 @@ class _Signup2State extends State<Signup2> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    "Create your free trial",
+                                    "Create your free account",
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
@@ -904,7 +904,7 @@ class _Signup2State extends State<Signup2> {
                             ),
                           ),
                           Text(
-                            'Customize Trial',
+                            'Customize Account',
                             textAlign: TextAlign.center,
                             style:
                                 TextStyle(fontSize: 10, fontFamily: 'muslish'),
@@ -1047,14 +1047,14 @@ class _Signup2State extends State<Signup2> {
           child: Column(
             children: [
               Text(
-                'Your trial account is being ready !',
+                'Your account is being created!',
                 style: TextStyle(fontSize: 14, fontFamily: 'mulish'),
               ),
               SizedBox(
                 height: 20,
               ),
               Text(
-                'Feel free to access the trial account.Once you sign u, we’ll start you with a fresh account',
+                "Feel free to access your account. Once you sign up, we'll start you with a fresh account",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, fontFamily: 'mulish'),
               ),

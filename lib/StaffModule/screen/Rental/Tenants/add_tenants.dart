@@ -1,5 +1,5 @@
 import 'package:three_zero_two_property/services/app_log.dart';
-import 'package:email_validator/email_validator.dart';
+import 'package:three_zero_two_property/services/web_email.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -349,6 +349,7 @@ class _AddTenantState extends State<AddTenant> {
     List<TextInputFormatter>? inputFormatters,
     TextEditingController? otherController,
     TextEditingController? alterController,
+    String? sameEmailMessage,
     TextEditingController? telephoneController,
   }) {
     return CustomTextField(
@@ -365,6 +366,7 @@ class _AddTenantState extends State<AddTenant> {
       inputFormatters: inputFormatters,
       otherController: otherController,
       alterController: alterController,
+      sameEmailMessage: sameEmailMessage,
       telephoneController: telephoneController,
       showElevation: false,
       borderColor: outlineClr,
@@ -471,6 +473,7 @@ class _AddTenantState extends State<AddTenant> {
           email: true,
           // Web parity: alternative email must differ from the primary email.
           alterController: email,
+          sameEmailMessage: 'Alternative email cannot be the same as the primary email',
         ),
         const SizedBox(height: 16),
         _fieldLabel('Date of Birth', required: true),
@@ -679,6 +682,7 @@ class _AddTenantState extends State<AddTenant> {
             email: true,
             // Web parity: emergency email must differ from the tenant's email.
             alterController: email,
+            sameEmailMessage: "Emergency email cannot be the same as the tenant's email",
           ),
           const SizedBox(height: 14),
           _fieldLabel('Phone Number'),
@@ -1138,6 +1142,11 @@ class CustomTextField extends StatefulWidget {
   final String? max_amount;
   final String? error_mess;
   final bool? optional;
+  /// Opt-in: message for an empty required box instead of "Please …"
+  /// (e.g. web's "Account name is required").
+  final String? requiredMessage;
+  /// Opt-in: the box turns red while it has an error, like web's red boxes.
+  final bool redBorderOnError;
   final bool? email;
   final bool? pass;
   final bool? phone;
@@ -1149,6 +1158,8 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController? businessController;
   final TextEditingController? telephoneController;
   final TextEditingController? alterController;
+  /// The message when this email matches [alterController], like web.
+  final String? sameEmailMessage;
   final TextEditingController? emrgencyController;
   final bool? samephonenumber;
   final bool? isInRow; // NEW PARAMETER FOR ROW LAYOUT
@@ -1158,6 +1169,10 @@ class CustomTextField extends StatefulWidget {
   final bool showElevation; // NEW PARAMETER TO CONTROL ELEVATION AND SHADOW
   final int? errorMaxLines; // NEW PARAMETER FOR ERROR MESSAGE MAX LINES
   final TextInputAction? textInputAction; // NEW PARAMETER FOR TEXT INPUT ACTION
+  final double? maxValue; // NEW PARAMETER: HIGHEST NUMBER ALLOWED (BLOCKS SAVE)
+  final String? maxValueMessage; // NEW PARAMETER: MESSAGE WHEN ABOVE maxValue
+  final String? Function(String value)? numberCheck; // NEW PARAMETER: EXTRA NUMBER RULE (MESSAGE BLOCKS SAVE)
+  final bool decimalPad; // NEW PARAMETER: NUMBER KEYBOARD WITH A "." KEY
 
   CustomTextField(
       {Key? key,
@@ -1178,6 +1193,8 @@ class CustomTextField extends StatefulWidget {
       this.max_amount,
       this.error_mess,
       this.optional = false,
+      this.requiredMessage,
+      this.redBorderOnError = false,
       this.email,
       this.pass,
       this.phone,
@@ -1189,6 +1206,7 @@ class CustomTextField extends StatefulWidget {
       this.businessController,
       this.telephoneController,
       this.alterController,
+      this.sameEmailMessage,
       this.emrgencyController,
       this.samephonenumber = false,
       this.isInRow = false, // DEFAULT TO FALSE FOR SINGLE COLUMN LAYOUT
@@ -1198,7 +1216,11 @@ class CustomTextField extends StatefulWidget {
       this.showElevation =
           true, // DEFAULT TO TRUE TO MAINTAIN EXISTING BEHAVIOR
       this.errorMaxLines, // PARAMETER FOR ERROR MESSAGE MAX LINES
-      this.textInputAction // PARAMETER FOR TEXT INPUT ACTION
+      this.textInputAction, // PARAMETER FOR TEXT INPUT ACTION
+      this.maxValue,
+      this.maxValueMessage,
+      this.numberCheck,
+      this.decimalPad = false,
       })
       : super(key: key);
 
@@ -1208,6 +1230,8 @@ class CustomTextField extends StatefulWidget {
 
 class CustomTextFieldState extends State<CustomTextField> {
   String? _errorMessage;
+  // Set once the box has been checked (after Add/Save), like web's "touched".
+  bool _requiredChecked = false;
   TextEditingController _textController =
       TextEditingController(); // Add this line
   late FocusNode _focusNode;
@@ -1288,22 +1312,24 @@ class CustomTextFieldState extends State<CustomTextField> {
   }
 
   void _validateEmail(String value) {
-    // Validate email format using EmailValidator
-    if (!EmailValidator.validate(value)) {
+    // Same email rule as web's tenant form (tenantFormConfig.js).
+    if (!isWebEmail(value)) {
       setState(() {
-        _errorMessage = "Email is not valid";
+        _errorMessage = webInvalidEmailMessage;
       });
     } else {
       // Check if email is not the same as another email (example: other controllers)
       if (widget.alterController != null &&
-          widget.alterController?.text == value) {
+          widget.alterController?.text.trim() == value) {
         setState(() {
-          _errorMessage = 'Email cannot be the same';
+          _errorMessage =
+              widget.sameEmailMessage ?? 'Email cannot be the same';
         });
       } else if (widget.emrgencyController != null &&
           widget.emrgencyController?.text == value) {
         setState(() {
-          _errorMessage = 'Email cannot be the same';
+          _errorMessage =
+              widget.sameEmailMessage ?? 'Email cannot be the same';
         });
       } else {
         setState(() {
@@ -1319,6 +1345,13 @@ class CustomTextFieldState extends State<CustomTextField> {
         widget.keyboardType == TextInputType.number;
 
     bool hasError = _errorMessage != null && _errorMessage!.isNotEmpty;
+
+    // Boxes with a number rule (the work order parts boxes): the message can
+    // be wider than a narrow box, so it shows in full under the box and wraps,
+    // like web, instead of being cut to one line.
+    final wrapError = shouldUseKeyboardActions &&
+        widget.isInRow != true &&
+        (widget.maxValue != null || widget.numberCheck != null);
 
     Widget textfield = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1342,6 +1375,23 @@ class CustomTextFieldState extends State<CustomTextField> {
                       return null;
                     }
                     return '';
+                  } else if (widget.numberCheck != null &&
+                      widget.numberCheck!(widget.controller!.text.trim()) !=
+                          null) {
+                    // Like web: the box's own number rule, before the cap.
+                    setState(() {
+                      _errorMessage =
+                          widget.numberCheck!(widget.controller!.text.trim());
+                    });
+                    return '';
+                  } else if (widget.maxValue != null &&
+                      (double.tryParse(widget.controller!.text.trim()) ?? 0.0) >
+                          widget.maxValue!) {
+                    // Like web: show the message and stop the save.
+                    setState(() {
+                      _errorMessage = widget.maxValueMessage;
+                    });
+                    return '';
                   } else if (widget.amount_check != null &&
                       (double.tryParse(widget.controller!.text.trim()) ?? 0.0) >
                           (double.tryParse(widget.max_amount!) ?? 0.0))
@@ -1351,9 +1401,12 @@ class CustomTextFieldState extends State<CustomTextField> {
                   return null;
                 }
               : (value) {
+                  _requiredChecked = true;
                   if (widget.controller!.text.trim().isEmpty) {
                     setState(() {
-                      if (widget.label == null)
+                      if (widget.requiredMessage != null)
+                        _errorMessage = widget.requiredMessage;
+                      else if (widget.label == null)
                         _errorMessage = 'Please ${widget.hintText.toLowerCase()}';
                       else
                         _errorMessage = 'Please ${(widget.label ?? '').toLowerCase()}';
@@ -1384,10 +1437,9 @@ class CustomTextFieldState extends State<CustomTextField> {
                       });
                     }
                   } else if (widget.email != null) {
-                    if (!EmailValidator.validate(
-                        widget.controller!.text.trim())) {
+                    if (!isWebEmail(widget.controller!.text.trim())) {
                       setState(() {
-                        _errorMessage = "Email is not valid";
+                        _errorMessage = webInvalidEmailMessage;
                       });
                       return '';
                     }
@@ -1404,6 +1456,23 @@ class CustomTextFieldState extends State<CustomTextField> {
                       });
                       return '';
                     }
+                  } else if (widget.numberCheck != null &&
+                      widget.numberCheck!(widget.controller!.text.trim()) !=
+                          null) {
+                    // Like web: the box's own number rule, before the cap.
+                    setState(() {
+                      _errorMessage =
+                          widget.numberCheck!(widget.controller!.text.trim());
+                    });
+                    return '';
+                  } else if (widget.maxValue != null &&
+                      (double.tryParse(widget.controller!.text.trim()) ?? 0.0) >
+                          widget.maxValue!) {
+                    // Like web: show the message and stop the save.
+                    setState(() {
+                      _errorMessage = widget.maxValueMessage;
+                    });
+                    return '';
                   } else if (widget.amount_check != null &&
                       (double.tryParse(widget.controller!.text.trim()) ?? 0.0) >
                           (double.tryParse(widget.max_amount!) ?? 0.0))
@@ -1427,12 +1496,16 @@ class CustomTextFieldState extends State<CustomTextField> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8.0),
                       // Custom border implementation
-                      border: widget.customBorder ??
-                          (widget.borderColor != null
-                              ? Border.all(
-                                  color: widget.borderColor!,
-                                  width: widget.borderWidth ?? 1.0)
-                              : null),
+                      border: (widget.redBorderOnError && hasError)
+                          ? Border.all(
+                              color: const Color(0xFFDC3545),
+                              width: widget.borderWidth ?? 1.0)
+                          : widget.customBorder ??
+                              (widget.borderColor != null
+                                  ? Border.all(
+                                      color: widget.borderColor!,
+                                      width: widget.borderWidth ?? 1.0)
+                                  : null),
                       boxShadow: widget.showElevation
                           ? [
                               BoxShadow(
@@ -1446,7 +1519,17 @@ class CustomTextFieldState extends State<CustomTextField> {
                     child: TextFormField(
                       onFieldSubmitted: widget.onChanged2,
                       onChanged: (value) {
-                        if (value.isNotEmpty) {
+                        if (widget.requiredMessage != null) {
+                          // Like web: once checked, an emptied box turns red
+                          // again and a filled one clears straight away.
+                          final empty = value.trim().isEmpty;
+                          if (!empty || _requiredChecked) {
+                            setState(() {
+                              _errorMessage =
+                                  empty ? widget.requiredMessage : null;
+                            });
+                          }
+                        } else if (value.isNotEmpty) {
                           setState(() {
                             _errorMessage = null;
                           });
@@ -1465,7 +1548,9 @@ class CustomTextFieldState extends State<CustomTextField> {
                       },
                       obscureText: widget.obscureText,
                       readOnly: widget.readOnnly,
-                      keyboardType: widget.keyboardType,
+                      keyboardType: widget.decimalPad
+                          ? const TextInputType.numberWithOptions(decimal: true)
+                          : widget.keyboardType,
                       textInputAction: widget.textInputAction,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -1484,7 +1569,7 @@ class CustomTextFieldState extends State<CustomTextField> {
                     ),
                   ),
                 ),
-                hasError
+                hasError && !wrapError
                     ? Padding(
                         padding: const EdgeInsets.only(top: 4, right: 8),
                         child: Container(
@@ -1523,6 +1608,39 @@ class CustomTextFieldState extends State<CustomTextField> {
         ),
       ],
     );
+    if (wrapError) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 54,
+            child: KeyboardActions(
+              config: _buildConfig(context),
+              child: textfield,
+            ),
+          ),
+          if (hasError)
+            ConstrainedBox(
+              // At least the room the one-line message had (74 - 54), so a
+              // short message sits and looks exactly as before.
+              constraints: const BoxConstraints(minHeight: 20),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(1, 1, 9, 1),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 11.0,
+                    height: 1.1,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    }
     return shouldUseKeyboardActions
         ? SizedBox(
             height: widget.isInRow == true

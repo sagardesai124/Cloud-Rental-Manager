@@ -1,3 +1,4 @@
+import 'package:three_zero_two_property/services/tenant_delete_reason.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -374,11 +375,13 @@ class _Tenants_tableState extends State<Tenants_table>
     // The Delete button stayed live while the request was in flight, so a
     // double tap fired two DELETE calls for the same record.
     bool deleting = false;
+    // Web's message about the reason, shown in the pop-up (like web staging).
+    final reasonProblem = ValueNotifier<String?>(null);
     Alert(
       context: context,
       type: AlertType.warning,
       title: "Are you sure?",
-      desc: "Once deleted, you will not be able to recover this Tenants!",
+      desc: "Once deleted, you will not be able to recover this tenant!",
       content: Column(
         children: <Widget>[
           SizedBox(
@@ -388,11 +391,28 @@ class _Tenants_tableState extends State<Tenants_table>
             height: 45,
             child: TextField(
               controller: reason,
+              // Like web: editing the reason clears the last warning.
+              onChanged: (_) => reasonProblem.value = null,
               decoration: InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Enter reason for deletion',
                   contentPadding: EdgeInsets.only(top: 8, left: 15)),
             ),
+          ),
+          ValueListenableBuilder<String?>(
+            valueListenable: reasonProblem,
+            builder: (context, problem, _) => problem == null
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        problem,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -406,8 +426,11 @@ class _Tenants_tableState extends State<Tenants_table>
             style: TextStyle(color: Colors.white, fontSize: 18),
           ),
           onPressed: () async {
-            if (reason.text.isEmpty) {
-              Fluttertoast.showToast(msg: "Please enter a reason for deletion");
+            // Same rule and messages as web: not blank, and letters,
+            // numbers and spaces only. Nothing is deleted until it passes.
+            final problem = tenantDeleteReasonProblem(reason.text);
+            if (problem != null) {
+              reasonProblem.value = problem;
               return;
             }
             if (deleting) return;

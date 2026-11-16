@@ -34,6 +34,7 @@ import '../../../widgets/drawer_tiles.dart';
 import '../../../../widgets/titleBar.dart';
 import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
+import 'package:three_zero_two_property/constant/workorder_parts_limits.dart';
 import '../../../widgets/custom_drawer.dart';
 import '../../Rental/Tenants/add_tenants.dart';
 import '../../../widgets/custom_drawer.dart';
@@ -664,6 +665,12 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
             hintText: 'Quantity',
             controller: partsAndLabor[index]['qtyController'],
             keyboardType: TextInputType.number,
+            // Like web: digits only, at least 1 ("Quantity must be at least 1"),
+            // and "Quantity cannot exceed 9,999".
+            inputFormatters: partsQtyInputFormatters,
+            maxValue: partsQtyMax,
+            maxValueMessage: partsQtyMaxMessage,
+            numberCheck: partsQtyCheck,
             showElevation: false,
             borderColor: const Color(0xFFCED4DA),
             borderWidth: 1.5,
@@ -765,6 +772,14 @@ class _AddWorkOrderForMobileState extends State<AddWorkOrderForMobile>
             hintText: 'Price',
             controller: partsAndLabor[index]['priceController'],
             keyboardType: TextInputType.number,
+            // Like web: decimal keypad, digits and "." only, a number with
+            // at most 2 decimals, above 0 ("Price is required"), and "Price
+            // cannot exceed $999,999.99".
+            decimalPad: true,
+            inputFormatters: partsPriceInputFormatters,
+            maxValue: partsPriceMax,
+            maxValueMessage: partsPriceMaxMessage,
+            numberCheck: partsPriceCheck,
             showElevation: false,
             borderColor: const Color(0xFFCED4DA),
             borderWidth: 1.5,
@@ -4522,6 +4537,12 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
             hintText: 'Quantity',
             controller: partsAndLabor[index]['qtyController'],
             keyboardType: TextInputType.number,
+            // Like web: digits only, at least 1 ("Quantity must be at least 1"),
+            // and "Quantity cannot exceed 9,999".
+            inputFormatters: partsQtyInputFormatters,
+            maxValue: partsQtyMax,
+            maxValueMessage: partsQtyMaxMessage,
+            numberCheck: partsQtyCheck,
           ),
           const SizedBox(height: 10),
           const Text(
@@ -4617,6 +4638,14 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
             hintText: 'Price',
             controller: partsAndLabor[index]['priceController'],
             keyboardType: TextInputType.number,
+            // Like web: decimal keypad, digits and "." only, a number with
+            // at most 2 decimals, above 0 ("Price is required"), and "Price
+            // cannot exceed $999,999.99".
+            decimalPad: true,
+            inputFormatters: partsPriceInputFormatters,
+            maxValue: partsPriceMax,
+            maxValueMessage: partsPriceMaxMessage,
+            numberCheck: partsPriceCheck,
           ),
           const SizedBox(height: 10),
           const Text(
@@ -6419,6 +6448,12 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                         controller: partsAndLabor[index]
                                             ['qtyController'],
                                         keyboardType: TextInputType.number,
+                                        // Like web: digits only, at least 1 ("Quantity must be at least 1"),
+                                        // and "Quantity cannot exceed 9,999".
+                                        inputFormatters: partsQtyInputFormatters,
+                                        maxValue: partsQtyMax,
+                                        maxValueMessage: partsQtyMaxMessage,
+                                        numberCheck: partsQtyCheck,
                                         showElevation: false,
                                         borderColor: const Color(0xFFCED4DA),
                                         borderWidth: 1.5,
@@ -6517,6 +6552,14 @@ class _AddWorkOrderForTabletState extends State<AddWorkOrderForTablet>
                                         controller: partsAndLabor[index]
                                             ['priceController'],
                                         keyboardType: TextInputType.number,
+                                        // Like web: decimal keypad, digits and "." only, a number with
+                                        // at most 2 decimals, above 0 ("Price is required"), and "Price
+                                        // cannot exceed $999,999.99".
+                                        decimalPad: true,
+                                        inputFormatters: partsPriceInputFormatters,
+                                        maxValue: partsPriceMax,
+                                        maxValueMessage: partsPriceMaxMessage,
+                                        numberCheck: partsPriceCheck,
                                         showElevation: false,
                                         borderColor: const Color(0xFFCED4DA),
                                         borderWidth: 1.5,

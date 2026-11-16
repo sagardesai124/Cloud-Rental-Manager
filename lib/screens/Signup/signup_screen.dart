@@ -39,7 +39,7 @@ class _SignupState extends State<Signup> {
 
   List<Step> steps = [
     Step(title: Text('About You'), content: AboutYouForm()),
-    Step(title: Text('Customize Trial'), content: CustomizeTrialForm()),
+    Step(title: Text('Customize Account'), content: CustomizeTrialForm()),
     Step(title: Text('Final Form'), content: FinalForm()),
   ];
   int i = 0;
@@ -160,7 +160,7 @@ class _SignupState extends State<Signup> {
               // ),
               Center(
                 child: Text(
-                  "Sign up for your free trial account",
+                  "Sign up for a free account",
                   style: TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.bold,
@@ -440,7 +440,7 @@ class _SignupState extends State<Signup> {
                     //     mainAxisAlignment: MainAxisAlignment.center,
                     //     children: [
                     //       Text(
-                    //         "Create your free trial",
+                    //         "Create your free account",
                     //         style: TextStyle(
                     //             color: Colors.white,
                     //             fontWeight: FontWeight.bold,
@@ -460,7 +460,7 @@ class _SignupState extends State<Signup> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            "Create your free trial",
+                            "Create your free account",
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -542,7 +542,7 @@ class _SignupState extends State<Signup> {
                         ),
                       ),
                       Text(
-                        'Customize Trial',
+                        'Customize Account',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 10, fontFamily: 'muslish'),
                       ),
@@ -670,7 +670,7 @@ class CustomizeTrialForm extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       alignment: Alignment.center,
-      child: Text('Customize Trial Form'),
+      child: Text('Customize Account Form'),
     );
   }
 }

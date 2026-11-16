@@ -14,6 +14,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
+import 'package:three_zero_two_property/services/web_parse_float.dart';
 import 'package:provider/provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../../../provider/dateProvider.dart';
@@ -188,6 +189,18 @@ class _Add_property_TaxState extends State<Add_property_Tax> {
     return null;
   }
 
+  /// Like web staging: Assessment Value is optional, and a value only needs
+  /// to start with a number (web checks it with parseFloat, so "1.2.3" is
+  /// accepted as 1.2 while "." is not).
+  String? _validateAssessmentValue(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final number = parseFloatLikeWeb(value);
+    if (number == null || number < 0) {
+      return 'Assessment Value must be a valid number';
+    }
+    return null;
+  }
+
   String? _validateAmount(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'This field is required';
@@ -320,6 +333,11 @@ class _Add_property_TaxState extends State<Add_property_Tax> {
       }
     }
 
+    // Assessment Value is optional; a value must read as a number, like web.
+    if (_validateAssessmentValue(_assessmentController.text) != null) {
+      isValid = false;
+    }
+
     if (!isValid) {
       return;
     }
@@ -374,8 +392,10 @@ class _Add_property_TaxState extends State<Add_property_Tax> {
           return true;
         if (initialStr.isEmpty || currentStr.isEmpty) return false;
 
-        final initialAmount = double.tryParse(initialStr) ?? 0.0;
-        final currentAmount = double.tryParse(currentStr) ?? 0.0;
+        // Read like the save does (web's parseFloat), so "1.2.3" over a
+        // stored 0 counts as a change (1.2) and is saved.
+        final initialAmount = parseFloatLikeWeb(initialStr) ?? 0.0;
+        final currentAmount = parseFloatLikeWeb(currentStr) ?? 0.0;
 
         return initialAmount == currentAmount;
       }
@@ -492,8 +512,7 @@ class _Add_property_TaxState extends State<Add_property_Tax> {
             double.tryParse(_taxAmountController.text.replaceAll('\$', '')) ??
                 0.0,
         'assessment_value':
-            double.tryParse(_assessmentController.text.replaceAll('\$', '')) ??
-                0.0,
+            parseFloatLikeWeb(_assessmentController.text) ?? 0.0,
         'tax_year': _taxYearController.text.trim(),
         'due_date':
             _getApiFormatDate(_dueDateController, _dueDate, dateProvider),
@@ -819,6 +838,7 @@ class _Add_property_TaxState extends State<Add_property_Tax> {
                       label: 'Assessment Value',
                       hint: '\$ Enter assessment value',
                       keyboardType: TextInputType.number,
+                      validator: _validateAssessmentValue,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                       ],

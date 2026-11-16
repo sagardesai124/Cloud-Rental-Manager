@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:super_tooltip/super_tooltip.dart';
+import 'package:three_zero_two_property/widgets/template_name_date_helper.dart';
 
 import 'package:three_zero_two_property/constant/constant.dart';
 import 'package:three_zero_two_property/screens/Rental/Tenants/add_tenants.dart';
@@ -536,11 +537,19 @@ class _Add_Email_templetState extends State<Add_Email_templet> {
                             children: [
                               Padding(
                                 padding: const EdgeInsets.all(4.0),
-                                child: Text('Name *',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: blueColor)),
+                                child: Row(
+                                  children: [
+                                    Text('Name *',
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: blueColor)),
+                                    const Spacer(),
+                                    // Same as web: tip about ${date} in the name.
+                                    TemplateNameDateTip(
+                                        color: blueColor, size: 16),
+                                  ],
+                                ),
                               ),
                               Padding(
                                 padding: const EdgeInsets.all(3.0),
@@ -566,27 +575,33 @@ class _Add_Email_templetState extends State<Add_Email_templet> {
                                     child: Stack(
                                       children: [
                                         Positioned.fill(
-                                          child: TextField(
-                                            focusNode: _nameFocusNode,
-                                            onChanged: (value) {
-                                              setState(() {
-                                                nameError = false;
-                                              });
-                                            },
+                                          // Same as web: typing `$` in the name suggests
+                                          // ${date} (Current Date).
+                                          child: TemplateDateTypeAhead(
                                             controller: name,
-                                            cursorColor: blueColor,
-                                            onTapOutside: (_) {
-                                              _nameFocusNode?.unfocus();
-                                              FocusScope.of(context)
-                                                  .requestFocus(_bodyFocusNode);
-                                              _htmlEditorController.setFocus();
-                                            },
-                                            decoration: const InputDecoration(
-                                              hintStyle: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Color(0xFFb0b6c3)),
-                                              border: InputBorder.none,
-                                              hintText: "Enter name",
+                                            focusNode: _nameFocusNode!,
+                                            child: TextField(
+                                              focusNode: _nameFocusNode,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  nameError = false;
+                                                });
+                                              },
+                                              controller: name,
+                                              cursorColor: blueColor,
+                                              onTapOutside: (_) {
+                                                _nameFocusNode?.unfocus();
+                                                FocusScope.of(context)
+                                                    .requestFocus(_bodyFocusNode);
+                                                _htmlEditorController.setFocus();
+                                              },
+                                              decoration: const InputDecoration(
+                                                hintStyle: TextStyle(
+                                                    fontSize: 13,
+                                                    color: Color(0xFFb0b6c3)),
+                                                border: InputBorder.none,
+                                                hintText: "Enter name",
+                                              ),
                                             ),
                                           ),
                                         ),

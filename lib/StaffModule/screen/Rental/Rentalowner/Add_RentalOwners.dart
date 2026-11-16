@@ -7,6 +7,8 @@ import 'package:email_validator/email_validator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:three_zero_two_property/services/letters_only.dart';
+import 'package:three_zero_two_property/services/zip_code.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -443,6 +445,7 @@ class _Add_rentalownersState extends State<Add_rentalowners> {
                                                     });
                                                   },
                                                   controller: name,
+                                                  inputFormatters: [typedLettersAndSpacesOnly],
                                                   cursorColor: blueColor,
                                                   decoration: InputDecoration(
                                                     hintText: "Enter name",
@@ -2506,8 +2509,7 @@ class _Add_rentalownersState extends State<Add_rentalowners> {
                                                   keyboardType:
                                                       TextInputType.number,
                                                   inputFormatters: [
-                                                    FilteringTextInputFormatter
-                                                        .digitsOnly,
+                                                    zipCodeFormatter,
                                                   ],
                                                   cursorColor: blueColor,
                                                   decoration: InputDecoration(
@@ -3731,13 +3733,20 @@ class _Add_rentalownersState extends State<Add_rentalowners> {
                       taxiderror = false;
                     });
                   }*/
+                      // Zip Code, same as web: optional, but 5 digits or 5+4 when filled.
+                      final zipError = validateZipCode(code2.text);
+                      setState(() {
+                        code2error = zipError != null;
+                        code2message = zipError ?? "";
+                      });
                       if (!nameerror &&
                               !comnameerror &&
                               !primaryemailerror &&
                               !alternativeerror &&
                               !phonenumerror &&
                               !homenumerror &&
-                              !officenumerror
+                              !officenumerror &&
+                              !code2error
                           // !street2error &&
                           // !city2error &&
                           //  !state2error &&

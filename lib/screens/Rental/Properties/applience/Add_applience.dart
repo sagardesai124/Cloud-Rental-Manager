@@ -54,45 +54,6 @@ class _AddApplienceState extends State<AddApplience> {
   TextEditingController _lastMaintenanceDate = TextEditingController();
   TextEditingController _maintenanceNotes = TextEditingController();
 
-  // Error messages for date validations
-  String? _warrantyExpiryError;
-  String? _lastMaintenanceDateError;
-
-  // Validate dates
-  bool validateDates() {
-    bool isValid = true;
-    setState(() {
-      _warrantyExpiryError = null;
-      _lastMaintenanceDateError = null;
-
-      if (_installedDate.text.isNotEmpty && _warrantyExpiry.text.isNotEmpty) {
-        DateTime installed =
-            DateTime.parse(_convertToApiFormat(_installedDate.text));
-        DateTime warranty =
-            DateTime.parse(_convertToApiFormat(_warrantyExpiry.text));
-        if (warranty.isBefore(installed)) {
-          _warrantyExpiryError =
-              "Warranty Expiration Date cannot be earlier than Installed Date.";
-          isValid = false;
-        }
-      }
-
-      if (_installedDate.text.isNotEmpty &&
-          _lastMaintenanceDate.text.isNotEmpty) {
-        DateTime installed =
-            DateTime.parse(_convertToApiFormat(_installedDate.text));
-        DateTime maintenance =
-            DateTime.parse(_convertToApiFormat(_lastMaintenanceDate.text));
-        if (maintenance.isBefore(installed)) {
-          _lastMaintenanceDateError =
-              "Last Maintenance Date cannot be earlier than Installed Date.";
-          isValid = false;
-        }
-      }
-    });
-    return isValid;
-  }
-
   String? _imageUrl; // Add this line
   bool _imageRemoved = false;
 
@@ -195,7 +156,7 @@ class _AddApplienceState extends State<AddApplience> {
       }
 
       // Load existing filters if available and category is HVAC
-      if (_selectedDropdownCategory?.name == 'HVAC' &&
+      if (_selectedDropdownCategory?.isHvac == true &&
           widget.appliance?.filters != null &&
           widget.appliance!.filters!.isNotEmpty) {
 
@@ -502,7 +463,7 @@ class _AddApplienceState extends State<AddApplience> {
                   const Padding(
                     padding: EdgeInsets.only(left: 10),
                     child: Text(
-                      'Infrastructure Name *',
+                      'Infrastructure Name',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -534,9 +495,8 @@ class _AddApplienceState extends State<AddApplience> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton2<String>(
                         isExpanded: true,
@@ -559,15 +519,7 @@ class _AddApplienceState extends State<AddApplience> {
                             showFiltersSection = false;
                           });
                         },
-                        buttonStyleData: ButtonStyleData(
-                          height: 45,
-                          padding: const EdgeInsets.only(left: 14, right: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          elevation: 2,
-                        ),
+                        buttonStyleData: _boxLikeTextField(),
                         iconStyleData: const IconStyleData(
                           icon: Icon(Icons.arrow_drop_down),
                           iconSize: 24,
@@ -596,10 +548,9 @@ class _AddApplienceState extends State<AddApplience> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(height: 4),
                   //categories dropdwoun
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton2<allcategories_model>(
                         isExpanded: true,
@@ -644,15 +595,7 @@ class _AddApplienceState extends State<AddApplience> {
                                   filterControllers.clear();
                                 });
                               },
-                        buttonStyleData: ButtonStyleData(
-                          height: 45,
-                          padding: const EdgeInsets.only(left: 14, right: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          elevation: 2,
-                        ),
+                        buttonStyleData: _boxLikeTextField(),
                         iconStyleData: const IconStyleData(
                           icon: Icon(Icons.arrow_drop_down),
                           iconSize: 24,
@@ -688,7 +631,7 @@ class _AddApplienceState extends State<AddApplience> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton2<String>(
                           isExpanded: true,
@@ -708,15 +651,7 @@ class _AddApplienceState extends State<AddApplience> {
                               if (newValue != 'Other') _customBrand.clear();
                             });
                           },
-                          buttonStyleData: ButtonStyleData(
-                            height: 45,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(6),
-                              color: Colors.white,
-                            ),
-                            elevation: 2,
-                          ),
+                          buttonStyleData: _boxLikeTextField(),
                           iconStyleData: const IconStyleData(
                             icon: Icon(Icons.arrow_drop_down),
                             iconSize: 24,
@@ -792,7 +727,7 @@ class _AddApplienceState extends State<AddApplience> {
                   const Padding(
                     padding: EdgeInsets.only(left: 10),
                     child: Text(
-                      'Installed Date *',
+                      'Installed Date',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -827,7 +762,7 @@ class _AddApplienceState extends State<AddApplience> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton2<String>(
                         isExpanded: true,
@@ -846,15 +781,7 @@ class _AddApplienceState extends State<AddApplience> {
                             _selectedStatus = newValue;
                           });
                         },
-                        buttonStyleData: ButtonStyleData(
-                          height: 45,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          elevation: 2,
-                        ),
+                        buttonStyleData: _boxLikeTextField(),
                         iconStyleData: const IconStyleData(
                           icon: Icon(Icons.arrow_drop_down),
                           iconSize: 24,
@@ -896,7 +823,7 @@ class _AddApplienceState extends State<AddApplience> {
                   ),
                   const SizedBox(height: 5),
                   // Add this after your Status dropdown
-                  if (_selectedDropdownCategory?.name == 'HVAC') ...[
+                  if (_selectedDropdownCategory?.isHvac == true) ...[
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -1159,20 +1086,24 @@ class _AddApplienceState extends State<AddApplience> {
                             ),
                           ),
                           onPressed: () async {
-                            if (_name.text.isEmpty ||
-                                _installedDate.text.isEmpty ||
-                                _selectedSystemType == null ||
+                            // Like web: only Type and Category are required,
+                            // plus the custom brand for "Other" on a new one.
+                            if (_selectedSystemType == null ||
                                 _selectedDropdownCategory == null ||
-                                _selectedStatus == null ||
-                                (_selectedBrand == 'Other' &&
+                                (widget.appliance == null &&
+                                    _selectedBrand == 'Other' &&
                                     _customBrand.text.trim().isEmpty)) {
                               setState(() => iserror = true);
-                            } else if (!validateDates()) {
-                              // Show error if dates are invalid
+                            } else if (_selectedDropdownCategory?.isHvac == true &&
+                                showFiltersSection &&
+                                filterControllers.any((c) =>
+                                    (c['name']?.text.trim() ?? '').isEmpty ||
+                                    (c['size']?.text.trim() ?? '').isEmpty)) {
+                              // Like web: every HVAC filter needs a name and a size.
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Please correct the date validation errors'),
+                                      'Filter name and size are required for all filters'),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -1189,7 +1120,7 @@ class _AddApplienceState extends State<AddApplience> {
 
                                 // Create a single filters list
                                 List<Map<String, dynamic>> filters = [];
-                                if (_selectedDropdownCategory?.name == 'HVAC' &&
+                                if (_selectedDropdownCategory?.isHvac == true &&
                                     showFiltersSection) {
                                   for (int i = 0;
                                       i < filterControllers.length;
@@ -1390,16 +1321,8 @@ class _AddApplienceState extends State<AddApplience> {
 
   Widget dateField(String label, TextEditingController controller,
       BuildContext context, StateSetter setState) {
-    String? errorText;
-    if (label == 'Warranty Expiry') {
-      errorText = _warrantyExpiryError;
-    } else if (label == 'Last Maintenance Date') {
-      errorText = _lastMaintenanceDateError;
-    }
-
-    // Installed Date is required to save; the other two are optional.
-    final bool isRequired = label == 'Installed Date';
-
+    // Like web, the three dates are optional and independent: no Installed
+    // Date is needed first and there is no order rule. Each offers Clear.
     void applyPickedDate(DateTime date) {
       setState(() {
         // Get dateProvider to format the date according to user's preference
@@ -1407,77 +1330,20 @@ class _AddApplienceState extends State<AddApplience> {
         // Display format: Use provider's format for user display
         String apiFormatDate = DateFormat('yyyy-MM-dd').format(date);
         controller.text = dateProvider.formatCurrentDate(apiFormatDate);
-        validateDates(); // Validate dates after selection
       });
     }
 
     void openPicker() {
-      // If installed date is empty and trying to set warranty or maintenance date
-      if (_installedDate.text.isEmpty &&
-          (label == 'Warranty Expiry' || label == 'Last Maintenance Date')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select Installed Date first'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      DateTime? initialDate;
-      DateTime? firstDate;
-
-      // Set minimum date based on installed date for warranty and maintenance
-      if (label == 'Installed Date') {
-        // For installed date, allow any date from 2000 to 2100
-        firstDate = DateTime(2000);
-        initialDate = DateTime.now();
-      } else if (_installedDate.text.isNotEmpty &&
-          (label == 'Warranty Expiry' || label == 'Last Maintenance Date')) {
-        firstDate = DateTime.parse(_convertToApiFormat(_installedDate.text));
-        initialDate = firstDate;
-      } else {
-        firstDate = DateTime(2000);
-        initialDate = DateTime.now();
-      }
-
-      if (isRequired) {
-        showDatePicker(
-          context: context,
-          initialDate: initialDate,
-          firstDate: firstDate,
-          lastDate: DateTime(2100),
-          builder: (context, child) {
-            return Theme(
-              data: ThemeData.light().copyWith(
-                colorScheme: ColorScheme.light(
-                  primary: blueColor,
-                  onSurface: Colors.black,
-                ),
-              ),
-              child: child!,
-            );
-          },
-        ).then((date) {
-          if (date != null) applyPickedDate(date);
-        });
-        return;
-      }
-
-      // Optional field: the picker offers a "Clear" action (web parity).
       showClearableDatePicker(
         context: context,
-        initialDate: initialDate,
-        firstDate: firstDate,
+        initialDate: DateTime.now(),
+        firstDate: DateTime(2000),
         lastDate: DateTime(2100),
         helpText: 'Select $label',
       ).then((result) {
         if (result == null) return; // cancelled — keep the current value
         if (result.cleared) {
-          setState(() {
-            controller.clear();
-            validateDates();
-          });
+          setState(() => controller.clear());
           return;
         }
         applyPickedDate(result.date!);
@@ -1487,50 +1353,40 @@ class _AddApplienceState extends State<AddApplience> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GestureDetector(
-          onTap: isRequired ? openPicker : null,
-          child: AbsorbPointer(
-            absorbing: isRequired,
-            child: CustomTextFormField(
-              labelText: label,
-              hintText: 'Select $label',
-              controller: controller,
-              keyboardType: TextInputType.datetime,
-              readOnly: !isRequired,
-              onTap: isRequired ? null : openPicker,
-              suffixIcon: isRequired
-                  ? const Icon(Icons.calendar_today, color: Colors.grey)
-                  : ClearableDateSuffix(
-                      controller: controller,
-                      onPick: openPicker,
-                      onClear: () {
-                        setState(() {
-                          controller.clear();
-                          validateDates();
-                        });
-                      },
-                      icon: Icons.calendar_today,
-                      iconColor: Colors.grey,
-                      iconSize: 20,
-                    ),
-            ),
+        CustomTextFormField(
+          labelText: label,
+          hintText: 'Select $label',
+          controller: controller,
+          keyboardType: TextInputType.datetime,
+          readOnly: true,
+          onTap: openPicker,
+          suffixIcon: ClearableDateSuffix(
+            controller: controller,
+            onPick: openPicker,
+            onClear: () => setState(() => controller.clear()),
+            icon: Icons.calendar_today,
+            iconColor: Colors.grey,
+            iconSize: 20,
           ),
         ),
-        if (errorText != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 12.0, top: 4.0),
-            child: Text(
-              errorText,
-              style: const TextStyle(
-                color: Colors.red,
-                fontSize: 12,
-              ),
-            ),
-          ),
       ],
     );
   }
 }
+
+/// The dropdown boxes look like [CustomTextFormField]: white, a grey border,
+/// corners 12, no shadow and the same height (52 + the 1.2 border top and
+/// bottom). dropdown_button2 adds the menu item padding (14) before the text,
+/// so 2 + 14 = 16, the same text start as the text boxes.
+ButtonStyleData _boxLikeTextField() => ButtonStyleData(
+      height: 54.4,
+      padding: const EdgeInsets.only(left: 2, right: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300, width: 1.2),
+      ),
+    );
 
 class CustomTextFormField extends StatefulWidget {
   final String labelText;

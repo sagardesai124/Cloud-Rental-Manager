@@ -125,6 +125,14 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
     return (value == null || value.trim().isEmpty) ? 'N/A' : value;
   }
 
+  // A date in the company format, or N/A when it is missing or empty, like
+  // web (an empty date showed as a blank).
+  String _dateOrNA(String? date, DateProvider dateProvider) {
+    return (date == null || date.trim().isEmpty)
+        ? 'N/A'
+        : dateProvider.formatCurrentDate(date);
+  }
+
   // Helper method to build appliance widget
   Widget _buildApplianceWidget(
       dynamic appliance, int applianceIndex, int rowIndex) {
@@ -315,7 +323,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                               ),
                               TextSpan(
                                 text:
-                                    "\n${appliance.installedDate != null ? dateProvider.formatCurrentDate(appliance.installedDate!) : 'N/A'}",
+                                    "\n${_dateOrNA(appliance.installedDate, dateProvider)}",
                                 style: TextStyle(color: Colors.black),
                               ),
                             ],
@@ -335,7 +343,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                               ),
                               TextSpan(
                                 text:
-                                    "\n${appliance.warrantyExpiry != null ? dateProvider.formatCurrentDate(appliance.warrantyExpiry!) : 'N/A'}",
+                                    "\n${_dateOrNA(appliance.warrantyExpiry, dateProvider)}",
                                 style: TextStyle(color: Colors.black),
                               ),
                             ],
@@ -360,7 +368,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                               ),
                               TextSpan(
                                 text:
-                                    "\n${appliance.lastMaintenanceDate != null ? dateProvider.formatCurrentDate(appliance.lastMaintenanceDate!) : 'N/A'}",
+                                    "\n${_dateOrNA(appliance.lastMaintenanceDate, dateProvider)}",
                                 style: TextStyle(color: Colors.black),
                               ),
                             ],
@@ -738,7 +746,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                       pw.TableRow(
                         children: [
                           _buildDetailCell(
-                            'Unit: ${unit.unitNumber} - ${unit.unitAddress}',
+                            'Unit: ${unit.unitNumber ?? ''} - ${unit.unitAddress ?? ''}',
                             isBold: true,
                             color: PdfColors.black,
                           ),
@@ -791,20 +799,11 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                                     _getValueOrNA(appliance.model)),
                                 _buildDetailCell(
                                     _getValueOrNA(appliance.serialNumber)),
-                                _buildDetailCell(appliance.installedDate != null
-                                    ? dateProvider.formatCurrentDate(
-                                        appliance.installedDate!)
-                                    : 'N/A'),
+                                _buildDetailCell(_dateOrNA(appliance.installedDate, dateProvider)),
                                 _buildDetailCell(
-                                    appliance.warrantyExpiry != null
-                                        ? dateProvider.formatCurrentDate(
-                                            appliance.warrantyExpiry!)
-                                        : 'N/A'),
+                                    _dateOrNA(appliance.warrantyExpiry, dateProvider)),
                                 _buildDetailCell(
-                                    appliance.lastMaintenanceDate != null
-                                        ? dateProvider.formatCurrentDate(
-                                            appliance.lastMaintenanceDate!)
-                                        : 'N/A'),
+                                    _dateOrNA(appliance.lastMaintenanceDate, dateProvider)),
                                 _buildDetailCell(
                                     _getValueOrNA(appliance.status),
                                     color: appliance.status?.toLowerCase() ==
@@ -946,7 +945,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                         const pw.BorderRadius.all(pw.Radius.circular(4)),
                   ),
                   child: pw.Text(
-                    'Unit: ${unit.unitNumber} - ${unit.unitAddress}',
+                    'Unit: ${unit.unitNumber ?? ''} - ${unit.unitAddress ?? ''}',
                     style: pw.TextStyle(
                       fontSize: 13,
                       fontWeight: pw.FontWeight.bold,
@@ -1377,7 +1376,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
       unitRange.merge();
       detailsSheet
           .getRangeByIndex(detailRow, 1)
-          .setText('Unit: ${unit.unitNumber} - ${unit.unitAddress}');
+          .setText('Unit: ${unit.unitNumber ?? ''} - ${unit.unitAddress ?? ''}');
       detailsSheet.getRangeByIndex(detailRow, 1).cellStyle.bold = true;
       detailsSheet.getRangeByIndex(detailRow, 1).cellStyle.backColor =
           '#F5F5F5';
@@ -1421,18 +1420,11 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
               .getRangeByIndex(detailRow, 7)
               .setText(_getValueOrNA(appliance.serialNumber));
           detailsSheet.getRangeByIndex(detailRow, 8).setText(
-              appliance.installedDate != null
-                  ? dateProvider.formatCurrentDate(appliance.installedDate!)
-                  : 'N/A');
+              _dateOrNA(appliance.installedDate, dateProvider));
           detailsSheet.getRangeByIndex(detailRow, 9).setText(
-              appliance.warrantyExpiry != null
-                  ? dateProvider.formatCurrentDate(appliance.warrantyExpiry!)
-                  : 'N/A');
+              _dateOrNA(appliance.warrantyExpiry, dateProvider));
           detailsSheet.getRangeByIndex(detailRow, 10).setText(
-              appliance.lastMaintenanceDate != null
-                  ? dateProvider
-                      .formatCurrentDate(appliance.lastMaintenanceDate!)
-                  : 'N/A');
+              _dateOrNA(appliance.lastMaintenanceDate, dateProvider));
           detailsSheet
               .getRangeByIndex(detailRow, 11)
               .setText(_getValueOrNA(appliance.status));
@@ -1474,7 +1466,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
       // Add unit header
       summarySheet
           .getRangeByIndex(summaryRow, 1)
-          .setText('Unit: ${unit.unitNumber} - for test');
+          .setText('Unit: ${unit.unitNumber ?? ''} - ${unit.unitAddress ?? ''}');
       summarySheet.getRangeByIndex(summaryRow, 1).cellStyle.bold = true;
       summaryRow++;
 
@@ -1602,7 +1594,9 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
     // Details Data
     for (var unit in data.units!) {
       // Add unit header (centered across columns)
-      final unitHeader = '"Unit: ${unit.unitNumber} - ${unit.unitAddress}"';
+      // Quotes inside the header are doubled, like the data cells.
+      final unitHeader =
+          '"${'Unit: ${unit.unitNumber ?? ''} - ${unit.unitAddress ?? ''}'.replaceAll('"', '""')}"';
       csvBuffer.writeln(unitHeader +
           ',' +
           List.filled(detailHeaders.length - 1, '""').join(','));
@@ -1623,15 +1617,9 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
             _getValueOrNA(appliance.brand),
             _getValueOrNA(appliance.model),
             _getValueOrNA(appliance.serialNumber),
-            appliance.installedDate != null
-                ? dateProvider.formatCurrentDate(appliance.installedDate!)
-                : 'N/A',
-            appliance.warrantyExpiry != null
-                ? dateProvider.formatCurrentDate(appliance.warrantyExpiry!)
-                : 'N/A',
-            appliance.lastMaintenanceDate != null
-                ? dateProvider.formatCurrentDate(appliance.lastMaintenanceDate!)
-                : 'N/A',
+            _dateOrNA(appliance.installedDate, dateProvider),
+            _dateOrNA(appliance.warrantyExpiry, dateProvider),
+            _dateOrNA(appliance.lastMaintenanceDate, dateProvider),
             _getValueOrNA(appliance.status)
           ];
           csvBuffer.writeln(row
@@ -1649,7 +1637,8 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
     csvBuffer.writeln();
 
     for (var unit in data.units!) {
-      csvBuffer.writeln('"Unit: ${unit.unitNumber} - for test"');
+      csvBuffer.writeln(
+          '"${'Unit: ${unit.unitNumber ?? ''} - ${unit.unitAddress ?? ''}'.replaceAll('"', '""')}"');
 
       if (unit.appliances != null) {
         for (var appliance in unit.appliances!) {
@@ -2037,7 +2026,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Unit: ${unit.unitNumber} - ${unit.unitAddress}',
+                'Unit: ${unit.unitNumber ?? ''} - ${unit.unitAddress ?? ''}',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -2421,7 +2410,7 @@ class _HomeSystemReportScreenState extends State<HomeSystemReportScreen>
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Text(
-                                        'Unit: ${unit.unitNumber} - ${unit.unitAddress}',
+                                        'Unit: ${unit.unitNumber ?? ''} - ${unit.unitAddress ?? ''}',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,

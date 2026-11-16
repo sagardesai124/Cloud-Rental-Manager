@@ -1094,6 +1094,10 @@ class CustomTextField extends StatefulWidget {
       final bool showElevation; // NEW PARAMETER TO CONTROL ELEVATION AND SHADOW
       final int? errorMaxLines; // NEW PARAMETER FOR ERROR MESSAGE MAX LINES
       final TextInputAction? textInputAction; // NEW PARAMETER FOR TEXT INPUT ACTION
+      final double? maxValue; // NEW PARAMETER: HIGHEST NUMBER ALLOWED (BLOCKS SAVE)
+      final String? maxValueMessage; // NEW PARAMETER: MESSAGE WHEN ABOVE maxValue
+      final String? Function(String value)? numberCheck; // NEW PARAMETER: EXTRA NUMBER RULE (MESSAGE BLOCKS SAVE)
+      final bool decimalPad; // NEW PARAMETER: NUMBER KEYBOARD WITH A "." KEY
       // For confirm password field to compare with
 
   CustomTextField({
@@ -1122,6 +1126,10 @@ class CustomTextField extends StatefulWidget {
     this.email, // Initialize onTap
     this.phone,
     this.inputFormatters,
+    this.maxValue,
+    this.maxValueMessage,
+    this.numberCheck,
+    this.decimalPad = false,
 
     this.passwordController,
      // Used when this is a confirm password field
@@ -1212,6 +1220,11 @@ class CustomTextFieldState extends State<CustomTextField> {
   Widget build(BuildContext context) {
     final shouldUseKeyboardActions =
         widget.keyboardType == TextInputType.number;
+    // Boxes with a number rule (the work order parts boxes): the message can
+    // be wider than a narrow box, so it shows in full under the box and wraps,
+    // like web, instead of running past the box's edge.
+    final wrapError = shouldUseKeyboardActions &&
+        (widget.maxValue != null || widget.numberCheck != null);
     Widget textfield = Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
@@ -1272,6 +1285,23 @@ class CustomTextFieldState extends State<CustomTextField> {
                         return '';
                       }
                     }
+                  } else if (widget.numberCheck != null &&
+                      widget.numberCheck!(widget.controller!.text.trim()) !=
+                          null) {
+                    // Like web: the box's own number rule, before the cap.
+                    setState(() {
+                      _errorMessage =
+                          widget.numberCheck!(widget.controller!.text.trim());
+                    });
+                    return '';
+                  } else if (widget.maxValue != null &&
+                      (double.tryParse(widget.controller!.text.trim()) ?? 0.0) >
+                          widget.maxValue!) {
+                    // Like web: show the message and stop the save.
+                    setState(() {
+                      _errorMessage = widget.maxValueMessage;
+                    });
+                    return '';
                   }
 
                   setState(() {
@@ -1323,7 +1353,9 @@ class CustomTextFieldState extends State<CustomTextField> {
                     onTap: widget.onTap,
                     obscureText: widget.obscureText,
                     readOnly: widget.readOnnly,
-                    keyboardType: widget.keyboardType,
+                    keyboardType: widget.decimalPad
+                        ? const TextInputType.numberWithOptions(decimal: true)
+                        : widget.keyboardType,
                     focusNode: _focusNode,
                     onChanged: (value) {
                       if (widget.onChanged != null) {
@@ -1352,13 +1384,13 @@ class CustomTextFieldState extends State<CustomTextField> {
                     ),
                   ),
                 ),
-                if (state.hasError)
+                if (state.hasError && !wrapError)
                   const SizedBox(height: 24), // Reserve space for error message
               ],
             );
           },
         ),
-        if (_errorMessage != null)
+        if (_errorMessage != null && !wrapError)
           Positioned(
             top: 60,
             left: 8,
@@ -1372,6 +1404,39 @@ class CustomTextFieldState extends State<CustomTextField> {
           ),
       ],
     );
+    if (wrapError) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 60,
+            width: MediaQuery.of(context).size.width * .98,
+            child: KeyboardActions(
+              config: _buildConfig(context),
+              child: textfield,
+            ),
+          ),
+          if (_errorMessage != null)
+            ConstrainedBox(
+              // At least the room the one-line message had (75 - 60).
+              constraints: const BoxConstraints(minHeight: 15),
+              child: Padding(
+                // Where the one-line message started (8 from the left); it
+                // wraps at the box's right edge, where it used to be cut.
+                padding: const EdgeInsets.only(left: 8),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12.0,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    }
     return shouldUseKeyboardActions
         ? SizedBox(
             // height: 60,

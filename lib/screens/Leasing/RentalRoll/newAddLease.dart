@@ -10,6 +10,7 @@ import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:three_zero_two_property/widgets/account_form_web_rules.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 // import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -5230,6 +5231,7 @@ class OneTimeChargePopUp extends StatefulWidget {
 class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
   void _openAddAccountDialog(BuildContext context) {
     bool isAddingAccount = false;
+    bool accountSubmitted = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
                                   showDialog(
                                     context: context,
@@ -5281,6 +5283,9 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                     ),
                                                     const SizedBox(height: 5),
                                                     CustomTextField(
+                                requiredMessage: kAccountNameRequiredMessage,
+                                redBorderOnError: true,
+                                onChanged: (_) => setState(() {}),
                                 showElevation: false,
                                 borderColor: const Color(0xFFCED4DA),
                                                       validator: (value) {
@@ -5299,7 +5304,7 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                     ),
                                                     const SizedBox(height: 10),
                                                     Text(
-                                                      'Account Type',
+                                                      'Account Type *',
                                                       style: TextStyle(
                                                         fontSize: 14,
                                                         fontWeight:
@@ -5309,11 +5314,12 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                     ),
                                                     const SizedBox(height: 5),
                                                     CustomDropdown(
+                                errorBorderOnly: true,
                                 useBorderStyle: true,
                                                       validator: (value) {
                                                         if (value == null ||
                                                             value.isEmpty) {
-                                                          return 'Please select a Account Type';
+                                                          return kSelectAccountTypeMessage;
                                                         }
                                                         return null;
                                                       },
@@ -5332,7 +5338,7 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                     ),
                                                     const SizedBox(height: 10),
                                                     Text(
-                                                      'Fund Type',
+                                                      'Fund Type *',
                                                       style: TextStyle(
                                                         fontSize: 14,
                                                         fontWeight:
@@ -5342,11 +5348,12 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                     ),
                                                     const SizedBox(height: 5),
                                                     CustomDropdown(
+                                errorBorderOnly: true,
                                 useBorderStyle: true,
                                                       validator: (value) {
                                                         if (value == null ||
                                                             value.isEmpty) {
-                                                          return 'Please select a Fund Type';
+                                                          return kSelectFundTypeMessage;
                                                         }
                                                         return null;
                                                       },
@@ -5377,13 +5384,7 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                     CustomTextField(
                                 showElevation: false,
                                 borderColor: const Color(0xFFCED4DA),
-                                                      validator: (value) {
-                                                        if (value == null ||
-                                                            value.isEmpty) {
-                                                          return 'Please enter Notes';
-                                                        }
-                                                        return null;
-                                                      },
+                                                      optional: true,
                                                       keyboardType:
                                                           TextInputType.text,
                                                       hintText: 'Enter Notes',
@@ -5396,7 +5397,7 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                         children: <TextSpan>[
                                                           const TextSpan(
                                                             text:
-                                                                'We stores this information ',
+                                                                'We store this information ',
                                                             style: TextStyle(
                                                               fontSize: 12,
                                                               fontWeight:
@@ -5407,7 +5408,7 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                             ),
                                                           ),
                                                           TextSpan(
-                                                            text: ' Privately ',
+                                                            text: 'privately',
                                                             style: TextStyle(
                                                               fontSize: 12,
                                                               fontWeight:
@@ -5428,7 +5429,7 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                             ),
                                                           ),
                                                           TextSpan(
-                                                            text: ' Securely ',
+                                                            text: 'securely.',
                                                             style: TextStyle(
                                                               fontSize: 12,
                                                               fontWeight:
@@ -5441,6 +5442,17 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                       ),
                                                     ),
                                                     const SizedBox(height: 20),
+                                                    if (accountSubmitted &&
+                                                        (_accountNameController.text.trim().isEmpty ||
+                                                            _selectedAccountType == null ||
+                                                            _selectedFundType == null))
+                                                      const Padding(
+                                                        padding: EdgeInsets.only(bottom: 12),
+                                                        child: Text(
+                                                          kAccountFixRedBoxesMessage,
+                                                          style: TextStyle(color: Colors.red, fontSize: 14),
+                                                        ),
+                                                      ),
                                                     Row(
                                                       mainAxisAlignment:
                                                           MainAxisAlignment.end,
@@ -5463,6 +5475,8 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
                                                                                 8.0))),
                                                                     onPressed:
                                                                         () {
+                                                                      // Like web: tapping Add turns empty required boxes red.
+                                                                      setState(() => accountSubmitted = true);
                                                                       if (isAddingAccount) return;
                                                                       isAddingAccount = true;
                                                                       _submitSubForm().whenComplete(() => isAddingAccount = false);
@@ -5538,15 +5552,8 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
   bool _isInvalid = true;
   List<String> items = [];
 
-  List<String> accountTypeItems = [
-    'Income',
-    'Non Operating Income ',
-    'Liability Account'
-  ];
-  List<String> fundTypeItems = [
-    'Reverse',
-    'Operating',
-  ];
+  List<String> accountTypeItems = List.of(kAccountTypeOptions);
+  List<String> fundTypeItems = List.of(kFundTypeOptions);
 
   bool _isLoading = true;
   List<String> accounts = [];
@@ -6009,9 +6016,7 @@ class _OneTimeChargePopUpState extends State<OneTimeChargePopUp> {
         if (mounted) { WidgetsBinding.instance.addPostFrameCallback((_) { if (Navigator.of(context).canPop()) Navigator.of(context).pop(); }); }
         Fluttertoast.showToast(msg: 'Account Added Successfully');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to add account')),
-        );
+        Fluttertoast.showToast(msg: accountAddFailureMessage(response));
       }
     } else {
       setState(() {
@@ -6034,6 +6039,7 @@ class RecurringChargePopUp extends StatefulWidget {
 class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
   void _openAddAccountDialog(BuildContext context) {
     bool isAddingAccount = false;
+    bool accountSubmitted = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
                                     showDialog(
                                       context: context,
@@ -6087,6 +6093,9 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                         const SizedBox(
                                                             height: 5),
                                                         CustomTextField(
+                                requiredMessage: kAccountNameRequiredMessage,
+                                redBorderOnError: true,
+                                onChanged: (_) => setState(() {}),
                                 showElevation: false,
                                 borderColor: const Color(0xFFCED4DA),
                                                           validator: (value) {
@@ -6107,7 +6116,7 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                         const SizedBox(
                                                             height: 10),
                                                         Text(
-                                                          'Account Type',
+                                                          'Account Type *',
                                                           style: TextStyle(
                                                             fontSize: 14,
                                                             fontWeight:
@@ -6118,13 +6127,14 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                         const SizedBox(
                                                             height: 5),
                                                         CustomDropdown(
+                                errorBorderOnly: true,
                                 useBorderStyle: true,
                                                           validator: (value) {
                                                             if (_selectedAccountType ==
                                                                     null ||
                                                                 _selectedAccountType!
                                                                     .isEmpty) {
-                                                              return 'Please select a Account Type';
+                                                              return kSelectAccountTypeMessage;
                                                             }
                                                             return null;
                                                           },
@@ -6145,7 +6155,7 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                         const SizedBox(
                                                             height: 10),
                                                         Text(
-                                                          'Fund Type',
+                                                          'Fund Type *',
                                                           style: TextStyle(
                                                             fontSize: 14,
                                                             fontWeight:
@@ -6156,13 +6166,14 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                         const SizedBox(
                                                             height: 5),
                                                         CustomDropdown(
+                                errorBorderOnly: true,
                                 useBorderStyle: true,
                                                           validator: (value) {
                                                             if (_selectedFundType ==
                                                                     null ||
                                                                 _selectedFundType!
                                                                     .isEmpty) {
-                                                              return 'Please select a Fund Type';
+                                                              return kSelectFundTypeMessage;
                                                             }
                                                             return null;
                                                           },
@@ -6195,13 +6206,7 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                         CustomTextField(
                                 showElevation: false,
                                 borderColor: const Color(0xFFCED4DA),
-                                                          validator: (value) {
-                                                            if (value == null ||
-                                                                value.isEmpty) {
-                                                              return 'Please enter Notes';
-                                                            }
-                                                            return null;
-                                                          },
+                                                          optional: true,
                                                           keyboardType:
                                                               TextInputType
                                                                   .text,
@@ -6218,7 +6223,7 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                             children: <TextSpan>[
                                                               const TextSpan(
                                                                 text:
-                                                                    'We stores this information ',
+                                                                    'We store this information ',
                                                                 style:
                                                                     TextStyle(
                                                                   fontSize: 12,
@@ -6231,7 +6236,7 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                               ),
                                                               TextSpan(
                                                                 text:
-                                                                    ' Privately ',
+                                                                    'privately',
                                                                 style:
                                                                     TextStyle(
                                                                   fontSize: 12,
@@ -6256,7 +6261,7 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                               ),
                                                               TextSpan(
                                                                 text:
-                                                                    ' Securely ',
+                                                                    'securely.',
                                                                 style:
                                                                     TextStyle(
                                                                   fontSize: 12,
@@ -6273,6 +6278,17 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                         const SizedBox(
                                                           height: 20,
                                                         ),
+                                                        if (accountSubmitted &&
+                                                            (_accountNameController.text.trim().isEmpty ||
+                                                                _selectedAccountType == null ||
+                                                                _selectedFundType == null))
+                                                          const Padding(
+                                                            padding: EdgeInsets.only(bottom: 12),
+                                                            child: Text(
+                                                              kAccountFixRedBoxesMessage,
+                                                              style: TextStyle(color: Colors.red, fontSize: 14),
+                                                            ),
+                                                          ),
                                                         Row(
                                                           mainAxisAlignment:
                                                               MainAxisAlignment
@@ -6295,6 +6311,8 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
                                                                                     8.0))),
                                                                         onPressed:
                                                                             () {
+                                                                          // Like web: tapping Add turns empty required boxes red.
+                                                                          setState(() => accountSubmitted = true);
                                                                           if (isAddingAccount) return;
                                                                           isAddingAccount = true;
                                                                           _submitSubForm(context).whenComplete(() => isAddingAccount = false);
@@ -6369,15 +6387,8 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
   bool _isInvalid = true;
   List<String> items = []; // Example items
 
-  List<String> accountTypeItems = [
-    'Income',
-    'Non Operating Income ',
-    'Liability Account',
-  ]; // Example items
-  List<String> fundTypeItems = [
-    'Reverse',
-    'Operating',
-  ]; // Example items
+  List<String> accountTypeItems = List.of(kAccountTypeOptions); // Example items
+  List<String> fundTypeItems = List.of(kFundTypeOptions); // Example items
 
   bool _isLoading = true;
   List<String> accounts = [];
@@ -6980,9 +6991,7 @@ class _RecurringChargePopUpState extends State<RecurringChargePopUp> {
         Fluttertoast.showToast(msg: 'Account Added Successfully');
       } else {
         // Handle error response
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to add account')),
-        );
+        Fluttertoast.showToast(msg: accountAddFailureMessage(response));
       }
     } else {
       setState(() {
@@ -8864,6 +8873,9 @@ class CustomDropdown extends StatefulWidget {
   /// When true, uses border instead of elevation/shadow and [dropdownHeight] for height (default 45).
   final bool useBorderStyle;
   final double? dropdownHeight;
+  /// Opt-in, like web's account form: an error shows as a red box with no
+  /// text under it.
+  final bool errorBorderOnly;
 
   CustomDropdown({
     Key? key,
@@ -8874,6 +8886,7 @@ class CustomDropdown extends StatefulWidget {
     required this.validator,
     this.useBorderStyle = false,
     this.dropdownHeight,
+    this.errorBorderOnly = false,
   }) : super(key: key);
 
   @override
@@ -8941,12 +8954,14 @@ class _CustomDropdownState extends State<CustomDropdown> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(6),
                       color: Colors.white,
-                      border: widget.useBorderStyle
-                          ? Border.all(
-                              color: const Color(0xFFCED4DA),
-                              width: 1.0,
-                            )
-                          : null,
+                      border: (widget.errorBorderOnly && state.hasError)
+                          ? Border.all(color: kAccountErrorRed, width: 1.0)
+                          : widget.useBorderStyle
+                              ? Border.all(
+                                  color: const Color(0xFFCED4DA),
+                                  width: 1.0,
+                                )
+                              : null,
                       boxShadow: widget.useBorderStyle
                           ? null
                           : [
@@ -8984,7 +8999,7 @@ class _CustomDropdownState extends State<CustomDropdown> {
                 ),
               ),
             ),
-            if (state.hasError)
+            if (state.hasError && !widget.errorBorderOnly)
               Padding(
                 padding: const EdgeInsets.only(left: 14, top: 8),
                 child: Text(

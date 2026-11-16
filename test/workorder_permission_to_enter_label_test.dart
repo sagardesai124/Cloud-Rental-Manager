@@ -11,6 +11,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/StaffModule/repository/staffpermission_provider.dart';
+import 'package:three_zero_two_property/TenantsModule/repository/permission_provider.dart';
 import 'package:three_zero_two_property/StaffModule/screen/Maintenance/Workorder/workorder_summery.dart'
     as staff;
 import 'package:three_zero_two_property/TenantsModule/screen/work_order/workorder_summery.dart'
@@ -157,6 +158,7 @@ void main() {
             ChangeNotifierProvider(create: (_) => NotificationProvider()),
             ChangeNotifierProvider(create: (_) => checkPlanPurchaseProiver()),
             ChangeNotifierProvider(create: (_) => VendorPermission()),
+            ChangeNotifierProvider(create: (_) => PermissionProvider()),
             ChangeNotifierProvider<StaffPermissionProvider>.value(
                 value: permissions),
           ],

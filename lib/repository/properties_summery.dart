@@ -264,20 +264,23 @@ class Properies_summery_Repo {
       'appliance_name': appliancename,
       'appliance_description': appliancedescription,
       'installed_date': installeddate,
-      'type': type,
+      'type': type ?? '',
       'system_type': systemType ?? '',
-      'brand': brand,
+      'brand': brand ?? '',
       'model': model,
       'serial_number': serialNumber,
-      'warranty_expiry': warrantyExpiry,
-      'last_maintenance_date': lastMaintenanceDate,
-      'maintenance_notes': maintenanceNotes,
+      'warranty_expiry': warrantyExpiry ?? '',
+      'last_maintenance_date': lastMaintenanceDate ?? '',
+      'maintenance_notes': maintenanceNotes ?? '',
       'status': status,
       'category_id': categoryId,
       'filters': filtersJson,
       'appliance_image': appliance_image, // Add this field
       'remove_appliance_images': removeApplianceImages ?? 'false',
     };
+    // Like web (PropDetails.jsx): empty optional fields go as "" and a missing
+    // photo isn't sent. A null can't be form-encoded and stopped the save.
+    formData.removeWhere((key, value) => value == null);
 
 
     final http.Response response = await apiPut(
@@ -378,7 +381,8 @@ class Properies_summery_Repo {
     }
   }
 
-  Future<Map<String, dynamic>> Deleteunit({required String? unitId}) async {
+  Future<Map<String, dynamic>> Deleteunit(
+      {required String? unitId, required String reason}) async {
     // print('$apiUrl/$id');
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -391,6 +395,10 @@ class Properies_summery_Repo {
         "id": "CRM $id",
         'Content-Type': 'application/json; charset=UTF-8',
       },
+      // Like web (Units.jsx handleDeleteUnit): the typed reason goes in the
+      // body. The server keeps it in the Activities log, and logged
+      // "No Reason Provided" when the app sent none.
+      body: jsonEncode({'reason': reason}),
     );
     var responseData = json.decode(response.body);
     if (responseData["statusCode"] == 200) {

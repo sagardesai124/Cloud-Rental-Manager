@@ -22,6 +22,10 @@ class allcategories_model {
         this.updatedAt,
         this.iV});
 
+  /// Like web and the server: a category is HVAC when its name contains
+  /// "hvac" in any case ("HVAC", "Hvac", "HVAC System").
+  bool get isHvac => (name ?? '').toLowerCase().contains('hvac');
+
   allcategories_model.fromJson(Map<String, dynamic> json) {
     sId = json['_id'];
     categoryId = json['category_id'];

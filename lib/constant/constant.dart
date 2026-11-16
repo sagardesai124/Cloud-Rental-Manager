@@ -877,7 +877,7 @@ Widget kNoSearchResults(BuildContext context) {
   );
 }
 
-/// Full state names for address dropdowns. Same 50 entries, same order, as
+/// Full state names for address dropdowns. Same entries (50 states + DC), same order, as
 /// web's `US_STATES_LIST` (Client/src/utils/usStates.js) — web stores the full
 /// name as the field value, so these strings are what the API receives.
 const List<String> kUsStateNames = [
@@ -889,6 +889,7 @@ const List<String> kUsStateNames = [
   'Colorado',
   'Connecticut',
   'Delaware',
+  'District of Columbia',
   'Florida',
   'Georgia',
   'Hawaii',
@@ -943,6 +944,7 @@ const Map<String, String> kUsStateIsoToName = {
   'CO': 'Colorado',
   'CT': 'Connecticut',
   'DE': 'Delaware',
+  'DC': 'District of Columbia',
   'FL': 'Florida',
   'GA': 'Georgia',
   'HI': 'Hawaii',

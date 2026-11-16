@@ -7,6 +7,7 @@ import 'package:email_validator/email_validator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:three_zero_two_property/services/letters_only.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -3312,6 +3313,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                                 keyboardType:
                                                     TextInputType.text,
                                                 controller: city,
+                                                inputFormatters: [typedLettersAndSpacesOnly],
                                                 style: const TextStyle(
                                                   color: navyClr,
                                                   fontSize: 14,
@@ -3457,6 +3459,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                                 keyboardType:
                                                     TextInputType.text,
                                                 controller: country,
+                                                inputFormatters: [typedLettersAndSpacesOnly],
                                                 style: const TextStyle(
                                                   color: navyClr,
                                                   fontSize: 14,
@@ -3964,6 +3967,8 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                                                                   });
                                                                                 },
                                                                                 controller: name,
+                                                                                // Letters and spaces only, like web StaffMemberModal.
+                                                                                inputFormatters: [typedLettersAndSpacesOnly],
                                                                                 cursorColor: blueColor,
                                                                                 decoration: InputDecoration(
                                                                                   hintText: "Enter a staff member name here..*",

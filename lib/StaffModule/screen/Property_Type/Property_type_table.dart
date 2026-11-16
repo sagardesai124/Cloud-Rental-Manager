@@ -242,7 +242,7 @@ class _PropertyTableState extends State<PropertyTable>
     );
   }
 
-  final List<String> items = ['All', 'Commercial', 'Residential'];
+  final List<String> items = ['Residential', 'Commercial', 'All'];
   String? selectedValue;
   String searchvalue = "";
   /// Required by [NetworkRetryState]: re-issue this screen's own load.
@@ -881,7 +881,7 @@ class _PropertyTableState extends State<PropertyTable>
                           ),
                           Expanded(
                             child: Text(
-                              'Type',
+                              'Select Type',
                               style: TextStyle(
                                 fontSize: 14,
                                 // fontWeight: FontWeight.bold,

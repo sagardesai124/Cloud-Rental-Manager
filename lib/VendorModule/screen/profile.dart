@@ -168,20 +168,16 @@ class _Profile_screenState extends State<Profile_screen>
         profiledata['vendor_email']?.toString() ?? '';
     _cellPhoneController.text =
         profiledata['vendor_phoneNumber']?.toString() ?? '';
-    // Contact Cell in Vendor Info: backend contact_cell_number, or first contact's number from contact_info
-    final contactCellFromApi = profiledata['contact_cell_number']?.toString().trim();
-    if (contactCellFromApi != null && contactCellFromApi.isNotEmpty) {
-      _contactCellController.text = contactCellFromApi;
+    // Contact Cell Number, like web: the first contact's number
+    // (contact_info[0].contact_number), the only place the server keeps it.
+    final savedContacts =
+        (profiledata['contact_info'] ?? profiledata['contacts']) as List?;
+    if (savedContacts != null && savedContacts.isNotEmpty) {
+      final first = savedContacts[0] is Map ? savedContacts[0] as Map : null;
+      _contactCellController.text =
+          first?['contact_number']?.toString().trim() ?? '';
     } else {
-      final contactsList =
-          (profiledata['contact_info'] ?? profiledata['contacts']) as List?;
-      if (contactsList != null && contactsList.isNotEmpty) {
-        final first = contactsList[0] is Map ? contactsList[0] as Map : null;
-        _contactCellController.text =
-            first?['contact_number']?.toString().trim() ?? '';
-      } else {
-        _contactCellController.text = '';
-      }
+      _contactCellController.text = '';
     }
 
     // Address Details
@@ -337,6 +333,20 @@ class _Profile_screenState extends State<Profile_screen>
     }
   }
 
+  // Like web (VendorProfile.jsx): the "Contact Cell Number" box is the first
+  // contact's number, contact_info[0].contact_number. The server keeps the
+  // number only there.
+  List<Map<String, String>> _contactInfoBody() => [
+        for (var i = 0; i < _contacts.length; i++)
+          {
+            'contact_name': _contacts[i].name.text.trim(),
+            'contact_number': i == 0
+                ? _contactCellController.text.trim()
+                : _contacts[i].number.text.trim(),
+            'contact_email': _contacts[i].email.text.trim(),
+          },
+      ];
+
   Map<String, dynamic> _getCurrentProfileBody() {
     return {
       'vendor_name': _companyNameController.text.trim(),
@@ -347,14 +357,7 @@ class _Profile_screenState extends State<Profile_screen>
       'vendor_state': _stateController.text.trim(),
       'vendor_zip': _zipCodeController.text.trim(),
       'vendor_country': _countryController.text.trim(),
-      'contact_cell_number': _contactCellController.text.trim(),
-      'contact_info': _contacts
-          .map((c) => {
-                'contact_name': c.name.text.trim(),
-                'contact_number': c.number.text.trim(),
-                'contact_email': c.email.text.trim(),
-              })
-          .toList(),
+      'contact_info': _contactInfoBody(),
       'trade': _selectedTradeType != null
           ? (_tradeToApiValue[_selectedTradeType!] ??
               (_selectedTradeType ?? '').toLowerCase().replaceAll(' ', '_'))
@@ -397,19 +400,12 @@ class _Profile_screenState extends State<Profile_screen>
         'vendor_name': _companyNameController.text.trim(),
         'vendor_email': _companyEmailController.text.trim(),
         'vendor_phoneNumber': _cellPhoneController.text.trim(),
-        'contact_cell_number': _contactCellController.text.trim(),
         'vendor_address': _streetAddressController.text.trim(),
         'vendor_city': _cityController.text.trim(),
         'vendor_state': _stateController.text.trim(),
         'vendor_zip': _zipCodeController.text.trim(),
         'vendor_country': _countryController.text.trim(),
-        'contact_info': _contacts
-            .map((c) => {
-                  'contact_name': c.name.text.trim(),
-                  'contact_number': c.number.text.trim(),
-                  'contact_email': c.email.text.trim(),
-                })
-            .toList(),
+        'contact_info': _contactInfoBody(),
         'trade': _selectedTradeType != null
             ? (_tradeToApiValue[_selectedTradeType!] ??
                 (_selectedTradeType ?? '').toLowerCase().replaceAll(' ', '_'))
@@ -470,24 +466,44 @@ class _Profile_screenState extends State<Profile_screen>
     );
   }
 
-  static String? _validatePhone(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Required';
-    final digits = v.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 10) return 'Phone number must be 10 digits';
-    return null;
-  }
+  // Like web (VendorProfile.jsx validationSchema), each box has its own
+  // message. Formik turns an empty box into no value, so web shows its
+  // "... is required" for an empty box and the format message only for a
+  // filled-in one.
+  static FormFieldValidator<String> _requiredText(String message) =>
+      (v) => (v == null || v.trim().isEmpty) ? message : null;
 
-  static String? _validateEmail(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Required';
-    if (!EmailValidator.validate(v.trim())) return 'Enter a valid email address';
-    return null;
-  }
+  static FormFieldValidator<String> _phone(String required, String format) =>
+      (v) {
+        if (v == null || v.trim().isEmpty) return required;
+        final digits = v.replaceAll(RegExp(r'\D'), '');
+        if (digits.length != 10) return format;
+        return null;
+      };
 
+  static FormFieldValidator<String> _email(String required, String invalid) =>
+      (v) {
+        if (v == null || v.trim().isEmpty) return required;
+        if (!EmailValidator.validate(v.trim())) return invalid;
+        return null;
+      };
+
+  /// Like web's VendorProfile.jsx (yup number().required().min(1)): required,
+  /// a number, at least 1 mile. Decimals such as 2.5 are fine.
   static String? _validateDistance(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Required';
-    if (RegExp(r'[a-zA-Z]').hasMatch(v)) return 'Numbers only';
+    final text = (v ?? '').trim();
+    final miles = double.tryParse(text);
+    // Web's number box reads a lone "." as empty, so it says required too.
+    if (text.isEmpty || miles == null) return 'Distance is required';
+    if (miles < 1) return 'Distance must be at least 1 mile';
     return null;
   }
+
+  /// Like web's number box: digits and one decimal point (2.5 is fine). Any
+  /// other keystroke or paste is refused and the text stays as it was.
+  static final TextInputFormatter _distanceFormatter =
+      TextInputFormatter.withFunction((oldValue, newValue) =>
+          RegExp(r'^\d*\.?\d*$').hasMatch(newValue.text) ? newValue : oldValue);
 
   Widget _buildTextField({
     required String label,
@@ -498,6 +514,7 @@ class _Profile_screenState extends State<Profile_screen>
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
+    int? errorMaxLines,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -536,6 +553,7 @@ class _Profile_screenState extends State<Profile_screen>
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Colors.red),
               ),
+              errorMaxLines: errorMaxLines,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
@@ -712,20 +730,24 @@ class _Profile_screenState extends State<Profile_screen>
                                 label: 'Company Name *',
                                 controller: _companyNameController,
                                 hint: 'Enter company name',
+                                validator:
+                                    _requiredText('Vendor name is required'),
                               ),
                               _buildTextField(
                                 label: 'Company Email *',
                                 controller: _companyEmailController,
                                 hint: 'Enter company email',
                                 keyboardType: TextInputType.emailAddress,
-                                validator: _validateEmail,
+                                validator: _email('Email is required',
+                                    'Please enter a valid email address'),
                               ),
                               _buildTextField(
                                 label: 'Cell Phone Number *',
                                 controller: _cellPhoneController,
                                 hint: '(xxx) xxx-xxxx',
                                 keyboardType: TextInputType.phone,
-                                validator: _validatePhone,
+                                validator: _phone('Phone number is required',
+                                    'Phone number must be in the format (xxx) xxx-xxxx'),
                                 inputFormatters: [
                                   FilteringTextInputFormatter.digitsOnly,
                                   LengthLimitingTextInputFormatter(10),
@@ -738,7 +760,8 @@ class _Profile_screenState extends State<Profile_screen>
                                 hint: '(xxx) xxx-xxxx',
                                 keyboardType: TextInputType.phone,
                                 required: true,
-                                validator: _validatePhone,
+                                validator: _phone('Contact number is required',
+                                    'Contact number must be in the format (xxx) xxx-xxxx'),
                                 inputFormatters: [
                                   FilteringTextInputFormatter.digitsOnly,
                                   LengthLimitingTextInputFormatter(10),
@@ -772,11 +795,14 @@ class _Profile_screenState extends State<Profile_screen>
                                   label: 'Street Address *',
                                   controller: _streetAddressController,
                                   hint: 'Start typing your address...',
+                                  validator:
+                                      _requiredText('Address is required'),
                                 ),
                                 _buildTextField(
                                   label: 'City *',
                                   controller: _cityController,
                                   hint: 'Enter city',
+                                  validator: _requiredText('City is required'),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
@@ -816,6 +842,8 @@ class _Profile_screenState extends State<Profile_screen>
                                   label: 'Country *',
                                   controller: _countryController,
                                   hint: 'Enter country',
+                                  validator:
+                                      _requiredText('Country is required'),
                                 ),
                               ]),
                         ),
@@ -862,6 +890,8 @@ class _Profile_screenState extends State<Profile_screen>
                                         label: 'Contact Name *',
                                         controller: _contacts[i].name,
                                         hint: 'Enter contact name',
+                                        validator: _requiredText(
+                                            'Contact name is required'),
                                       ),
                                       _buildTextField(
                                         label: 'Contact Email *',
@@ -869,7 +899,9 @@ class _Profile_screenState extends State<Profile_screen>
                                         hint: 'Enter contact email',
                                         keyboardType:
                                             TextInputType.emailAddress,
-                                        validator: _validateEmail,
+                                        validator: _email(
+                                            'Contact email is required',
+                                            'Please enter a valid contact email address'),
                                       ),
                                     ],
                                   ),
@@ -885,6 +917,14 @@ class _Profile_screenState extends State<Profile_screen>
                                           _contacts[i].number.dispose();
                                           _contacts[i].email.dispose();
                                           _contacts.removeAt(i);
+                                          // Like web: the Contact Cell Number
+                                          // box is the first contact's number,
+                                          // so removing Contact 1 shows the
+                                          // next contact's number, not the old.
+                                          if (i == 0) {
+                                            _contactCellController.text =
+                                                _contacts.first.number.text;
+                                          }
                                         });
                                       },
                                       icon: Icon(Icons.remove_circle_outline,
@@ -997,7 +1037,7 @@ class _Profile_screenState extends State<Profile_screen>
                                 onChanged: (v) =>
                                     setState(() => _selectedTradeType = v),
                                 validator: (v) => (v == null || v.isEmpty)
-                                    ? 'Required'
+                                    ? 'Trade/Service type is required'
                                     : null,
                               ),
                             ],
@@ -1059,12 +1099,15 @@ class _Profile_screenState extends State<Profile_screen>
                                           controller: _zipDistancePairs[i]
                                               .distanceMiles,
                                           hint: 'Enter distance',
-                                          keyboardType: TextInputType.number,
+                                          // Shows the "." key on iPhone too.
+                                          keyboardType: const TextInputType
+                                              .numberWithOptions(decimal: true),
                                           validator: _validateDistance,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter
-                                                .digitsOnly,
-                                          ],
+                                          inputFormatters: [_distanceFormatter],
+                                          // The half-width box would cut
+                                          // "Distance must be at least 1
+                                          // mile" short; it wraps instead.
+                                          errorMaxLines: 2,
                                         ),
                                       ),
                                     ],
@@ -1150,6 +1193,8 @@ class _Profile_screenState extends State<Profile_screen>
                           hint:
                               'Please provide details of your licenses and permits...',
                           maxLines: 4,
+                          validator: _requiredText(
+                              'License/permit information is required'),
                         ),
                         if (_showValidationError)
                           Padding(

@@ -14,6 +14,8 @@ import 'package:three_zero_two_property/StaffModule/screen/Maintenance/Workorder
     as staff_add;
 import 'package:three_zero_two_property/StaffModule/screen/Maintenance/Workorder/Edit_workorders.dart'
     as staff_edit;
+import 'package:three_zero_two_property/VendorModule/screen/work_order/Edit_workorders.dart'
+    as vendor_edit;
 import 'package:three_zero_two_property/provider/Plan%20Purchase/plancheckProvider.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/provider/notification_provider.dart';
@@ -27,7 +29,10 @@ import 'package:three_zero_two_property/screens/Maintenance/Workorder/Edit_worko
 /// web staging's AddWorkorder.jsx (which both roles open for add and edit).
 /// Staff's phone forms read "Parts And Labour :" / "Vendors Note"; every wide
 /// form read "Parts And Labour" / "Vendors Note *" (the field is optional, as
-/// on web, so no star).
+/// on web, so no star). The vendor Edit form (web VendorAddWork: "Parts and
+/// Labor", "Vendor Notes") read "Parts And Labour :" / "Vendors Note " on the
+/// phone and "Parts And Labou " / "Vendors Note *" on the wide layout, where
+/// an empty note also blocked the save; web never requires it.
 
 /// No category, vendor or staff picked: the fake server returns no lists for
 /// them, and a dropdown value missing from its list would stop the form. The
@@ -70,11 +75,67 @@ final _workOrder = {
   'workOrder_images': [],
 };
 
+/// Vendor sample: the vendor form needs its category listed; no note.
+final _vendorWorkOrder = {
+  'workOrder_id': 'WO-1',
+  'admin_id': 'ADMIN-1',
+  'vendor_id': 'V-1',
+  'work_subject': 'Leaky tap',
+  'work_category': 'Plumbing',
+  'work_performed': 'Unit',
+  'status': 'In Progress',
+  'priority': 'High',
+  'date': '2026-10-30',
+  'entry_allowed': true,
+  'is_billable': false,
+  'staffmember_id': 'S-1',
+  'rental_id': 'P-1',
+  'unit_id': 'U-1',
+  'property_data': {
+    '_id': 'P-1',
+    'property_name': 'Main St',
+    'rental_adress': '123 Main St',
+    'rental_id': 'P-1',
+  },
+  'unit_data': {'_id': 'U-1', 'unit_no': 'A1'},
+  'staff_data': {
+    '_id': 'S-1',
+    'staffmember_id': 'S-1',
+    'staffmember_name': 'Pat Staff',
+    'role': 'staff',
+  },
+  'vendor_data': {'_id': 'V-1', 'vendor_name': 'Fixit Co', 'vendor_type': 'Plumbing'},
+  'tenant_data': {
+    '_id': 'T-1',
+    'tenant_name': 'Ruth Moss',
+    'email': 'ruth@example.com',
+    'phone_number': '5551234567',
+  },
+  'vendor_notes': '',
+  'workorder_updates': [],
+  'partsandcharge_data': [],
+  'workOrder_images': [],
+};
+
+var _vendor = false;
+
 final _server = MockClient((request) async {
   Object body = {'statusCode': 200, 'data': []};
   final path = request.url.path;
   if (path.startsWith('/api/work-order/workorder_details/')) {
-    body = {'statusCode': 200, 'data': _workOrder};
+    body = {'statusCode': 200, 'data': _vendor ? _vendorWorkOrder : _workOrder};
+  } else if (_vendor && path == '/api/auth') {
+    body = {
+      'statusCode': 200,
+      'themes': {'format': 'MM/DD/YYYY', 'timeFormat': '12'}
+    };
+  } else if (_vendor && path.startsWith('/api/settings/allCategories/')) {
+    body = {
+      'statusCode': 200,
+      'data': [
+        {'category_id': 'C-1', 'name': 'Plumbing', 'brands': []},
+      ]
+    };
   } else if (path.startsWith('/api/rentals/rentals/')) {
     body = {
       'statusCode': 200,
@@ -104,14 +165,16 @@ void main() {
   });
 
   Future<void> check(WidgetTester tester, Widget form, String role,
-      {required bool wide}) async {
-    tester.view.physicalSize = Size(wide ? 800 : 430, 9000);
+      {required bool wide, bool vendor = false}) async {
+    _vendor = vendor;
+    tester.view.physicalSize = Size(wide ? (vendor ? 900 : 800) : 430, 9000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues({
       'token': 'tkn',
       'adminId': 'ADMIN-1',
       'staff_id': 'S-1',
+      'vendor_id': 'V-1',
       'role': role,
     });
     final original = FlutterError.onError;
@@ -140,6 +203,13 @@ void main() {
             findsOneWidget);
         expect(find.textContaining('Parts And Labour'), findsNothing);
         expect(find.textContaining('Vendors Note'), findsNothing);
+
+        if (vendor) {
+          // An empty note doesn't stop the save, like web.
+          tester.state<FormState>(find.byType(Form).first).validate();
+          await tester.pump();
+          expect(find.text('Please enter here'), findsNothing);
+        }
       }, () => _server);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
@@ -168,6 +238,12 @@ void main() {
   testWidgets('Staff Edit, wide', (t) async => check(
       t, staff_edit.EditWorkOrderForTablet(workorderId: 'WO-1'), 'Staffmember',
       wide: true));
+  testWidgets('Vendor Edit, phone', (t) async => check(
+      t, vendor_edit.Edit_Workorder(workorderId: 'WO-1'), 'Vendor',
+      wide: false, vendor: true));
+  testWidgets('Vendor Edit, wide', (t) async => check(
+      t, vendor_edit.Edit_Workorder(workorderId: 'WO-1'), 'Vendor',
+      wide: true, vendor: true));
 }
 
 class _OnlineConnectivity extends ConnectivityPlatform

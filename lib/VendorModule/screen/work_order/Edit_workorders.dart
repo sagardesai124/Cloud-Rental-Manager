@@ -29,6 +29,12 @@ import '../../../Model/All_categories_model.dart';
 import '../../../repository/fetch_allcategories.dart';
 import 'package:provider/provider.dart';
 import 'package:three_zero_two_property/provider/dateProvider.dart';
+import 'package:three_zero_two_property/constant/workorder_parts_limits.dart';
+
+// Web's disabled dropdown text (MUI text.disabled, rgba(0, 0, 0, 0.38)) and
+// arrow (action.disabled, rgba(0, 0, 0, 0.26)).
+const Color _lockedTextColor = Color(0x61000000);
+const Color _lockedIconColor = Color(0x42000000);
 
 class Edit_Workorder extends StatefulWidget {
   EditData? property;
@@ -39,6 +45,34 @@ class Edit_Workorder extends StatefulWidget {
 }
 
 class _Edit_WorkorderState extends State<Edit_Workorder> {
+  // One text size for every box in this form (inputs and dropdowns take it
+  // from titleMedium).
+  ThemeData _formTheme(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.copyWith(
+      textTheme: theme.textTheme.copyWith(
+        titleMedium: theme.textTheme.titleMedium?.copyWith(fontSize: 14),
+      ),
+    );
+  }
+
+  // Fields web disables for a vendor (Property, Unit, Category, Entry
+  // Allowed, Assigned To): web's disabled dropdown grey. Web's read-only
+  // Subject and Work To Be Performed keep normal text.
+  Widget _locked(Widget field) {
+    final theme = _formTheme(context);
+    return Theme(
+      data: theme.copyWith(
+        disabledColor: _lockedTextColor,
+        textTheme: theme.textTheme.copyWith(
+          titleMedium:
+              theme.textTheme.titleMedium?.copyWith(color: _lockedTextColor),
+        ),
+      ),
+      child: field,
+    );
+  }
+
   final TextEditingController subject = TextEditingController();
 
   final TextEditingController other = TextEditingController();
@@ -52,7 +86,6 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
   bool _isLoading = false;
   bool _isLoadingvendors = true;
   bool _isLoadingstaff = false;
-  bool _isLoadingtenant = false;
   bool _Loading = false;
   bool _isLoadingCategories = false;
   Map<String, String> properties = {}; // Mapping of rental_id to rental_address
@@ -202,13 +235,31 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
               [];
       //partsAndLabor.clear();
       _disposeRowsAfterFrame(replacedRows);
-      // The fetched rows carry no calculateTotal listener, so the dirty flag
-      // has to be driven straight off their controllers.
+      // The fetched rows get the listeners rows added later have: a changed
+      // Quantity or Price recalculates the row's amount, like Admin/Staff
+      // Edit (the loaded amount used to stay and be saved), and the dirty
+      // flag is driven straight off their controllers.
       for (final row in partsAndLabor) {
-        (row['qtyController'] as TextEditingController)
-            .addListener(_onDirtyFieldChanged);
-        (row['priceController'] as TextEditingController)
-            .addListener(_onDirtyFieldChanged);
+        final qty = row['qtyController'] as TextEditingController;
+        final price = row['priceController'] as TextEditingController;
+        final total = row['totalController'] as TextEditingController;
+        final subtotal = TextEditingController();
+        row['subtotalcontroller'] = subtotal;
+        // Only when the Quantity or Price text changes: tapping into a box
+        // also notifies (the cursor moves), and must not rewrite the saved
+        // Total ("11" → "11.00"), which would turn on Update.
+        var lastQty = qty.text;
+        var lastPrice = price.text;
+        void recalculate() {
+          if (qty.text == lastQty && price.text == lastPrice) return;
+          lastQty = qty.text;
+          lastPrice = price.text;
+          calculateTotal(qty, price, total, subtotal);
+        }
+        qty.addListener(recalculate);
+        price.addListener(recalculate);
+        qty.addListener(_onDirtyFieldChanged);
+        price.addListener(_onDirtyFieldChanged);
         (row['descriptionController'] as TextEditingController)
             .addListener(_onDirtyFieldChanged);
       }
@@ -240,9 +291,9 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
 
     if (_selectedPropertyId != null) {
       _loadUnits(_selectedPropertyId!);
-      if (_selectedUnitId != null) {
-        _loadTenant(_selectedPropertyId!, _selectedUnitId!);
-      }
+      // No tenant lookup, like web's vendor form: the server keeps a
+      // property's tenant list to Admin/Staff, and the saved tenant comes
+      // from the work order itself.
     }
     // _loadUnits(renderId)
     /* if (_selectedProperty != null) {
@@ -320,7 +371,6 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
           _isLoading = false;
         });
       } else {
-        _loadTenant(rentalId, unitId);
         throw Exception('Failed to load units');
       }
     } catch (e) {
@@ -412,46 +462,6 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
     }
   }
 
-  Future<void> _loadTenant(String rentalId, String unitId) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? id = prefs.getString("vendor_id");
-    String? token = prefs.getString('token');
-    setState(() {
-      _isLoadingtenant = true;
-    });
-    try {
-      final response = await apiGet(
-          Uri.parse('${Api_url}/api/leases/get_tenants/$rentalId/$unitId'),
-          headers: {
-            "authorization": "CRM $token",
-            "id": "CRM $id",
-          });
-      if (response.statusCode == 200) {
-        List jsonResponse = json.decode(response.body)['data'];
-        Map<String, String> tenantsnames = {};
-        jsonResponse.forEach((data) {
-          tenantsnames[data['tenant_id'].toString()] =
-              data['tenant_firstName'].toString() +
-                  " " +
-                  data['tenant_lastName'].toString();
-        });
-        setState(() {
-          tenants = tenantsnames;
-          _isLoadingtenant = false;
-        });
-      } else {
-        throw Exception('Failed to load data');
-      }
-    } catch (e) {
-      setState(() {
-        _isLoadingtenant = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch tenants: ${friendlyErrorMessage(e)}')),
-      );
-    }
-  }
-
   Future<void> _loadDropdownCategories() async {
     setState(() {
       _isLoadingCategories = true;
@@ -517,7 +527,10 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
       if (_normDirty(c['priceController']?.text) != _normDirty(w['price'])) {
         return true;
       }
-      if (_normDirty(c['totalController']?.text) != _normDirty(w['total'])) {
+      // Total is worked out from Quantity x Price ("11.00"), so compare it as
+      // a number: a changed-and-restored row still matches the saved "11".
+      if ((double.tryParse(_normDirty(c['totalController']?.text)) ?? 0) !=
+          (double.tryParse(_normDirty(w['total'])) ?? 0)) {
         return true;
       }
     }
@@ -712,6 +725,12 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
             hintText: 'Quantity',
             controller: partsAndLabor[index]['qtyController'],
             keyboardType: TextInputType.number,
+            // Like web: digits only, at least 1 ("Quantity must be at least 1"),
+            // and "Quantity cannot exceed 9,999".
+            inputFormatters: partsQtyInputFormatters,
+            maxValue: partsQtyMax,
+            maxValueMessage: partsQtyMaxMessage,
+            numberCheck: partsQtyCheck,
           ),
           const SizedBox(height: 10),
           Text(
@@ -803,6 +822,14 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
             hintText: 'Price',
             controller: partsAndLabor[index]['priceController'],
             keyboardType: TextInputType.number,
+            // Like web: decimal keypad, digits and "." only, a number with
+            // at most 2 decimals, above 0 ("Price is required"), and "Price
+            // cannot exceed $999,999.99".
+            decimalPad: true,
+            inputFormatters: partsPriceInputFormatters,
+            maxValue: partsPriceMax,
+            maxValueMessage: partsPriceMaxMessage,
+            numberCheck: partsPriceCheck,
           ),
           const SizedBox(height: 10),
           Text(
@@ -926,7 +953,9 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
         },
       ),
       backgroundColor: Colors.white,
-      body: LayoutBuilder(builder: (context, constraints) {
+      body: Theme(
+        data: _formTheme(context),
+        child: LayoutBuilder(builder: (context, constraints) {
         if (constraints.maxWidth > 500) {
           return Form(
             key: _formkey,
@@ -1156,7 +1185,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                           fontSize: 14,
                                                           fontWeight:
                                                           FontWeight.w400,
-                                                          color: Colors.black87,
+                                                          color: _lockedTextColor,
                                                         ),
                                                         overflow: TextOverflow
                                                             .ellipsis,
@@ -1205,8 +1234,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                     iconSize: 24,
                                                     iconEnabledColor:
                                                     Color(0xFFb0b6c3),
-                                                    iconDisabledColor:
-                                                    Colors.grey,
+                                                    iconDisabledColor: _lockedIconColor,
                                                   ),
                                                   dropdownStyleData:
                                                   DropdownStyleData(
@@ -1309,8 +1337,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                           fontWeight:
                                                           FontWeight
                                                               .w400,
-                                                          color: Colors
-                                                              .black87,
+                                                          color: _lockedTextColor,
                                                         ),
                                                         overflow:
                                                         TextOverflow
@@ -1363,8 +1390,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                     iconSize: 24,
                                                     iconEnabledColor:
                                                     Color(0xFFb0b6c3),
-                                                    iconDisabledColor:
-                                                    Colors.grey,
+                                                    iconDisabledColor: _lockedIconColor,
                                                   ),
                                                   dropdownStyleData:
                                                   DropdownStyleData(
@@ -1437,7 +1463,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                               const SizedBox(
                                                 height: 10,
                                               ),
-                                              DropdownButtonHideUnderline(
+                                              _locked(DropdownButtonHideUnderline(
                                                 child: DropdownButton2<
                                                     allcategories_model>(
                                                   isExpanded: true,
@@ -1483,8 +1509,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                     iconSize: 24,
                                                     iconEnabledColor:
                                                     Color(0xFFb0b6c3),
-                                                    iconDisabledColor:
-                                                    Colors.grey,
+                                                    iconDisabledColor: _lockedIconColor,
                                                   ),
                                                   dropdownStyleData:
                                                   DropdownStyleData(
@@ -1514,7 +1539,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                         left: 14, right: 14),
                                                   ),
                                                 ),
-                                              ),
+                                              )),
                                             ],
                                           ),
                                         ),
@@ -1537,7 +1562,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                               const SizedBox(
                                                 height: 10,
                                               ),
-                                              DropdownButtonHideUnderline(
+                                              _locked(DropdownButtonHideUnderline(
                                                 child: DropdownButton2<String>(
                                                   isExpanded: true,
                                                   hint: const Text('Select'),
@@ -1582,8 +1607,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                     iconSize: 24,
                                                     iconEnabledColor:
                                                     Color(0xFFb0b6c3),
-                                                    iconDisabledColor:
-                                                    Colors.grey,
+                                                    iconDisabledColor: _lockedIconColor,
                                                   ),
                                                   dropdownStyleData:
                                                   DropdownStyleData(
@@ -1613,7 +1637,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                         left: 14, right: 14),
                                                   ),
                                                 ),
-                                              ),
+                                              )),
                                             ],
                                           ),
                                         ),
@@ -1694,8 +1718,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                                   fontWeight:
                                                                   FontWeight
                                                                       .w400,
-                                                                  color: Colors
-                                                                      .black87,
+                                                                  color: _lockedTextColor,
                                                                 ),
                                                                 overflow:
                                                                 TextOverflow
@@ -1748,8 +1771,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                         iconEnabledColor:
                                                         Color(
                                                             0xFFb0b6c3),
-                                                        iconDisabledColor:
-                                                        Colors.grey,
+                                                        iconDisabledColor: _lockedIconColor,
                                                       ),
                                                       dropdownStyleData:
                                                       DropdownStyleData(
@@ -1846,7 +1868,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                   children: [
                                     const Row(
                                       children: [
-                                        Text('Parts And Labou ',
+                                        Text('Parts and Labor ',
                                             style: TextStyle(
                                                 fontWeight: FontWeight.bold)),
                                       ],
@@ -1979,6 +2001,12 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                 ['qtyController'],
                                                 keyboardType:
                                                 TextInputType.number,
+                                                // Like web: digits only, at least 1 ("Quantity must be at least 1"),
+                                                // and "Quantity cannot exceed 9,999".
+                                                inputFormatters: partsQtyInputFormatters,
+                                                maxValue: partsQtyMax,
+                                                maxValueMessage: partsQtyMaxMessage,
+                                                numberCheck: partsQtyCheck,
                                               ),
                                             ),
                                             Padding(
@@ -2088,6 +2116,14 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                 ['priceController'],
                                                 keyboardType:
                                                 TextInputType.number,
+                                                // Like web: decimal keypad, digits and "." only, a number with
+                                                // at most 2 decimals, above 0 ("Price is required"), and "Price
+                                                // cannot exceed $999,999.99".
+                                                decimalPad: true,
+                                                inputFormatters: partsPriceInputFormatters,
+                                                maxValue: partsPriceMax,
+                                                maxValueMessage: partsPriceMaxMessage,
+                                                numberCheck: partsPriceCheck,
                                               ),
                                             ),
                                             Padding(
@@ -2223,7 +2259,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     const SizedBox(
                                       height: 10,
                                     ),
-                                    Text('Vendors Note *',
+                                    Text('Vendor Notes',
                                         style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.bold,
@@ -2238,12 +2274,8 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                       keyboardType: TextInputType.text,
                                       hintText: 'Enter here',
                                       controller: vendornote,
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'please enter the note here';
-                                        }
-                                        return null;
-                                      },
+                                      // Optional, like web and the phone layout.
+                                      optional: true,
                                     ),
                                     const SizedBox(
                                       height: 20,
@@ -2570,22 +2602,13 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                 const EdgeInsets.symmetric(
                                                     horizontal: 12.0,
                                                     vertical: 0),
+                                                // Web's disabled Due Date box, like
+                                                // the phone layout.
                                                 decoration: BoxDecoration(
-                                                    color: Colors.white,
-                                                    boxShadow: [
-                                                      const BoxShadow(
-                                                        color: Colors.black26,
-                                                        offset: Offset(1.0,
-                                                            1.0), // Shadow offset to the bottom right
-                                                        blurRadius:
-                                                        8.0, // How much to blur the shadow
-                                                        spreadRadius:
-                                                        0.0, // How much the shadow should spread
-                                                      ),
-                                                    ],
+                                                    color: const Color(0xFFF8F9FA),
                                                     border: Border.all(
-                                                        width: 0,
-                                                        color: Colors.white),
+                                                        width: 1.5,
+                                                        color: const Color(0xFFCED4DA)),
                                                     borderRadius:
                                                     BorderRadius.circular(
                                                         6.0)),
@@ -2606,7 +2629,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                                     ),
                                                   ),
                                                   const Icon(Icons.calendar_today,
-                                                      size: 20, color: Color(0xFF8898aa)),
+                                                      size: 20, color: Color(0xFFADB5BD)),
                                                 ],
                                               ),
                                             ),
@@ -2911,17 +2934,16 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                   ),
                                 ],
                               )
-                                  : const Center(child: Text("")),
-                              const SizedBox(
-                                height: 10,
-                              ),
+                                  : const SizedBox.shrink(),
+                              if (_imageUrls.isNotEmpty)
+                                const SizedBox(height: 10),
                               Text('Property *',
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                       color: blueColor)),
                               const SizedBox(
-                                height: 2,
+                                height: 10,
                               ),
                               _isLoading
                                   ? const Center(
@@ -2938,7 +2960,9 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     child:
                                     DropdownButtonFormField2<String>(
                                       decoration: const InputDecoration(
-                                          border: InputBorder.none),
+                                          border: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero),
                                       isExpanded: true,
                                       hint: const Row(
                                         children: [
@@ -2966,7 +2990,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w400,
-                                              color: Colors.black87,
+                                              color: _lockedTextColor,
                                             ),
                                             overflow:
                                             TextOverflow.ellipsis,
@@ -3011,7 +3035,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                         iconSize: 24,
                                         iconEnabledColor:
                                         Color(0xFFb0b6c3),
-                                        iconDisabledColor: Colors.grey,
+                                        iconDisabledColor: _lockedIconColor,
                                       ),
                                       dropdownStyleData:
                                       DropdownStyleData(
@@ -3047,22 +3071,22 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                       },
                                     ),
                                   ),
-                                  units.isNotEmpty
-                                      ? Text('Unit',
+                                  if (units.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    Text('Unit',
                                       style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
-                                          color: blueColor))
-                                      : Container(),
-                                  const SizedBox(height: 0),
-                                  units.isNotEmpty
-                                      ? DropdownButtonHideUnderline(
+                                          color: blueColor)),
+                                    const SizedBox(height: 10),
+                                    DropdownButtonHideUnderline(
                                     child: DropdownButtonFormField2<
                                         String>(
                                       decoration:
                                       const InputDecoration(
-                                          border:
-                                          InputBorder.none),
+                                          border: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero),
                                       isExpanded: true,
                                       hint: const Row(
                                         children: [
@@ -3093,7 +3117,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                               fontSize: 14,
                                               fontWeight:
                                               FontWeight.w400,
-                                              color: Colors.black87,
+                                              color: _lockedTextColor,
                                             ),
                                             overflow: TextOverflow
                                                 .ellipsis,
@@ -3144,8 +3168,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                         iconSize: 24,
                                         iconEnabledColor:
                                         Color(0xFFb0b6c3),
-                                        iconDisabledColor:
-                                        Colors.grey,
+                                        iconDisabledColor: _lockedIconColor,
                                       ),
                                       dropdownStyleData:
                                       DropdownStyleData(
@@ -3175,8 +3198,8 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                             left: 14, right: 14),
                                       ),
                                     ),
-                                  )
-                                      : Container(),
+                                  ),
+                                  ],
                                 ],
                               ),
                               const SizedBox(
@@ -3190,7 +3213,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                               const SizedBox(
                                 height: 10,
                               ),
-                              DropdownButtonHideUnderline(
+                              _locked(DropdownButtonHideUnderline(
                                 child: DropdownButton2<allcategories_model>(
                                   isExpanded: true,
                                   hint: Text(_isLoadingCategories
@@ -3226,7 +3249,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     ),
                                     iconSize: 24,
                                     iconEnabledColor: Color(0xFFb0b6c3),
-                                    iconDisabledColor: Colors.grey,
+                                    iconDisabledColor: _lockedIconColor,
                                   ),
                                   dropdownStyleData: DropdownStyleData(
                                     decoration: BoxDecoration(
@@ -3246,7 +3269,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     EdgeInsets.only(left: 14, right: 14),
                                   ),
                                 ),
-                              ),
+                              )),
                               _showTextField
                                   ? Padding(
                                 padding: const EdgeInsets.only(
@@ -3343,7 +3366,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                         ),
                                         iconSize: 24,
                                         iconEnabledColor: Color(0xFFb0b6c3),
-                                        iconDisabledColor: Colors.grey,
+                                        iconDisabledColor: _lockedIconColor,
                                       ),
                                       dropdownStyleData: DropdownStyleData(
                                         decoration: BoxDecoration(
@@ -3386,7 +3409,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                               const SizedBox(
                                 height: 10,
                               ),
-                              DropdownButtonHideUnderline(
+                              _locked(DropdownButtonHideUnderline(
                                 child: DropdownButton2<String>(
                                   isExpanded: true,
                                   hint: const Text('Select'),
@@ -3425,7 +3448,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     ),
                                     iconSize: 24,
                                     iconEnabledColor: Color(0xFFb0b6c3),
-                                    iconDisabledColor: Colors.grey,
+                                    iconDisabledColor: _lockedIconColor,
                                   ),
                                   dropdownStyleData: DropdownStyleData(
                                     decoration: BoxDecoration(
@@ -3445,7 +3468,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     EdgeInsets.only(left: 14, right: 14),
                                   ),
                                 ),
-                              ),
+                              )),
                               const SizedBox(
                                 height: 10,
                               ),
@@ -3455,7 +3478,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                       fontWeight: FontWeight.bold,
                                       color: blueColor)),
                               const SizedBox(
-                                height: 2,
+                                height: 10,
                               ),
                               _isLoadingstaff
                                   ? const Center(
@@ -3472,7 +3495,9 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     child:
                                     DropdownButtonFormField2<String>(
                                       decoration: const InputDecoration(
-                                          border: InputBorder.none),
+                                          border: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero),
                                       isExpanded: true,
                                       hint: const Row(
                                         children: [
@@ -3500,7 +3525,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w400,
-                                              color: Colors.black87,
+                                              color: _lockedTextColor,
                                             ),
                                             overflow:
                                             TextOverflow.ellipsis,
@@ -3543,7 +3568,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                         iconSize: 24,
                                         iconEnabledColor:
                                         Color(0xFFb0b6c3),
-                                        iconDisabledColor: Colors.grey,
+                                        iconDisabledColor: _lockedIconColor,
                                       ),
                                       dropdownStyleData:
                                       DropdownStyleData(
@@ -3627,7 +3652,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                             children: [
                               const Row(
                                 children: [
-                                  Text('Parts And Labour :',
+                                  Text('Parts and Labor :',
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold)),
                                 ],
@@ -3665,7 +3690,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                               const SizedBox(
                                 height: 10,
                               ),
-                              Text('Vendors Note ',
+                              Text('Vendor Notes ',
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
@@ -4017,8 +4042,10 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12.0),
+                                    // Web's disabled Due Date box (#f8f9fa,
+                                    // #ced4da border, #adb5bd icon).
                                     decoration: BoxDecoration(
-                                        color: const Color(0xFFF1F3F6),
+                                        color: const Color(0xFFF8F9FA),
                                         border: Border.all(
                                             width: 1.5,
                                             color: const Color(0xFFCED4DA)),
@@ -4039,7 +4066,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                           ),
                                         ),
                                         const Icon(Icons.calendar_today,
-                                            size: 20, color: Color(0xFF8898aa)),
+                                            size: 20, color: Color(0xFFADB5BD)),
                                       ],
                                     ),
                                   ),
@@ -4082,7 +4109,8 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
                                         ),
                                       )
                                     : Text(
-                                        'Edit Work Order',
+                                        // Like web (and the wide layout): "Update Work Order".
+                                        'Update Work Order',
                                         style: TextStyle(
                                             color: canSave
                                                 ? const Color(0xFFf7f8f9)
@@ -4127,7 +4155,7 @@ class _Edit_WorkorderState extends State<Edit_Workorder> {
             ),
           );
         }
-      }),
+      })),
     );
   }
 

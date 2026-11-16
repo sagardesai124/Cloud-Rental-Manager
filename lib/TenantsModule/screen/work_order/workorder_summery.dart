@@ -22,6 +22,8 @@ import 'package:three_zero_two_property/Model/tenants.dart';
 import 'package:three_zero_two_property/TenantsModule/model/workorder_summery_model.dart';
 import 'package:three_zero_two_property/TenantsModule/repository/workorder.dart';
 import 'update_workorder.dart';
+import 'edit_workorder.dart';
+import '../../repository/permission_provider.dart';
 import 'package:three_zero_two_property/TenantsModule/widgets/drawer_tiles.dart';
 
 import 'package:three_zero_two_property/constant/constant.dart';
@@ -205,6 +207,42 @@ class _Workorder_summeryState extends State<Workorder_summery>
   int visibleCount = 5;
   int _partsVisibleCount = 5;
   final PageController _partsPageCtrl = PageController();
+  /// Opens the Edit Work Order form from the details screen, like web, and
+  /// reloads the details after a save.
+  Widget _editWorkOrderPencil() {
+    return InkWell(
+      key: const Key('workorder_details_edit_pencil'),
+      borderRadius: BorderRadius.circular(8),
+      onTap: () async {
+        final saved = await Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => Edit_Workorder(
+            workorderId: widget.workorder_id!,
+          ),
+        ));
+        if (saved == true && mounted) {
+          setState(() {
+            futureworkorderSummary =
+                WorkOrderRepository.getworkorderSummary(widget.workorder_id!);
+          });
+        }
+      },
+      child: Container(
+        height: 35,
+        width: 35,
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: const FaIcon(
+          FontAwesomeIcons.edit,
+          size: 15,
+          color: Colors.green,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -297,13 +335,36 @@ class _Workorder_summeryState extends State<Workorder_summery>
                           const SizedBox(height: 15),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Work Order : #${snapshot.data!.ticketNumber ?? 'N/A'}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: blueColor,
+                                    ),
+                                  ),
+                                ),
+                                // Edit pencil next to the work order number, like web
+                                // WorkOrderDetails: shown only with Work Orders → Edit permission.
+                                if (Provider.of<PermissionProvider>(context).permissions?.workorderEdit == true)
+                                  _editWorkOrderPencil(),
+                              ],
+                            ),
+                          ),
+                          // Like web: the property address under the work order number,
+                          // "N/A" when there is none.
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'Work Order : #${snapshot.data!.ticketNumber ?? 'N/A'}',
+                                'Address: ${(snapshot.data!.propertyData?.rentaladress ?? '').isEmpty ? 'N/A' : snapshot.data!.propertyData!.rentaladress}',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
                                   color: blueColor,
                                 ),
                               ),

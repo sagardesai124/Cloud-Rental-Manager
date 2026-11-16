@@ -4,6 +4,7 @@ import 'package:email_validator/email_validator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:three_zero_two_property/services/letters_only.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -465,6 +466,7 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                   });
                                 },
                                 controller: firstname,
+                                inputFormatters: [typedLettersAndSpacesOnly],
                                 cursorColor: blueColor,
                                 decoration: const InputDecoration(
                                   // enabledBorder: firstnameerror
@@ -876,6 +878,7 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                           keyboardType:
                                               TextInputType.text,
                                           controller: city2,
+                                          inputFormatters: [typedLettersAndSpacesOnly],
                                           style: TextStyle(
                                             color: Colors.black,
                                             fontSize: MediaQuery.of(
@@ -964,6 +967,7 @@ class _AddRentalownersState extends State<AddRentalowners> {
                                           keyboardType:
                                               TextInputType.text,
                                           controller: county2,
+                                          inputFormatters: [typedLettersAndSpacesOnly],
                                           style: TextStyle(
                                             color: Colors.black,
                                             fontSize: MediaQuery.of(

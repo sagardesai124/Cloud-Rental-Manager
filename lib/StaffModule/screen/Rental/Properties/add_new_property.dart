@@ -7,6 +7,7 @@ import 'package:email_validator/email_validator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:three_zero_two_property/services/letters_only.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -2378,6 +2379,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
                           TextField(
                             keyboardType: TextInputType.text,
                             controller: city,
+                            inputFormatters: [typedLettersAndSpacesOnly],
                             style: _pfInputStyle,
                             onChanged: (value) {
                               setState(() {
@@ -2455,6 +2457,7 @@ class _Add_new_propertyState extends State<Add_new_property> {
                           TextField(
                             keyboardType: TextInputType.text,
                             controller: country,
+                            inputFormatters: [typedLettersAndSpacesOnly],
                             style: _pfInputStyle,
                             onChanged: (value) {
                               setState(() {
@@ -2907,6 +2910,8 @@ class _Add_new_propertyState extends State<Add_new_property> {
                                                                                   });
                                                                                 },
                                                                                 controller: name,
+                                                                                // Letters and spaces only, like web StaffMemberModal.
+                                                                                inputFormatters: [typedLettersAndSpacesOnly],
                                                                                 cursorColor: blueColor,
                                                                                 decoration: InputDecoration(
                                                                                   hintText: "Enter a staff member name here..*",

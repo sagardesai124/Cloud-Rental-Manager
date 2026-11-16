@@ -4032,12 +4032,13 @@ class _TenantSummaryMobileState extends State<TenantSummaryMobile>
     if (mounted) setState(() => _sendingSetupEmail = false);
   }
 
-  /// Formats an API timestamp the way web's `toLocaleString()` renders it
-  /// (e.g. "7/15/2026, 6:22:35 PM"), converted to the device's local zone.
+  /// Formats an API timestamp like web's `formatDateTime` on the tenant page
+  /// (TenantDetailPage.jsx): the company Date & Time Format, local time, e.g.
+  /// "2026-07-15 18:22:35" or "07/15/2026 06:22:35 PM".
   String _formatAccountTimestamp(String raw) {
     try {
-      return DateFormat('M/d/yyyy, h:mm:ss a')
-          .format(DateTime.parse(raw).toLocal());
+      return Provider.of<DateProvider>(context, listen: false)
+          .formatWebDateTime(DateTime.parse(raw));
     } catch (_) {
       return raw;
     }

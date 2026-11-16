@@ -311,7 +311,11 @@ class MaintenanceHistory {
     workorderId = json['workorder_id'];
     vendor = json['vendor'];
     event = json['event'];
-    images = json['images'].cast<String>();
+    // Older history entries have no images list; read them as none, so the
+    // whole report still loads.
+    images = json['images'] is List
+        ? (json['images'] as List).whereType<String>().toList()
+        : <String>[];
     sId = json['_id'];
     workSubject = json['work_subject'];
     workStatus = json['work_status'];

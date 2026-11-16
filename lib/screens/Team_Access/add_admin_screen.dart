@@ -25,6 +25,7 @@ class _AddAdminScreenState extends State<AddAdminScreen> {
   final TextEditingController _phone = TextEditingController();
 
   String? _firstNameError;
+  String? _lastNameError;
   String? _emailError;
   String? _phoneError;
   bool _loading = false;
@@ -44,6 +45,9 @@ class _AddAdminScreenState extends State<AddAdminScreen> {
     setState(() {
       _firstNameError =
           _firstName.text.trim().isEmpty ? 'Please enter first name' : null;
+      // Same as web (InviteUserModal.jsx): Last name is required.
+      _lastNameError =
+          _lastName.text.trim().isEmpty ? 'Last name is required.' : null;
       if (_email.text.trim().isEmpty) {
         _emailError = 'Please enter email';
       } else if (!EmailValidator.validate(_email.text.trim())) {
@@ -57,6 +61,7 @@ class _AddAdminScreenState extends State<AddAdminScreen> {
           : null;
     });
     if (_firstNameError != null ||
+        _lastNameError != null ||
         _emailError != null ||
         _phoneError != null) {
       return;
@@ -110,8 +115,17 @@ class _AddAdminScreenState extends State<AddAdminScreen> {
           ),
           if (_firstNameError != null) teamErrorText(_firstNameError!),
           const SizedBox(height: 16),
-          teamFieldLabel('Last Name'),
-          teamTextField(_lastName, 'Enter last name'),
+          teamFieldLabel('Last Name', required: true),
+          teamTextField(
+            _lastName,
+            'Enter last name',
+            onChanged: () {
+              if (_lastNameError != null) {
+                setState(() => _lastNameError = null);
+              }
+            },
+          ),
+          if (_lastNameError != null) teamErrorText(_lastNameError!),
           const SizedBox(height: 16),
           teamFieldLabel('Email', required: true),
           teamTextField(

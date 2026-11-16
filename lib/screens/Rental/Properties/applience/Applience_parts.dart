@@ -468,15 +468,22 @@ class _AppliancesPartState extends State<AppliancesPart>
   bool ascending2 = false;
   bool ascending3 = false;
 
+  /// Like web: the installed date in the company format, or "N/A" when the
+  /// appliance has none (web lets an appliance be saved without one).
+  String _installedDateText(unit_appliance appliance, DateProvider dates) {
+    final date = appliance.installedDate ?? '';
+    return date.isEmpty ? 'N/A' : dates.formatCurrentDate(date);
+  }
+
   void sortData(List<unit_appliance> data) {
     if (sorting1) {
       data.sort((a, b) => ascending1
-          ? a.applianceName!.compareTo(b.applianceName!)
-          : b.applianceName!.compareTo(a.applianceName!));
+          ? (a.applianceName ?? '').compareTo((b.applianceName ?? ''))
+          : (b.applianceName ?? '').compareTo((a.applianceName ?? '')));
     } else if (sorting2) {
       data.sort((a, b) => ascending2
-          ? a.applianceDescription!.compareTo(b.applianceDescription!)
-          : b.applianceDescription!.compareTo(a.applianceDescription!));
+          ? (a.applianceDescription ?? '').compareTo((b.applianceDescription ?? ''))
+          : (b.applianceDescription ?? '').compareTo((a.applianceDescription ?? '')));
     }
   }
 
@@ -1838,7 +1845,7 @@ class _AppliancesPartState extends State<AppliancesPart>
                                                       //               rentalOwnersid: rentals.rentalownerId!,)));
                                                     },
                                                     child: Text(
-                                                      '   ${rentals.applianceName}',
+                                                      '   ${rentals.applianceName ?? ''}',
                                                       style: TextStyle(
                                                         color: blueColor,
                                                         fontWeight:
@@ -1919,9 +1926,7 @@ class _AppliancesPartState extends State<AppliancesPart>
                                                                             blueColor), // Bold and black
                                                                   ),
                                                                   TextSpan(
-                                                                    text: dateProvider
-                                                                        .formatCurrentDate(
-                                                                            '${rentals.installedDate}'),
+                                                                    text: _installedDateText(rentals, dateProvider),
                                                                     style: const TextStyle(
                                                                         fontWeight:
                                                                             FontWeight
@@ -1954,7 +1959,9 @@ class _AppliancesPartState extends State<AppliancesPart>
                                                                   ),
                                                                   TextSpan(
                                                                     text:
-                                                                        '${rentals.brand}',
+                                                                        (rentals.brand ?? '').isEmpty
+                                                                            ? 'N/A' // like web
+                                                                            : rentals.brand!,
                                                                     style: const TextStyle(
                                                                         fontWeight:
                                                                             FontWeight
@@ -2327,14 +2334,14 @@ class _AppliancesPartState extends State<AppliancesPart>
                                           BoxDecoration(border: Border.all()),
                                       children: [
                                         _buildHeader('Name', 0,
-                                            (rental) => rental.applianceName!),
+                                            (rental) => rental.applianceName ?? ''),
                                         _buildHeader(
                                             'Description',
                                             1,
                                             (rental) =>
-                                                rental.applianceDescription!),
+                                                rental.applianceDescription ?? ''),
                                         _buildHeader('InstalledDate', 2,
-                                            (rental) => rental.installedDate!),
+                                            (rental) => rental.installedDate ?? ''),
                                         _buildHeader('Actions', 3, null),
                                       ],
                                     ),
@@ -2362,12 +2369,12 @@ class _AppliancesPartState extends State<AppliancesPart>
                                         ),
                                         children: [
                                           _buildDataCell(
-                                              _pagedData[i].applianceName!),
+                                              _pagedData[i].applianceName ?? ''),
                                           // _buildDataCell('${_pagedData[i].rentalOwnerFirstName ?? ''} ${_pagedData[i].rentalOwnerLastName ?? ''}'),
                                           _buildDataCell(_pagedData[i]
-                                              .applianceDescription!),
+                                              .applianceDescription ?? ''),
                                           _buildDataCell(
-                                              _pagedData[i].installedDate!),
+                                              _installedDateText(_pagedData[i], dateProvider)),
                                           Column(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
@@ -2384,14 +2391,12 @@ class _AppliancesPartState extends State<AppliancesPart>
                                                   ),
                                                   InkWell(
                                                     onTap: () async {
-                                                      _name.text = _tableData
-                                                          .first.applianceName!;
-                                                      _description.text = _tableData
-                                                          .first
-                                                          .applianceDescription!;
-                                                      _installedDate.text =
-                                                          _tableData.first
-                                                              .installedDate!;
+                                                      // Like web: edit the appliance on the row that was tapped.
+                                                      final appliance = _pagedData[i];
+                                                      _name.text = appliance.applianceName ?? '';
+                                                      _description.text =
+                                                          appliance.applianceDescription ?? '';
+                                                      _installedDate.text = appliance.installedDate ?? '';
                                                       showDialog(
                                                         context: context,
                                                         builder: (BuildContext
@@ -2527,7 +2532,8 @@ class _AppliancesPartState extends State<AppliancesPart>
                                                                               child: ElevatedButton(
                                                                                 style: ElevatedButton.styleFrom(backgroundColor: blueColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0))),
                                                                                 onPressed: () async {
-                                                                                  if (_name.text.isEmpty || _description.text.isEmpty || _installedDate.text.isEmpty) {
+                                                                                  // Like web: description and installed date are optional.
+                                                                                  if (_name.text.isEmpty) {
                                                                                     setState(() {
                                                                                       iserror = true;
                                                                                     });
@@ -2540,13 +2546,27 @@ class _AppliancesPartState extends State<AppliancesPart>
                                                                                     String? id = prefs.getString("adminId");
                                                                                     Properies_summery_Repo()
                                                                                         .Editappliances(
-                                                                                      applianceid: _tableData.first.applianceId,
+                                                                                      applianceid: appliance.applianceId,
                                                                                       adminId: id,
                                                                                       unitId: widget.unit?.unitId,
                                                                                       rentalId: widget.unit?.rentalId ?? widget.properties?.rentalId ?? "",
                                                                                       appliancename: _name.text,
                                                                                       appliancedescription: _description.text,
                                                                                       installeddate: reverseFormatDate(_installedDate.text),
+                                                                                      // Like web's edit form: send the other saved values too, so the
+                                                                                      // update keeps them (the server writes every field it gets, and
+                                                                                      // clears HVAC filters when no category is sent).
+                                                                                      categoryId: appliance.categoryId,
+                                                                                      type: appliance.type,
+                                                                                      systemType: appliance.systemType,
+                                                                                      brand: appliance.brand,
+                                                                                      model: appliance.model,
+                                                                                      serialNumber: appliance.serialNumber,
+                                                                                      warrantyExpiry: appliance.warrantyExpiry,
+                                                                                      lastMaintenanceDate: appliance.lastMaintenanceDate,
+                                                                                      maintenanceNotes: appliance.maintenanceNotes,
+                                                                                      status: appliance.status,
+                                                                                      filters: appliance.filters,
                                                                                     )
                                                                                         .then((value) {
                                                                                       setState(() {
@@ -2630,7 +2650,8 @@ class _AppliancesPartState extends State<AppliancesPart>
                                                     onTap: () async {
                                                       _showDeleteAlert(
                                                           context,
-                                                          _tableData.first
+                                                          // Like web: delete the appliance on the row that was tapped.
+                                                          _pagedData[i]
                                                               .applianceId!);
                                                     },
                                                     child: Container(
