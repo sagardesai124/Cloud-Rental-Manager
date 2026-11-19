@@ -6,6 +6,9 @@ class propertytype {
   String? propertysubType;
   bool? isMultiunit;
   String? propertyTypeImage;
+  // Web's Syndication Property Type (zillow_property_type): CONDO, HOUSE,
+  // ... for a Residential type; empty otherwise.
+  String? zillowPropertyType;
   String? createdAt;
   String? updatedAt;
   bool? isDelete;
@@ -19,6 +22,7 @@ class propertytype {
         this.propertysubType,
         this.isMultiunit,
         this.propertyTypeImage,
+        this.zillowPropertyType,
         this.createdAt,
         this.updatedAt,
         this.isDelete,
@@ -32,6 +36,7 @@ class propertytype {
     propertysubType = json['propertysub_type'];
     isMultiunit = json['is_multiunit'];
     propertyTypeImage = json['property_type_image'];
+    zillowPropertyType = json['zillow_property_type']?.toString();
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
     isDelete = json['is_delete'];
@@ -47,6 +52,7 @@ class propertytype {
     data['propertysub_type'] = this.propertysubType;
     data['is_multiunit'] = this.isMultiunit;
     data['property_type_image'] = this.propertyTypeImage;
+    data['zillow_property_type'] = this.zillowPropertyType;
     data['createdAt'] = this.createdAt;
     data['updatedAt'] = this.updatedAt;
     data['is_delete'] = this.isDelete;

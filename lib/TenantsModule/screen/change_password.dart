@@ -763,7 +763,7 @@ class _Change_passwordState extends State<Change_password> {
                                                                 'assets/icons/pasword.png'),
                                                           ),
                                                           hintText:
-                                                              "New Password",
+                                                              "Enter Your New Password",
                                                           suffixIcon: InkWell(
                                                             onTap: () {
                                                               setState(() {
@@ -898,7 +898,7 @@ class _Change_passwordState extends State<Change_password> {
                                                                 'assets/icons/pasword.png'),
                                                           ),
                                                           hintText:
-                                                              "Confirm password",
+                                                              "Confirm Password",
                                                           suffixIcon: InkWell(
                                                             onTap: () {
                                                               setState(() {
@@ -956,11 +956,12 @@ class _Change_passwordState extends State<Change_password> {
                                         ? null
                                         : () async {
                                       // Validate Current Password
-                                      if (currentpassword.text.isEmpty) {
+                                      // Like web: spaces alone count as empty.
+                                      if (currentpassword.text.trim().isEmpty) {
                                         setState(() {
                                           currentpassworderror = true;
                                           currentpasswordmessage =
-                                              "Current password is required";
+                                              "Please enter current password";
                                         });
                                       } else {
                                         setState(() {
@@ -973,7 +974,7 @@ class _Change_passwordState extends State<Change_password> {
                                         setState(() {
                                           passworderror = true;
                                           passwordmessage =
-                                              "Password is required";
+                                              "Password is required.";
                                         });
                                       } else if (password.text.length < 8) {
                                         setState(() {
@@ -1010,14 +1011,14 @@ class _Change_passwordState extends State<Change_password> {
                                         setState(() {
                                           confirmpassworderror = true;
                                           confirmpasswordmessage =
-                                              "Confirm password is required";
+                                              "Please confirm your new password";
                                         });
                                       } else if (confirmpassword.text !=
                                           password.text) {
                                         setState(() {
                                           confirmpassworderror = true;
                                           confirmpasswordmessage =
-                                              "Both passwords do not match";
+                                              "Passwords do not match";
                                         });
                                       } else {
                                         setState(() {

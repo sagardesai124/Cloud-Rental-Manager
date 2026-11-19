@@ -93,41 +93,8 @@ class VendorRepository {
       return Vendor();
     }
   }
-  /// Masked Tax ID for the edit form, fetched SEPARATELY from [getVendor].
-  ///
-  /// Web parity (AddVendor.jsx): the base vendor is loaded without
-  /// `include_tax_id`, then the tax id is requested on its own. The server
-  /// hides `tax_id` by default and answers 403 for any role other than
-  /// admin/super_admin, so folding this into the main request would blank the
-  /// whole edit form for Staff instead of just omitting one field.
-  ///
-  /// Returns null when unavailable (403, missing, or any error) — the caller
-  /// simply shows no current-value hint.
-  Future<String?> getVendorTaxId(String vender_id) async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? id = prefs.getString("adminId");
-      String? token = prefs.getString('token');
-      final url = Uri.parse(
-          '$Api_url/api/vendor/get_vendor/$vender_id?include_tax_id=true');
-      final response = await apiGet(url, headers: {
-        "authorization": "CRM $token",
-        "id": "CRM $id",
-      });
-      // Suppressed in release by the zone-level print filter in main().
-      print('[tax id] HTTP ${response.statusCode} body=${response.body}');
-      if (response.statusCode != 200) return null;
-      final decoded = jsonDecode(response.body);
-      final data = decoded is Map ? decoded["data"] : null;
-      if (data is! Map) return null;
-      final value = data["tax_id"]?.toString().trim() ?? '';
-      print('[tax id] parsed value="$value"');
-      return value.isEmpty ? null : value;
-    } catch (e) {
-      print('[tax id] exception: $e');
-      return null;
-    }
-  }
+  // No Tax ID loader: like web staging (CRM-5279), Edit Vendor never asks
+  // for the stored Tax ID (`include_tax_id`).
 
   /// Returns null on success, otherwise the message to show. See [addVendor].
   Future<String?> update_vendor(Vendor vendor,String vender_id) async {

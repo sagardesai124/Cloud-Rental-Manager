@@ -21,9 +21,11 @@ import 'package:three_zero_two_property/screens/Maintenance/Vendor/add_vendor.da
 import 'package:three_zero_two_property/screens/Maintenance/Vendor/edit_vendor.dart'
     as admin_edit;
 
-/// Vendors → Add Vendor / Edit Vendor: the email box uses web's rule
-/// (AddVendor on live staging: `/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/`
-/// with "Invalid email address"). Before, the phone used a looser check that
+/// Vendors → Add Vendor / Edit Vendor: the email box uses web's rule and
+/// wording (AddVendor.jsx on web staging: placeholder "Enter email address",
+/// `/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/` with "Please enter a
+/// valid email address", and "Please enter email address." when it is
+/// empty). Before, the phone used a looser check that
 /// let through emails web refuses, such as o'brien@test.com, so web could
 /// not save that vendor later. Admin and Staff each have their own Add and
 /// Edit forms; all four are covered.
@@ -101,7 +103,7 @@ class _LauncherState extends State<_Launcher> {
 }
 
 Finder get _emailBox => find.byWidgetPredicate(
-    (w) => w is TextField && w.decoration?.hintText == 'Enter email');
+    (w) => w is TextField && w.decoration?.hintText == 'Enter email address');
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -171,11 +173,18 @@ void main() {
 
           for (final email in _refused) {
             await submit(email);
-            expect(find.text('Invalid email address'), findsOneWidget,
+            expect(find.text('Please enter a valid email address'),
+                findsOneWidget,
                 reason: '$email is refused, as on web');
           }
           expect(server.saves, isEmpty,
               reason: 'nothing is saved while the email is refused');
+
+          // An empty email: web's "Please enter email address.".
+          await submit('');
+          expect(find.text('Please enter email address.'), findsOneWidget,
+              reason: 'empty email, as on web');
+          expect(server.saves, isEmpty, reason: 'nothing is saved');
 
           // Accepted emails: run the form's own checks (what the save button
           // runs first) without saving, so every email can be tried.
@@ -186,11 +195,14 @@ void main() {
             await tester.pump();
             formState.validate();
             await _settle(tester, 4);
-            expect(find.text('Invalid email address'), findsNothing,
+            expect(find.text('Please enter a valid email address'),
+                findsNothing,
                 reason: '$email is accepted, as on web');
           }
           expect(find.text('Email is not valid'), findsNothing,
               reason: 'the old message is gone');
+          expect(find.text('Invalid email address'), findsNothing,
+              reason: "the app's old wording is gone");
 
           // Edit forms are otherwise complete, so an accepted email saves.
           if (button == 'Update Vendor') {

@@ -1,4 +1,5 @@
 import 'package:three_zero_two_property/services/app_log.dart';
+import 'package:three_zero_two_property/services/work_order_billable.dart';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -535,6 +536,9 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
         // Load tenant data if we have a valid unit selected
         if (_selectedUnitId != null && units.containsKey(_selectedUnitId)) {
           _loadTenant(rentalId, _selectedUnitId!);
+        } else {
+          // Like web: no unit picked, so look up the whole property.
+          _lookUpBillableTenants();
         }
       } else {
         setState(() {
@@ -631,17 +635,20 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? id = prefs.getString("adminId");
     String? token = prefs.getString('token');
+    final int request = ++_tenantRequest;
     setState(() {
       _isLoadingtenant = true;
+      _tenantLookup = TenantLookup.loading;
     });
     try {
       final response = await apiGet(
-          Uri.parse('${Api_url}/api/leases/get_tenants/$rentalId/$unitId'),
+          Uri.parse('${Api_url}/api/${tenantLookupPath(rentalId, unitId)}'),
           headers: {
             "authorization": "CRM $token",
             "id": "CRM $id",
           });
       if (!mounted) return;
+      if (!mounted || request != _tenantRequest) return;
       if (response.statusCode == 200) {
         List jsonResponse = json.decode(response.body)['data'];
         Map<String, String> tenantsnames = {};
@@ -653,14 +660,17 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
         });
         setState(() {
           tenants = tenantsnames;
+          _tenantLookup = TenantLookup.loaded;
           _isLoadingtenant = false;
         });
       } else {
         throw Exception('Failed to load data');
       }
     } catch (e) {
+      if (!mounted || request != _tenantRequest) return;
       setState(() {
         _isLoadingtenant = false;
+        _tenantLookup = TenantLookup.idle;
       });
     }
   }
@@ -715,6 +725,31 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
   String StaffId = '';
   String tenantId = '';
   bool isChecked = false;
+
+  // Like web (AddWorkorder.jsx, utils/workOrderBillable.js): whether the
+  // tenant lookup for the chosen property or unit has answered, so an empty
+  // list means "nobody to bill" rather than "still loading" or "failed".
+  TenantLookup _tenantLookup = TenantLookup.idle;
+  int _tenantRequest = 0;
+
+  bool get _noBillableTenant => hasNoBillableTenant(
+        isBillable: isChecked,
+        rentalId: _selectedPropertyId,
+        tenantId: _selectedtenantId ?? tenantId,
+        lookup: _tenantLookup,
+        tenantCount: tenants.length,
+      );
+
+  /// With Billable To Tenant ticked, look up who can be billed for the
+  /// chosen property (or its unit once one is picked), like web.
+  void _lookUpBillableTenants() {
+    final rentalId = (_selectedPropertyId ?? '').trim();
+    if (!isChecked || rentalId.isEmpty || _tenantLookup != TenantLookup.idle) {
+      return;
+    }
+    final unit = _selectedUnitId;
+    _loadTenant(rentalId, unit != null && units.containsKey(unit) ? unit : '');
+  }
   //for parts and lebours
   List<Map<String, dynamic>> partsAndLabor = [];
 
@@ -2322,6 +2357,9 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                                             setState(() {
                                               _selectedUnitId = null;
                                               _selectedPropertyId = value;
+                                              // A new property: who can be billed is looked up again.
+                                              _tenantRequest++;
+                                              _tenantLookup = TenantLookup.idle;
                                               _selectedProperty = properties[
                                                   value]; // Store selected rental address
 
@@ -3317,6 +3355,7 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                                     setState(() {
                                       isChecked = value ?? false;
                                     });
+                                    _lookUpBillableTenants();
                                   },
                                   activeColor:
                                       isChecked ? blueColor : Colors.black,
@@ -3336,6 +3375,12 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
                           const SizedBox(
                             height: 10,
                           ),
+                          if (_noBillableTenant)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 10),
+                              child: Text(kNoBillableTenantMessage,
+                                  style: TextStyle(color: Colors.red, fontSize: 13)),
+                            ),
                           if (isChecked)
                             Column(
                               mainAxisAlignment: MainAxisAlignment.start,
@@ -3968,6 +4013,12 @@ class _EditWorkOrderForMobileState extends State<EditWorkOrderForMobile> {
 
   void _submitForm() async {
     if (_formkey.currentState!.validate()) {
+      // Like web (AddWorkorder.jsx): a billable work order needs someone to
+      // bill; the same message shows under Billable To Tenant.
+      if (_noBillableTenant) {
+        Fluttertoast.showToast(msg: kNoBillableTenantMessage);
+        return;
+      }
       setState(() {
         isloading = true;
       });
@@ -4468,6 +4519,8 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
           units = unitAddresses;
           _isLoading = false;
         });
+        // Like web: with Billable To Tenant ticked, look up who can be billed.
+        _lookUpBillableTenants();
       } else {
         _loadTenant(rentalId, unitId);
         throw Exception('Failed to load units');
@@ -4558,17 +4611,20 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? id = prefs.getString("adminId");
     String? token = prefs.getString('token');
+    final int request = ++_tenantRequest;
     setState(() {
       _isLoadingtenant = true;
+      _tenantLookup = TenantLookup.loading;
     });
     try {
       final response = await apiGet(
-          Uri.parse('${Api_url}/api/leases/get_tenants/$rentalId/$unitId'),
+          Uri.parse('${Api_url}/api/${tenantLookupPath(rentalId, unitId)}'),
           headers: {
             "authorization": "CRM $token",
             "id": "CRM $id",
           });
       if (!mounted) return;
+      if (!mounted || request != _tenantRequest) return;
       if (response.statusCode == 200) {
         List jsonResponse = json.decode(response.body)['data'];
         Map<String, String> tenantsnames = {};
@@ -4580,14 +4636,17 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
         });
         setState(() {
           tenants = tenantsnames;
+          _tenantLookup = TenantLookup.loaded;
           _isLoadingtenant = false;
         });
       } else {
         throw Exception('Failed to load data');
       }
     } catch (e) {
+      if (!mounted || request != _tenantRequest) return;
       setState(() {
         _isLoadingtenant = false;
+        _tenantLookup = TenantLookup.idle;
       });
     }
   }
@@ -4642,6 +4701,31 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
   String StaffId = '';
   String tenantId = '';
   bool isChecked = false;
+
+  // Like web (AddWorkorder.jsx, utils/workOrderBillable.js): whether the
+  // tenant lookup for the chosen property or unit has answered, so an empty
+  // list means "nobody to bill" rather than "still loading" or "failed".
+  TenantLookup _tenantLookup = TenantLookup.idle;
+  int _tenantRequest = 0;
+
+  bool get _noBillableTenant => hasNoBillableTenant(
+        isBillable: isChecked,
+        rentalId: _selectedPropertyId,
+        tenantId: _selectedtenantId ?? tenantId,
+        lookup: _tenantLookup,
+        tenantCount: tenants.length,
+      );
+
+  /// With Billable To Tenant ticked, look up who can be billed for the
+  /// chosen property (or its unit once one is picked), like web.
+  void _lookUpBillableTenants() {
+    final rentalId = (_selectedPropertyId ?? '').trim();
+    if (!isChecked || rentalId.isEmpty || _tenantLookup != TenantLookup.idle) {
+      return;
+    }
+    final unit = _selectedUnitId;
+    _loadTenant(rentalId, unit != null && units.containsKey(unit) ? unit : '');
+  }
   //for parts and lebours
   List<Map<String, dynamic>> partsAndLabor = [];
 
@@ -6133,6 +6217,9 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                                   setState(() {
                                                     _selectedUnitId = null;
                                                     _selectedPropertyId = value;
+                                                    // A new property: who can be billed is looked up again.
+                                                    _tenantRequest++;
+                                                    _tenantLookup = TenantLookup.idle;
                                                     _selectedProperty = properties[
                                                         value]; // Store selected rental_adress
 
@@ -7336,6 +7423,7 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                             setState(() {
                                               isChecked = value ?? false;
                                             });
+                                            _lookUpBillableTenants();
                                           },
                                           activeColor: isChecked
                                               ? blueColor
@@ -7347,6 +7435,12 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
                                   const SizedBox(
                                     height: 10,
                                   ),
+                                  if (_noBillableTenant)
+                                    const Padding(
+                                      padding: EdgeInsets.only(bottom: 10),
+                                      child: Text(kNoBillableTenantMessage,
+                                          style: TextStyle(color: Colors.red, fontSize: 13)),
+                                    ),
                                   Row(
                                     children: [
                                       if (isChecked)
@@ -7974,6 +8068,12 @@ class _EditWorkOrderForTabletState extends State<EditWorkOrderForTablet> {
 
   void _submitForm() async {
     if (_formkey.currentState!.validate()) {
+      // Like web (AddWorkorder.jsx): a billable work order needs someone to
+      // bill; the same message shows under Billable To Tenant.
+      if (_noBillableTenant) {
+        Fluttertoast.showToast(msg: kNoBillableTenantMessage);
+        return;
+      }
       setState(() {
         isLoading = true;
       });

@@ -211,10 +211,16 @@ void main() {
         return pops;
       }
 
+      // Tenant's boxes use web's placeholders (TenantPassChange.jsx).
+      final newHint =
+          role == 'Tenant' ? 'Enter Your New Password' : 'New Password';
+      final confirmHint =
+          role == 'Tenant' ? 'Confirm Password' : 'Confirm password';
+
       Future<void> fill(WidgetTester tester, String current, String next) async {
         await tester.enterText(_field('Current Password'), current);
-        await tester.enterText(_field('New Password'), next);
-        await tester.enterText(_field('Confirm password'), next);
+        await tester.enterText(_field(newHint), next);
+        await tester.enterText(_field(confirmHint), next);
         await tester.pump();
         final submit = find.text('Change Password').last;
         await tester.ensureVisible(submit);

@@ -9,6 +9,11 @@ class ScheduledCharges {
   String? rentalId;
   String? rentalAddress;
   String? taskType;
+  /// "Weekly" / "Monthly" — the lease list sends it; the all-charges list
+  /// does not, so [frequency] falls back to [taskType] like web.
+  String? rentCycle;
+  /// Sent by the lease list; null on the all-charges list.
+  bool? isRecurring;
 
   ScheduledCharges({
     this.taskId,
@@ -21,6 +26,8 @@ class ScheduledCharges {
     this.rentalId,
     this.rentalAddress,
     this.taskType,
+    this.rentCycle,
+    this.isRecurring,
   }) : amount = amount ?? 0.0;
 
   ScheduledCharges.fromJson(Map<String, dynamic> json)
@@ -39,7 +46,26 @@ class ScheduledCharges {
         leaseId = json['lease_id'],
         rentalId = json['rental_id'],
         rentalAddress = json['rental_address'],
-        taskType = json['task_type'];
+        taskType = json['task_type'],
+        rentCycle = json['rent_cycle']?.toString(),
+        isRecurring = json['is_recurring'] is bool ? json['is_recurring'] : null;
+
+  /// Same as web staging's Manage Charges: `rent_cycle === "Weekly"` → Weekly,
+  /// a WEEKLY_CHARGE task → Weekly, otherwise Monthly.
+  String get frequency {
+    if (rentCycle != null && rentCycle!.isNotEmpty) {
+      return rentCycle == 'Weekly' ? 'Weekly' : 'Monthly';
+    }
+    return taskType == 'WEEKLY_CHARGE' ? 'Weekly' : 'Monthly';
+  }
+
+  /// Same as web staging: use `is_recurring` when sent, else a
+  /// MONTHLY_CHARGE / WEEKLY_CHARGE task, else a Rent / Recurring Charge type.
+  bool get recurring {
+    if (isRecurring != null) return isRecurring!;
+    if (taskType == 'MONTHLY_CHARGE' || taskType == 'WEEKLY_CHARGE') return true;
+    return chargeType == 'Rent' || chargeType == 'Recurring Charge';
+  }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
@@ -53,6 +79,8 @@ class ScheduledCharges {
     data['rental_id'] = rentalId;
     data['rental_address'] = rentalAddress;
     data['task_type'] = taskType;
+    data['rent_cycle'] = rentCycle;
+    data['is_recurring'] = isRecurring;
     return data;
   }
 }

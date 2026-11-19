@@ -462,11 +462,45 @@ class DateProvider with ChangeNotifier {
   /// "YYYY-MM-DD" (`themes.format || "YYYY-MM-DD"`), not the MM/DD/YYYY the
   /// rest of the app uses (like web Settings), so the same happens here.
   String formatWebDateTime(DateTime dateTime) => webDateTime(dateTime,
-      dateFormat:
-          _serverFormatLoaded && (_savedServerFormat ?? '').trim().isEmpty
-              ? 'yyyy-MM-dd'
-              : _dateFormat,
-      timeFormat: _timeFormat);
+      dateFormat: webDateFormat, timeFormat: _timeFormat);
+
+  /// Web's `themes.format || "YYYY-MM-DD"` in intl tokens: the company Date
+  /// Format, or yyyy-MM-dd when the company never saved one.
+  String get webDateFormat =>
+      _serverFormatLoaded && (_savedServerFormat ?? '').trim().isEmpty
+          ? 'yyyy-MM-dd'
+          : _dateFormat;
+
+  /// A date-only value shown like web's list pages (e.g. PendingLeases.jsx
+  /// `formatDate`): in [webDateFormat], or "N/A" when missing or invalid.
+  String formatWebDate(String? raw) => webDate(raw, dateFormat: webDateFormat);
+
+  /// Exactly web's `moment(raw, DATE_FORMATS)` then `.format(...)`, where
+  /// DATE_FORMATS is ["YYYY-MM-DD", "MM/DD/YYYY", "M/D/YYYY"]: reads the
+  /// date at the start of [raw] (so an ISO timestamp keeps its calendar day,
+  /// with no time-zone shift), and returns "N/A" for an empty, "At Will" or
+  /// impossible date instead of "Invalid date".
+  static String webDate(String? raw, {required String dateFormat}) {
+    final s = (raw ?? '').trim();
+    if (s.isEmpty) return 'N/A';
+    int y, m, d;
+    final iso = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})').firstMatch(s);
+    final us = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})').firstMatch(s);
+    if (iso != null) {
+      y = int.parse(iso.group(1)!);
+      m = int.parse(iso.group(2)!);
+      d = int.parse(iso.group(3)!);
+    } else if (us != null) {
+      m = int.parse(us.group(1)!);
+      d = int.parse(us.group(2)!);
+      y = int.parse(us.group(3)!);
+    } else {
+      return 'N/A';
+    }
+    final date = DateTime.utc(y, m, d);
+    if (date.year != y || date.month != m || date.day != d) return 'N/A';
+    return AppDateFormat.format(date, dateFormat);
+  }
 
   /// [formatWebDateTime] for a given format pair: [dateFormat] in intl tokens
   /// (as [dateFormat] holds it), [timeFormat] "12" or "24" (anything but "12"

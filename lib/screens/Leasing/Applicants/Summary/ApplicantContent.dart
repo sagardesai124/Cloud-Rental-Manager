@@ -13,6 +13,7 @@ import 'package:three_zero_two_property/provider/editapplicationsummaryForm.dart
 import 'package:three_zero_two_property/repository/applicant_summery_repo.dart';
 import 'package:three_zero_two_property/screens/Leasing/Applicants/Summary/SummaryEditApplicant.dart';
 import 'package:three_zero_two_property/widgets/application_details_view.dart';
+import 'package:three_zero_two_property/repository/application_rules_repo.dart';
 import 'package:three_zero_two_property/widgets/application_edit_form.dart';
 import 'package:three_zero_two_property/screens/Leasing/Applicants/editApplicant.dart';
 import 'package:three_zero_two_property/widgets/CustomDateField.dart';
@@ -226,6 +227,9 @@ class _ApplicantContentState extends State<ApplicantContent> {
                 child: ApplicationEditForm(
                   raw: snapshot.data!.raw ?? const {},
                   applicantId: widget.applicant_id,
+                  // Web's "Require date of birth" for residents.
+                  loadResidentDobRequired: () => fetchResidentDobRequired(
+                      raw: snapshot.data!.raw ?? const {}, asStaff: false),
                   dateFormat:
                       Provider.of<DateProvider>(context, listen: false)
                           .dateFormat,

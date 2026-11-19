@@ -619,9 +619,13 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
             ),
           ),
         );
-    bool editIsRecurring = (selectedChargeType ?? '').toLowerCase().contains('recurring') ||
-        (selectedChargeType ?? '').toLowerCase().contains('rent');
-    String editRentCycle = 'Monthly';
+    // Open with the charge's own type and frequency, like web staging's
+    // Manage Charges, so saving a Weekly charge doesn't send it back as
+    // Monthly (the server would switch it and drop its other weekly charges).
+    bool editIsRecurring = editingCharge?.recurring ??
+        ((selectedChargeType ?? '').toLowerCase().contains('recurring') ||
+            (selectedChargeType ?? '').toLowerCase().contains('rent'));
+    String editRentCycle = editingCharge?.frequency ?? 'Monthly';
     bool editSaving = false;
     return showDialog(
       context: context,
@@ -934,6 +938,7 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
   String? _apiActionDate;
   String? selectedAccount;
   String? charge_id;
+  ScheduledCharges? editingCharge;
   TextEditingController amountController = TextEditingController();
   TextEditingController memoController = TextEditingController();
   TextEditingController dateController = TextEditingController();
@@ -1965,6 +1970,7 @@ class _ScheduledChargeTableState extends State<ScheduledChargeTable>
                                                                   charge_id =
                                                                       Propertytype
                                                                           .taskId;
+                                                                  editingCharge = Propertytype;
                                                                 });
 
                                                                 EditCharge();

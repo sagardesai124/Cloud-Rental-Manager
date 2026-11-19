@@ -28,6 +28,16 @@ class DashboardPaginationFooter extends StatelessWidget {
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
 
+  /// Web's "All" page size (CommonPagination), listed first. While [showAll]
+  /// the arrows give way to "Showing all [totalRecords] records". Off by
+  /// default, so existing tables are unchanged.
+  final bool showAllOption;
+  final bool showAll;
+  final VoidCallback? onShowAll;
+  final int totalRecords;
+
+  static const int _kAllValue = -1;
+
   /// The footer's own breathing room, above and below.
   static const double kFooterPad = 4.0;
 
@@ -45,6 +55,10 @@ class DashboardPaginationFooter extends StatelessWidget {
     this.onRowsPerPageChanged,
     this.onPrev,
     this.onNext,
+    this.showAllOption = false,
+    this.showAll = false,
+    this.onShowAll,
+    this.totalRecords = 0,
   });
 
   Widget _chevron(IconData icon, VoidCallback? onTap) {
@@ -98,13 +112,16 @@ class DashboardPaginationFooter extends StatelessWidget {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<int>(
-                  value: rowsPerPage,
+                  value: showAllOption && showAll ? _kAllValue : rowsPerPage,
                   isExpanded: false,
-                  items: options.map((int value) {
+                  items: [
+                    if (showAllOption) _kAllValue,
+                    ...options,
+                  ].map((int value) {
                     return DropdownMenuItem<int>(
                       value: value,
                       child: Text(
-                        value.toString(),
+                        value == _kAllValue ? 'All' : value.toString(),
                         style:
                             const TextStyle(fontSize: 14, color: Colors.black),
                       ),
@@ -113,7 +130,12 @@ class DashboardPaginationFooter extends StatelessWidget {
                   onChanged: onRowsPerPageChanged == null
                       ? null
                       : (int? newValue) {
-                          if (newValue != null) onRowsPerPageChanged!(newValue);
+                          if (newValue == null) return;
+                          if (newValue == _kAllValue) {
+                            onShowAll?.call();
+                          } else {
+                            onRowsPerPageChanged!(newValue);
+                          }
                         },
                   icon: Icon(Icons.arrow_drop_down, color: blueColor, size: 24),
                   style: const TextStyle(fontSize: 14, color: Colors.black),
@@ -123,20 +145,24 @@ class DashboardPaginationFooter extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _chevron(FontAwesomeIcons.circleChevronLeft, onPrev),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Text(
-                  'Page $currentPage of $safeTotal',
-                  style: const TextStyle(fontSize: 14),
+          if (showAllOption && showAll)
+            Text('Showing all $totalRecords records',
+                style: const TextStyle(fontSize: 14))
+          else
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _chevron(FontAwesomeIcons.circleChevronLeft, onPrev),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Text(
+                    'Page $currentPage of $safeTotal',
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 ),
-              ),
-              _chevron(FontAwesomeIcons.circleChevronRight, onNext),
-            ],
-          ),
+                _chevron(FontAwesomeIcons.circleChevronRight, onNext),
+              ],
+            ),
         ],
       ),
     );

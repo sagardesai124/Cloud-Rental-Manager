@@ -1104,11 +1104,6 @@ class _edit_vendorState extends State<edit_vendor> {
   /// set on web (the update payload always includes this field).
   bool is1099 = false;
 
-  /// Web parity: "Tax ID (EIN/SSN)". Staff render the SAME web component as
-  /// admins (AddVendor.jsx), so the field is present here too. No masked
-  /// current-value hint: reading the stored tax id back is admin-only (the
-  /// server answers 403), which is exactly what web shows Staff.
-  final TextEditingController taxId = TextEditingController();
   @override
   void initState() {
     // TODO: implement initState
@@ -1131,7 +1126,6 @@ class _edit_vendorState extends State<edit_vendor> {
     email.dispose();
     passWord.dispose();
     conpassWord.dispose();
-    taxId.dispose();
     super.dispose();
   }
 
@@ -1280,11 +1274,11 @@ class _edit_vendorState extends State<edit_vendor> {
                               ),
                               CustomTextField(
                                 keyboardType: TextInputType.emailAddress,
-                                hintText: 'Enter email',
+                                hintText: 'Enter email address',
                                 controller: email,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'please enter email';
+                                    return 'Please enter email address.';
                                   }
                                   return null;
                                 },
@@ -1449,7 +1443,6 @@ class _edit_vendorState extends State<edit_vendor> {
                               InkWell(
                                 onTap: () => setState(() {
                                   is1099 = !is1099;
-                                  if (!is1099) taxId.clear();
                                 }),
                                 child: Row(
                                   children: [
@@ -1460,7 +1453,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                         value: is1099,
                                         onChanged: (v) => setState(() {
                                           is1099 = v ?? false;
-                                          if (!is1099) taxId.clear();
                                         }),
                                         activeColor: blueColor,
                                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1474,24 +1466,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                   ],
                                 ),
                               ),
-                              // Web parity: Tax ID shows only while the 1099 box is ticked.
-                              if (is1099) ...[
-                                const SizedBox(height: 14),
-                                Text('Tax ID (EIN/SSN)',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: blueColor)),
-                                const SizedBox(height: 10),
-                                CustomTextField(
-                                  keyboardType: TextInputType.text,
-                                  hintText: 'Enter Tax ID (e.g., XX-XXXXXXX)',
-                                  controller: taxId,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
-                                  ],
-                                ),
-                              ],
                               const SizedBox(height: 18),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.start,
@@ -1531,8 +1505,7 @@ class _edit_vendorState extends State<edit_vendor> {
                                               passWord.text.trim() != (initialPassword ?? '').trim() ||
                                               (selectedTradeType ?? '').trim() !=
                                                   (initialTradeType ?? '').trim() ||
-                                                  is1099 != (initialIs1099 ?? false) ||
-                                                  (is1099 && taxId.text.trim().isNotEmpty);
+                                                  is1099 != (initialIs1099 ?? false);
 
                                           if (!hasChanges) { Navigator.of(context).pop(false); return; }
 
@@ -1554,7 +1527,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                               vendorPassword: passWord.text.trim(),
                                               trade: selectedTradeType,
                                               is1099: is1099,
-                                              taxId: is1099 ? taxId.text.trim() : null,
                                             );
                                             // Web parity: surface the server's own reason
                                             // (duplicate phone/email) instead of a generic failure.
@@ -1693,11 +1665,11 @@ class _edit_vendorState extends State<edit_vendor> {
                             const SizedBox(height: 10),
                             CustomTextField(
                               keyboardType: TextInputType.emailAddress,
-                              hintText: 'Enter email',
+                              hintText: 'Enter email address',
                               controller: email,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'please enter email';
+                                  return 'Please enter email address.';
                                 }
                                 return null;
                               },
@@ -1821,7 +1793,6 @@ class _edit_vendorState extends State<edit_vendor> {
                             InkWell(
                               onTap: () => setState(() {
                                   is1099 = !is1099;
-                                  if (!is1099) taxId.clear();
                                 }),
                               child: Row(
                                 children: [
@@ -1832,7 +1803,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                       value: is1099,
                                       onChanged: (v) => setState(() {
                                           is1099 = v ?? false;
-                                          if (!is1099) taxId.clear();
                                         }),
                                       activeColor: blueColor,
                                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1846,24 +1816,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                 ],
                               ),
                             ),
-                            // Web parity: Tax ID shows only while the 1099 box is ticked.
-                            if (is1099) ...[
-                              const SizedBox(height: 14),
-                              Text('Tax ID (EIN/SSN)',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor)),
-                              const SizedBox(height: 10),
-                              CustomTextField(
-                                keyboardType: TextInputType.text,
-                                hintText: 'Enter Tax ID (e.g., XX-XXXXXXX)',
-                                controller: taxId,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
-                                ],
-                              ),
-                            ],
                             const SizedBox(height: 18),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.start,
@@ -1898,8 +1850,7 @@ class _edit_vendorState extends State<edit_vendor> {
                                             passWord.text.trim() != (initialPassword ?? '').trim() ||
                                             (selectedTradeType ?? '').trim() !=
                                                 (initialTradeType ?? '').trim() ||
-                                                is1099 != (initialIs1099 ?? false) ||
-                                                  (is1099 && taxId.text.trim().isNotEmpty);
+                                                is1099 != (initialIs1099 ?? false);
 
                                         if (!hasChanges) { Navigator.of(context).pop(false); return; }
 
@@ -1916,7 +1867,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                             vendorPassword: passWord.text.trim(),
                                             trade: selectedTradeType,
                                             is1099: is1099,
-                                            taxId: is1099 ? taxId.text.trim() : null,
                                           );
                                           // Web parity: surface the server's own reason
                                           // (duplicate phone/email) instead of a generic failure.
@@ -3268,7 +3218,10 @@ class CustomTextFieldState extends State<CustomTextField> {
                           ? widget.hintText
                           : widget.hintText[0].toLowerCase() +
                               widget.hintText.substring(1);
-                      _errorMessage = 'Please $hintTextLower';
+                      // Like web's Add/Edit Vendor: "Please enter email address."
+                      _errorMessage = widget.email != null
+                          ? 'Please enter email address.'
+                          : 'Please $hintTextLower';
                     });
                     return '';
                   } else if (widget.phone != null) {
@@ -3286,7 +3239,7 @@ class CustomTextFieldState extends State<CustomTextField> {
                     if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
                         .hasMatch(widget.controller!.text.trim())) {
                       setState(() {
-                        _errorMessage = "Invalid email address";
+                        _errorMessage = "Please enter a valid email address";
                       });
                       return '';
                     }

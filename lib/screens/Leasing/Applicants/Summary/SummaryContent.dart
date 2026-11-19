@@ -9,6 +9,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/Model/applicant_summery_model.dart';
+import 'package:three_zero_two_property/services/applicant_checklist_rules.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 import 'package:three_zero_two_property/repository/applicant_summery_repo.dart';
 import 'package:three_zero_two_property/widgets/file_viewer.dart';
@@ -37,13 +38,10 @@ class _SummaryContentState extends State<SummaryContent> {
     "IncomeVerification",
     "LandlordVerification"
   ];
-  final Map<String, String> displayNames = {
-    "CreditCheck": "Credit and background check",
-    "EmploymentVerification": "Employment verification",
-    "ApplicationFee": "Application fee collected",
-    "IncomeVerification": "Income verification",
-    "LandlordVerification": "Landlord verification",
-  };
+  // Web's labels for the five standard items.
+  final Map<String, String> displayNames = kApplicantChecklistLabels;
+  // The checked items as last saved; like web, Save Changes compares with it.
+  late List<String> _savedChecklist;
   TextEditingController checkvalue = TextEditingController();
   List<String> applicantChecklist = [];
   bool addcheckbox = false;
@@ -114,6 +112,18 @@ class _SummaryContentState extends State<SummaryContent> {
   void initState() {
     super.initState();
     notesAndFiles = widget.summery.applicantNotesAndFile!;
+    _savedChecklist =
+        List<String>.from(widget.summery.applicantCheckedChecklist ?? []);
+  }
+
+  @override
+  void didUpdateWidget(covariant SummaryContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A freshly loaded applicant: its checklist is the saved one.
+    if (!identical(oldWidget.summery, widget.summery)) {
+      _savedChecklist =
+          List<String>.from(widget.summery.applicantCheckedChecklist ?? []);
+    }
   }
 
   void addNoteAndFile(ApplicantNotesAndFile noteFile) {
@@ -624,6 +634,8 @@ class _SummaryContentState extends State<SummaryContent> {
                       ),
                       InkWell(
                         onTap: () {
+                          // Like web (handleAddItem), a blank item is not added.
+                          if (isBlankChecklistItem(checkvalue.text)) return;
                           setState(() {
                             widget.summery.applicantChecklist!.add(checkvalue.text);
                             //newItems.add(checkvalue.text);
@@ -729,7 +741,7 @@ class _SummaryContentState extends State<SummaryContent> {
                       color: blueColor,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
+                  ),//
                   const SizedBox(height: 12),
                   _contactRow(
                     icon: Icons.home_outlined,
@@ -1221,6 +1233,12 @@ class _SummaryContentState extends State<SummaryContent> {
   }
 
   updatecheckBox() async {
+    // Like web (ApplicantSummary.jsx handleSaveChecklist): with no checklist
+    // change, say so and save nothing.
+    if (!applicantChecklistChanged(applicantChecklist, _savedChecklist)) {
+      Fluttertoast.showToast(msg: applicantChecklistNoChangesMessage);
+      return;
+    }
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     String? id = prefs.getString("adminId");
@@ -1267,8 +1285,9 @@ class _SummaryContentState extends State<SummaryContent> {
       body: jsonEncode(checkvalue),
     );
     if (response.statusCode == 200) {
-      Fluttertoast.showToast(msg: 'Applicant Updated Successfully');
-
+      Fluttertoast.showToast(msg: applicantChecklistSavedMessage);
+      // Later saves are compared with what was just saved, like web.
+      _savedChecklist = List<String>.from(applicantChecklist);
       setState(() {});
     } else {
       // Log the response body for debugging

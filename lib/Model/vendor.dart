@@ -12,21 +12,9 @@ class Vendor {
   /// silently never flagged for 1099 tax reporting.
   bool? is1099;
 
-  /// Web parity: "Tax ID (EIN/SSN)", shown on Add/Edit Vendor only when the
-  /// 1099 box is ticked. Present for Admin AND Staff, because both roles land
-  /// on the same web component (/staff/staffaddvendor routes to AddVendor.jsx;
-  /// StaffAddVendor.jsx is dead code).
-  ///
-  /// WRITING it is open to both roles; READING the stored value back is not —
-  /// the server hides tax_id from the normal vendor response and returns 403
-  /// to any role other than admin/super_admin (Vendor.js: "Only administrators
-  /// may access tax ID information"). So only the Admin edit form shows the
-  /// masked current value; Staff sees an empty field, exactly as on web.
-  ///
-  /// The value handed back on edit is MASKED, so only send this when the user
-  /// has actually typed a new one — otherwise the mask would overwrite the
-  /// real number.
-  String? taxId;
+  // No Tax ID (EIN/SSN), like web staging (CRM-5279): Add/Edit Vendor no
+  // longer collects it, so the app never loads or sends `tax_id` and a
+  // vendor's stored value is left as it is.
 
   Vendor({
     this.adminId,
@@ -38,7 +26,6 @@ class Vendor {
     this.vendorPassword,
     this.trade,
     this.is1099,
-    this.taxId,
   });
 
   factory Vendor.fromJson(Map<String, dynamic> json) {
@@ -51,12 +38,11 @@ class Vendor {
       vendorPassword: json['vendor_password'],
       trade: json['trade'],
       is1099: json['is_1099'] is bool ? json['is_1099'] : null,
-      taxId: json['tax_id']?.toString(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{
+    return <String, dynamic>{
       'admin_id': adminId,
       'vendor_name': vendorName,
       'vendor_phoneNumber': vendorPhoneNumber,
@@ -65,14 +51,5 @@ class Vendor {
       'trade': trade,
       'is_1099': is1099 ?? false,
     };
-    // Only include tax_id when there is a real value to save. Web does the
-    // same (`if (!taxIdEdited || !trimmedValues.tax_id) delete
-    // trimmedValues.tax_id`) so an untouched edit form cannot write the
-    // masked placeholder back over the stored number.
-    final tid = taxId?.trim() ?? '';
-    if (tid.isNotEmpty) {
-      map['tax_id'] = tid;
-    }
-    return map;
   }
 }

@@ -18,6 +18,8 @@ import 'package:three_zero_two_property/Model/bid_request.dart';
 import 'package:three_zero_two_property/constant/constant.dart';
 import 'package:three_zero_two_property/repository/bid_request.dart';
 import 'package:three_zero_two_property/StaffModule/repository/bid_room_repository.dart';
+import 'package:three_zero_two_property/StaffModule/model/staffpermission.dart';
+import 'package:three_zero_two_property/StaffModule/repository/staffpermission_provider.dart';
 import 'package:three_zero_two_property/StaffModule/widgets/custom_drawer.dart'
     as staff_drawer;
 import 'package:three_zero_two_property/StaffModule/widgets/appbar.dart'
@@ -31,6 +33,35 @@ import 'package:three_zero_two_property/repository/fetch_allcategories.dart';
 import 'package:three_zero_two_property/Model/All_categories_model.dart';
 import 'package:lottie/lottie.dart';
 import 'package:three_zero_two_property/widgets/dashboard_pagination_footer.dart';
+
+/// Which Bid Room actions to show, like web BidRequests.jsx:
+/// `canAdd/canEdit/canDelete = admin || permissions.workorder_add/edit/delete`.
+/// Admin sees every action; staff only those their Work Order permissions
+/// allow (a missing permission counts as not allowed, like web).
+class BidRoomActions {
+  final bool add;
+  final bool edit;
+  final bool delete;
+  const BidRoomActions({
+    required this.add,
+    required this.edit,
+    required this.delete,
+  });
+
+  factory BidRoomActions.of({
+    required bool isStaff,
+    StaffPermission? permissions,
+  }) {
+    if (!isStaff) {
+      return const BidRoomActions(add: true, edit: true, delete: true);
+    }
+    return BidRoomActions(
+      add: permissions?.workorderAdd == true,
+      edit: permissions?.workorderEdit == true,
+      delete: permissions?.workorderDelete == true,
+    );
+  }
+}
 
 class BidRoomTable extends StatefulWidget {
   /// When true, uses staff drawer, staff app bar, and staff repository.
@@ -89,7 +120,20 @@ class _BidRoomTableState extends State<BidRoomTable>
     checkInternet();
     _fetchBidRequests();
     _loadAllTradeTypes();
+    if (widget.useStaffLayout) {
+      // Fresh Work Order permissions, so Add/Edit/Delete match web.
+      Provider.of<StaffPermissionProvider>(context, listen: false)
+          .fetchPermissions();
+    }
   }
+
+  /// Add / Edit / Delete for this user, like web (see [BidRoomActions]).
+  BidRoomActions get _actions => BidRoomActions.of(
+        isStaff: widget.useStaffLayout,
+        permissions: widget.useStaffLayout
+            ? Provider.of<StaffPermissionProvider>(context).permissions
+            : null,
+      );
 
   @override
   void dispose() {
@@ -659,13 +703,16 @@ class _BidRoomTableState extends State<BidRoomTable>
                         Expanded(
                           flex: 3,
                           child: Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
+                            // No gap when Add is hidden, like Staff Work Orders.
+                            padding: EdgeInsets.only(
+                                right: _actions.add ? 8.0 : 0),
                             child: titleBar(
                               width: double.infinity,
                               title: 'Bid Room',
                             ),
                           ),
                         ),
+                        if (_actions.add)
                         Flexible(
                           flex: 1,
                           child: Padding(
@@ -1309,10 +1356,10 @@ class _BidRoomTableState extends State<BidRoomTable>
                                                                         ),
                                                                       ),
                                                                     ),
-                                                                    const SizedBox(
+                                                                    if (_actions.edit) const SizedBox(
                                                                         width:
                                                                             5),
-                                                                    GestureDetector(
+                                                                    if (_actions.edit) GestureDetector(
                                                                       onTap:
                                                                           () async {
                                                                         final result =
@@ -1361,10 +1408,10 @@ class _BidRoomTableState extends State<BidRoomTable>
                                                                         ),
                                                                       ),
                                                                     ),
-                                                                    const SizedBox(
+                                                                    if (_actions.delete) const SizedBox(
                                                                         width:
                                                                             5),
-                                                                    GestureDetector(
+                                                                    if (_actions.delete) GestureDetector(
                                                                       onTap:
                                                                           () {
                                                                         if (request.bidRequestId != null) {
@@ -1879,10 +1926,10 @@ class _BidRoomTableState extends State<BidRoomTable>
                                                                         ),
                                                                       ),
                                                                     ),
-                                                                    const SizedBox(
+                                                                    if (_actions.edit) const SizedBox(
                                                                         width:
                                                                             5),
-                                                                    GestureDetector(
+                                                                    if (_actions.edit) GestureDetector(
                                                                       onTap:
                                                                           () async {
                                                                         final result =
@@ -1931,10 +1978,10 @@ class _BidRoomTableState extends State<BidRoomTable>
                                                                         ),
                                                                       ),
                                                                     ),
-                                                                    const SizedBox(
+                                                                    if (_actions.delete) const SizedBox(
                                                                         width:
                                                                             5),
-                                                                    GestureDetector(
+                                                                    if (_actions.delete) GestureDetector(
                                                                       onTap:
                                                                           () {
                                                                         if (request.bidRequestId != null) {

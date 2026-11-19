@@ -262,17 +262,10 @@ class _Pending_leaseState extends State<Pending_lease>
   List<_PendingLeaseRow> get _signedLeases =>
       _filtered.where((r) => r.isSigned).toList();
 
-  String _formatDate(String? raw, DateProvider dateProvider) {
-    if (raw == null || raw.trim().isEmpty || raw == 'null') return 'N/A';
-    try {
-      final parsed = DateTime.parse(raw);
-      return DateFormat('MM/dd/yyyy').format(parsed);
-    } catch (_) {
-      final via = dateProvider.formatCurrentDate(raw);
-      if (via.toLowerCase().contains('invalid')) return 'N/A';
-      return via;
-    }
-  }
+  /// Like web PendingLeases.jsx `formatDate`: the company Date Format
+  /// (YYYY-MM-DD when none is saved), "N/A" when missing or invalid.
+  String _formatDate(String? raw, DateProvider dateProvider) =>
+      dateProvider.formatWebDate(raw);
 
   void _viewLease(String leaseId) {
     if (widget.useStaffLayout) {

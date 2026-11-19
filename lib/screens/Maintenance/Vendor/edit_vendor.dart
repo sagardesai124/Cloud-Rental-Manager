@@ -33,12 +33,6 @@ class _edit_vendorState extends State<edit_vendor> {
   String? initialTradeType;
   bool? initialIs1099;
 
-  /// Web parity: "Tax ID (EIN/SSN)". The server returns this MASKED, so the
-  /// mask is shown as a hint and the controller starts empty — anything typed
-  /// is a genuine replacement. Saving an untouched form must not write the
-  /// mask back over the real number.
-  final TextEditingController taxId = TextEditingController();
-  String? maskedTaxId;
   String? selectedTradeType;
   final List<String> _tradeTypes = ['General', 'Drywall', 'Electrical', 'HVAC', 'Landscaping', 'Painting', 'Plumbing', 'Roofing'];
   Future<void> _fetchVendor() async {
@@ -55,9 +49,6 @@ class _edit_vendorState extends State<edit_vendor> {
       initialTradeType = vendor.trade;
       initialIs1099 = vendor.is1099 ?? false;
       is1099 = vendor.is1099 ?? false;
-      // Requested separately so a 403 (non-admin) leaves the rest of the form
-      // intact — exactly how web loads it.
-      maskedTaxId = await vendorRepository.getVendorTaxId(widget.vender_id!);
       // Null-safe assignment: a vendor with no password (setup-email flow)
       // previously threw here on `!`, aborting before Trade Type was set and
       // showing "Failed to fetch vendor data". Match web (null-safe pre-fill).
@@ -128,7 +119,6 @@ class _edit_vendorState extends State<edit_vendor> {
     email.dispose();
     passWord.dispose();
     conpassWord.dispose();
-    taxId.dispose();
     super.dispose();
   }
 
@@ -277,11 +267,11 @@ class _edit_vendorState extends State<edit_vendor> {
                               ),
                               CustomTextField(
                                 keyboardType: TextInputType.emailAddress,
-                                hintText: 'Enter email',
+                                hintText: 'Enter email address',
                                 controller: email,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'please enter email';
+                                    return 'Please enter email address.';
                                   }
                                   return null;
                                 },
@@ -446,7 +436,6 @@ class _edit_vendorState extends State<edit_vendor> {
                               InkWell(
                                 onTap: () => setState(() {
                                   is1099 = !is1099;
-                                  if (!is1099) taxId.clear();
                                 }),
                                 child: Row(
                                   children: [
@@ -457,7 +446,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                         value: is1099,
                                         onChanged: (v) => setState(() {
                                           is1099 = v ?? false;
-                                          if (!is1099) taxId.clear();
                                         }),
                                         activeColor: blueColor,
                                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -471,29 +459,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                   ],
                                 ),
                               ),
-                              // Web parity: Tax ID shows only while the 1099 box is ticked.
-                              // The stored value arrives MASKED, so it is shown as the hint and
-                              // the box starts empty — typing replaces it, leaving it alone
-                              // keeps the real number (the model omits a blank tax_id).
-                              if (is1099) ...[
-                                const SizedBox(height: 14),
-                                Text('Tax ID (EIN/SSN)',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: blueColor)),
-                                const SizedBox(height: 10),
-                                CustomTextField(
-                                  keyboardType: TextInputType.text,
-                                  hintText: maskedTaxId != null
-                                      ? 'Current: $maskedTaxId — enter a new value to replace'
-                                      : 'Enter Tax ID (e.g., XX-XXXXXXX)',
-                                  controller: taxId,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
-                                  ],
-                                ),
-                              ],
                               const SizedBox(height: 18),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.start,
@@ -533,8 +498,7 @@ class _edit_vendorState extends State<edit_vendor> {
                                               passWord.text.trim() != (initialPassword ?? '').trim() ||
                                               (selectedTradeType ?? '').trim() !=
                                                   (initialTradeType ?? '').trim() ||
-                                              is1099 != (initialIs1099 ?? false) ||
-                                              (is1099 && taxId.text.trim().isNotEmpty);
+                                              is1099 != (initialIs1099 ?? false);
 
                                           if (!hasChanges) { Navigator.of(context).pop(false); return; }
 
@@ -556,7 +520,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                               vendorPassword: passWord.text.trim(),
                                               trade: selectedTradeType,
                                               is1099: is1099,
-                                              taxId: is1099 ? taxId.text.trim() : null,
                                             );
                                             // Web parity: surface the server's own reason
                                             // (duplicate phone/email) instead of a generic failure.
@@ -780,11 +743,11 @@ class _edit_vendorState extends State<edit_vendor> {
                             ),
                             CustomTextField(
                               keyboardType: TextInputType.emailAddress,
-                              hintText: 'Enter email',
+                              hintText: 'Enter email address',
                               controller: email,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'please enter email';
+                                  return 'Please enter email address.';
                                 }
                                 return null;
                               },
@@ -1024,7 +987,6 @@ class _edit_vendorState extends State<edit_vendor> {
                             InkWell(
                               onTap: () => setState(() {
                                   is1099 = !is1099;
-                                  if (!is1099) taxId.clear();
                                 }),
                               child: Row(
                                 children: [
@@ -1035,7 +997,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                       value: is1099,
                                       onChanged: (v) => setState(() {
                                           is1099 = v ?? false;
-                                          if (!is1099) taxId.clear();
                                         }),
                                       activeColor: blueColor,
                                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1049,29 +1010,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                 ],
                               ),
                             ),
-                            // Web parity: Tax ID shows only while the 1099 box is ticked.
-                            // The stored value arrives MASKED, so it is shown as the hint and
-                            // the box starts empty — typing replaces it, leaving it alone
-                            // keeps the real number (the model omits a blank tax_id).
-                            if (is1099) ...[
-                              const SizedBox(height: 14),
-                              Text('Tax ID (EIN/SSN)',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: blueColor)),
-                              const SizedBox(height: 10),
-                              CustomTextField(
-                                keyboardType: TextInputType.text,
-                                hintText: maskedTaxId != null
-                                    ? 'Current: $maskedTaxId — enter a new value to replace'
-                                    : 'Enter Tax ID (e.g., XX-XXXXXXX)',
-                                controller: taxId,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
-                                ],
-                              ),
-                            ],
                             const SizedBox(height: 18),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.start,
@@ -1102,8 +1040,7 @@ class _edit_vendorState extends State<edit_vendor> {
                                             email.text != initialEmail ||
                                             passWord.text != initialPassword ||
                                             selectedTradeType != initialTradeType ||
-                                              is1099 != (initialIs1099 ?? false) ||
-                                              (is1099 && taxId.text.trim().isNotEmpty);
+                                              is1099 != (initialIs1099 ?? false);
 
                                         if (!hasChanges) {
                                           Navigator.of(context).pop(false);
@@ -1124,7 +1061,6 @@ class _edit_vendorState extends State<edit_vendor> {
                                             vendorPassword: passWord.text.trim(),
                                             trade: selectedTradeType,
                                             is1099: is1099,
-                                            taxId: is1099 ? taxId.text.trim() : null,
                                           );
 
                                           // Web parity: surface the server's own reason
@@ -1525,7 +1461,10 @@ class CustomTextFieldState extends State<CustomTextField> {
                     ? widget.hintText
                     : widget.hintText[0].toLowerCase() +
                         widget.hintText.substring(1);
-                _errorMessage = 'Please $hintTextLower';
+                // Like web's Add/Edit Vendor: "Please enter email address."
+                _errorMessage = widget.email != null
+                    ? 'Please enter email address.'
+                    : 'Please $hintTextLower';
               });
               return '';
             } else if (widget.phone != null) {
@@ -1544,7 +1483,7 @@ class CustomTextFieldState extends State<CustomTextField> {
               if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
                   .hasMatch(widget.controller!.text.trim())) {
                 setState(() {
-                  _errorMessage = "Invalid email address";
+                  _errorMessage = "Please enter a valid email address";
                 });
                 return '';
               }

@@ -25,6 +25,8 @@ import '../../widgets/custom_drawer.dart';
 import '../../model/staffpermission.dart';
 import 'package:three_zero_two_property/widgets/no_internet_view.dart';
 import 'package:three_zero_two_property/provider/network_retry_state.dart';
+import 'package:three_zero_two_property/provider/dateProvider.dart';
+import 'package:three_zero_two_property/services/property_type_search.dart';
 
 class PropertyTable extends StatefulWidget {
   final bool
@@ -717,6 +719,8 @@ class _PropertyTableState extends State<PropertyTable>
   final _scrollController = ScrollController();
   Widget _buildTableContent(BuildContext context) {
     final permissionProvider = Provider.of<StaffPermissionProvider>(context);
+    // The dates show in the company's format, like web and Admin.
+    final dateProvider = Provider.of<DateProvider>(context);
     StaffPermission? permissions = permissionProvider.permissions;
     Widget content = Column(
       children: [
@@ -847,7 +851,8 @@ class _PropertyTableState extends State<PropertyTable>
                             cursorColor: blueColor,
                             decoration: InputDecoration(
                                 border: InputBorder.none,
-                                hintText: "Search here...",
+                                // Web's prompt (property-types-v2).
+                                hintText: kPropertyTypeSearchHint,
                                 hintStyle: TextStyle(
                                   fontSize:
                                       MediaQuery.of(context).size.width < 500
@@ -1008,21 +1013,20 @@ class _PropertyTableState extends State<PropertyTable>
                       .toList();
                 }
 
-                // Apply search filter on top of type filter (if search is not empty)
-                if (searchvalue!.isNotEmpty) {
+                // Like web (property-types-v2/propertyTypeRows.js matchRow): the
+                // search also matches the Created On and Updated On dates as this
+                // list shows them (company date format) and ignores spaces around it.
+                if (searchvalue.trim().isNotEmpty) {
                   data = data
-                      // Search only the visible columns. createdAt/updatedAt are raw
-                      // ISO strings ("2026-09-24T10:15:30.000Z") and were matched too,
-                      // so any char in a timestamp (t, z, -, :, ., 20) matched every
-                      // row; those dates are not even shown as columns. propertysubType
-                      // is guarded so a null subtype no longer matches the text "null".
-                      .where((property) =>
-                          (property.propertyType ?? '')
-                              .toLowerCase()
-                              .contains(searchvalue!.toLowerCase()) ||
-                          (property.propertysubType ?? '')
-                              .toLowerCase()
-                              .contains(searchvalue!.toLowerCase()))
+                      .where((property) => propertyTypeMatchesSearch(
+                            searchvalue,
+                            type: property.propertyType,
+                            subType: property.propertysubType,
+                            createdOn: propertyTypeShownDay(
+                                property.createdAt, dateProvider.formatCurrentDate),
+                            updatedOn: propertyTypeShownDay(
+                                property.updatedAt, dateProvider.formatCurrentDate),
+                          ))
                       .toList();
                 }
                 //  data = data.reversed.toList();
@@ -1221,8 +1225,12 @@ class _PropertyTableState extends State<PropertyTable>
                                                                     blueColor), // Bold and black
                                                           ),
                                                           TextSpan(
-                                                            text: formatDate(
-                                                                '${Propertytype.createdAt ?? "---"}'),
+                                                            // In the company's date format, like web (it was always
+                                                            // yyyy-MM-dd here).
+                                                            text: (Propertytype.createdAt ?? '').trim().isNotEmpty
+                                                                ? dateProvider.formatCurrentDate(
+                                                                    '${Propertytype.createdAt}')
+                                                                : '---',
                                                             style: TextStyle(
                                                                 fontWeight:
                                                                     FontWeight
@@ -1248,8 +1256,12 @@ class _PropertyTableState extends State<PropertyTable>
                                                                     blueColor), // Bold and black
                                                           ),
                                                           TextSpan(
-                                                            text: formatDate(
-                                                                '${Propertytype.updatedAt ?? "---"}'),
+                                                            // In the company's date format, like web (it was always
+                                                            // yyyy-MM-dd here).
+                                                            text: (Propertytype.updatedAt ?? '').trim().isNotEmpty
+                                                                ? dateProvider.formatCurrentDate(
+                                                                    '${Propertytype.updatedAt}')
+                                                                : '---',
                                                             style: TextStyle(
                                                                 fontWeight:
                                                                     FontWeight

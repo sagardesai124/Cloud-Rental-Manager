@@ -16,6 +16,9 @@ class PropertyTypeRepository {
     required String? propertySubType,
     required bool isMultiUnit,
     String? propertyTypeImage,
+    // Web's Syndication Property Type; sent only when given, so other
+    // saves keep the stored value (the server updates what is sent).
+    String? zillowPropertyType,
   }) async {
     final Map<String, dynamic> data = {
       'admin_id': adminId,
@@ -23,6 +26,8 @@ class PropertyTypeRepository {
       'propertysub_type': propertySubType,
       'is_multiunit': isMultiUnit,
       'property_type_image': propertyTypeImage ?? '',
+      if (zillowPropertyType != null)
+        'zillow_property_type': zillowPropertyType,
     };
     SharedPreferences prefs = await SharedPreferences.getInstance();
      String? token = prefs.getString('token');
@@ -78,6 +83,9 @@ class PropertyTypeRepository {
     required bool isMultiUnit,
     required String? id,
     String? propertyTypeImage,
+    // Web's Syndication Property Type; sent only when given, so other
+    // saves keep the stored value (the server updates what is sent).
+    String? zillowPropertyType,
   }) async {
     final Map<String, dynamic> data = {
       'admin_id': adminId,
@@ -85,6 +93,8 @@ class PropertyTypeRepository {
       'propertysub_type': propertySubType,
       'is_multiunit': isMultiUnit,
       'property_type_image': propertyTypeImage ?? '',
+      if (zillowPropertyType != null)
+        'zillow_property_type': zillowPropertyType,
     };
 
    // print('$apiUrl/$id');

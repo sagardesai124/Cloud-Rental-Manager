@@ -3,10 +3,13 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../Model/history_item_model.dart';
 import '../enums/history_type.dart';
 import '../services/history_service.dart';
+import '../services/lease_history_search.dart';
 import '../provider/dateProvider.dart';
+import 'dashboard_pagination_footer.dart';
 
 class CustomHistoryTable extends StatefulWidget {
   final HistoryType historyType;
@@ -41,12 +44,132 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
       _allHistoryItems; // Store all items for frontend pagination
   bool _isFrontendPagination = false;
 
+  // Lease History only, like web: the search box, the page size (5–100, or
+  // "All") and the box's identity so typing keeps focus when the list
+  // switches to "No history matches your search".
+  final TextEditingController _leaseSearchController = TextEditingController();
+  final GlobalKey _leaseSearchKey = GlobalKey();
+  String _leaseSearch = '';
+  int? _leasePageSize;
+  bool _leaseShowAll = false;
+
+  bool get _isLease => widget.historyType == HistoryType.lease;
+  int get _perPage => _leasePageSize ?? widget.itemsPerPage;
+
   @override
   void initState() {
     super.initState();
     // print(
         // '🔵 CustomHistoryTable initState - Type: ${widget.historyType}, EntityId: ${widget.entityId}');
     _loadHistory();
+    if (_isLease) _loadLeasePageSize();
+  }
+
+  @override
+  void dispose() {
+    _leaseSearchController.dispose();
+    super.dispose();
+  }
+
+  /// The page size last chosen on Lease History, like web's remembered
+  /// page size per screen.
+  Future<void> _loadLeasePageSize() async {
+    try {
+      final stored =
+          (await SharedPreferences.getInstance()).getInt(leaseHistoryPageSizeKey);
+      if (stored != null &&
+          leaseHistoryPageSizes.contains(stored) &&
+          mounted &&
+          stored != _perPage) {
+        setState(() {
+          _leasePageSize = stored;
+          _currentPage = 1;
+        });
+      }
+    } catch (_) {}
+  }
+
+  // Like web: a new search, page size or "All" starts again at page 1.
+  void _setLeaseSearch(String value) {
+    setState(() {
+      _leaseSearch = value;
+      _currentPage = 1;
+      _expandedIndex = null;
+    });
+  }
+
+  void _setLeasePageSize(int size) {
+    setState(() {
+      _leasePageSize = size;
+      _leaseShowAll = false;
+      _currentPage = 1;
+      _expandedIndex = null;
+    });
+    SharedPreferences.getInstance()
+        .then((p) => p.setInt(leaseHistoryPageSizeKey, size))
+        .catchError((_) => false);
+  }
+
+  void _showAllLeaseRows() {
+    setState(() {
+      _leaseShowAll = true;
+      _currentPage = 1;
+      _expandedIndex = null;
+    });
+  }
+
+  /// Web's search box above Lease History.
+  Widget _leaseSearchBox() {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(8)),
+      borderSide: BorderSide(color: Color(0xFFDBE0E5)),
+    );
+    return Padding(
+      key: _leaseSearchKey,
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextField(
+        controller: _leaseSearchController,
+        onChanged: _setLeaseSearch,
+        textInputAction: TextInputAction.search,
+        style: const TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          hintText: leaseHistorySearchHint,
+          hintStyle: const TextStyle(color: Color(0xFFB0B6C3), fontSize: 14),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFF8A95A8)),
+          suffixIcon: _leaseSearch.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Clear search',
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () {
+                    _leaseSearchController.clear();
+                    _setLeaseSearch('');
+                  },
+                ),
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border.copyWith(
+              borderSide: BorderSide(color: widget.blueColor)),
+        ),
+      ),
+    );
+  }
+
+  /// Lease History rows the search keeps, like web's filterLeaseHistory.
+  List<HistoryItem> _leaseRowsMatching(
+      List<HistoryItem> rows, BuildContext context) {
+    if (_leaseSearch.isEmpty) return rows;
+    final datePattern =
+        Provider.of<DateProvider>(context, listen: false).dateFormat;
+    return rows
+        .where((item) => leaseHistoryMatches(item, _leaseSearch,
+            shownDate: _formatDateTimeWithAMPM(item.date, context),
+            datePattern: datePattern))
+        .toList();
   }
 
   void _loadHistory() {
@@ -2037,7 +2160,12 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
       {HistoryItem? historyItem}) {
     final dateProvider = Provider.of<DateProvider>(context, listen: false);
     final parsedDetails = _parseDescription(description)
-        .map((detail) => _formatDatesInText(detail, dateProvider))
+        // Lease History shows dates and amounts exactly as web does
+        // (formatDaysInText + formatCurrencyInText), so the search finds
+        // what is shown.
+        .map((detail) => _isLease
+            ? leaseHistoryShownDescription(detail, dateProvider.dateFormat)
+            : _formatDatesInText(detail, dateProvider))
         .toList();
 
     // For "Payment created" entries, also check metadata for Entry data
@@ -2764,6 +2892,15 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
         // print(
             // '🔵 History FutureBuilder - ConnectionState: ${snapshot.connectionState}, HasData: ${snapshot.hasData}, HasError: ${snapshot.hasError}');
 
+        // Lease History: the rows the search keeps (all of them when the
+        // search is empty), like web.
+        final List<HistoryItem>? leaseRows = _isLease &&
+                snapshot.connectionState != ConnectionState.waiting &&
+                snapshot.hasData
+            ? _leaseRowsMatching(
+                _allHistoryItems ?? snapshot.data!.data, context)
+            : null;
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           // print('⏳ History loading...');
           // Show title and header structure while loading
@@ -2785,6 +2922,8 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                // Lease History keeps web's search box while it loads.
+                if (_isLease) _leaseSearchBox(),
                 // Table Header
                 Container(
                   decoration: BoxDecoration(
@@ -2889,10 +3028,18 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
               ],
             ),
           );
-        } else if (!snapshot.hasData || snapshot.data!.data.isEmpty) {
+        } else if (!snapshot.hasData ||
+            snapshot.data!.data.isEmpty ||
+            (leaseRows != null && leaseRows.isEmpty)) {
           // print(
               // '⚠️ History - No data or empty data. Data count: ${snapshot.hasData ? snapshot.data!.data.length : 0}');
-          // Show title and header even when no data
+          // Show title and header even when no data. Lease History keeps
+          // its search box and uses web's messages.
+          final String emptyMessage = !_isLease
+              ? 'No history data available'
+              : (_leaseSearch.isNotEmpty
+                  ? leaseHistoryNoMatchMessage
+                  : leaseHistoryEmptyMessage);
           return RepaintBoundary(
             child: Column(
               children: [
@@ -2911,6 +3058,7 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                if (_isLease) _leaseSearchBox(),
                 // Table Header
                 Container(
                   decoration: BoxDecoration(
@@ -2972,8 +3120,7 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                // No data message
+                const SizedBox(height: 10), // No data message
                 Container(
                   padding: const EdgeInsets.all(20.0),
                   decoration: BoxDecoration(
@@ -2981,10 +3128,10 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
                     border: Border.all(color: const Color(0xFFDBE0E5)),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'No history data available',
-                      style: TextStyle(
+                      emptyMessage,
+                      style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 14,
                       ),
@@ -3004,27 +3151,29 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
 
           // For lease history or frontend pagination, slice the data based on current page
           if (widget.historyType == HistoryType.lease) {
-            // Lease history: use stored all items if available, otherwise use snapshot data
-            final allItems = _allHistoryItems ?? snapshot.data!.data;
-            final startIndex = (_currentPage - 1) * widget.itemsPerPage;
-            final endIndex = startIndex + widget.itemsPerPage;
-
-            // Only slice if we have more items than per page
-            if (allItems.length > widget.itemsPerPage) {
+            // Lease history: the rows the search keeps, a page of the chosen
+            // size at a time, or all of them with "All", like web.
+            final allItems = leaseRows ?? _allHistoryItems ?? snapshot.data!.data;
+            final perPage = _perPage;
+            final pages = _leaseShowAll || allItems.isEmpty
+                ? 1
+                : (allItems.length / perPage).ceil();
+            final page = _currentPage.clamp(1, pages);
+            if (_leaseShowAll) {
+              displayData = allItems;
+            } else {
+              final startIndex = (page - 1) * perPage;
+              final endIndex = startIndex + perPage;
               displayData = allItems.sublist(
                 startIndex,
                 endIndex > allItems.length ? allItems.length : endIndex,
               );
-            } else {
-              displayData = allItems;
             }
-
-            final totalPages = (allItems.length / widget.itemsPerPage).ceil();
             pagination = PaginationInfo(
               total: allItems.length,
-              page: _currentPage,
-              limit: widget.itemsPerPage,
-              totalPages: totalPages > 0 ? totalPages : 1,
+              page: page,
+              limit: perPage,
+              totalPages: pages,
             );
             // print(
                 // '🔵 Lease History Pagination - Total: ${allItems.length}, Showing items ${startIndex + 1}-${endIndex > allItems.length ? allItems.length : endIndex}, Page: $_currentPage of $totalPages');
@@ -3073,6 +3222,7 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                if (_isLease) _leaseSearchBox(),
                 // Header
                 Container(
                   decoration: BoxDecoration(
@@ -3403,8 +3553,27 @@ class _CustomHistoryTableState extends State<CustomHistoryTable> {
                     }).toList(),
                   ),
                 ),
-                // Pagination Controls
-                if (finalPagination.totalPages > 1)
+                // Pagination Controls. Lease History: web's page sizes and
+                // "All", shown whenever there are rows, like web.
+                if (_isLease)
+                  DashboardPaginationFooter(
+                    currentPage: finalPagination.page,
+                    totalPages: finalPagination.totalPages,
+                    rowsPerPage: _perPage,
+                    rowsPerPageOptions: leaseHistoryPageSizes,
+                    onRowsPerPageChanged: _setLeasePageSize,
+                    showAllOption: true,
+                    showAll: _leaseShowAll,
+                    onShowAll: _showAllLeaseRows,
+                    totalRecords: finalPagination.total,
+                    onPrev: finalPagination.page > 1
+                        ? () => _goToPage(finalPagination.page - 1)
+                        : null,
+                    onNext: finalPagination.page < finalPagination.totalPages
+                        ? () => _goToPage(finalPagination.page + 1)
+                        : null,
+                  )
+                else if (finalPagination.totalPages > 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 15.0),
                     child: Row(

@@ -79,6 +79,11 @@ class Data {
   dynamic tenantData; // tenantData is dynamic to handle any JSON structure
   double? balance; // Adjusted to double
 
+  /// The payment's and the charge's own dates (`payment_date`,
+  /// `charge_date`), used by the Tenant Statement like web.
+  String? rawPaymentDate;
+  String? rawChargeDate;
+
   Data({
     this.sId,
     this.chargeId,
@@ -145,6 +150,10 @@ class Data {
     state = json["state"]?? "";
     responseText = json["responseText"]??"";
     balance = (json['balance'] as num?)?.toDouble()??0.0; // Parse as double
+    // Web's Tenant Statement falls back to these when a row has no entry
+    // date (LeaseFinancialTab: entry[0].date || payment_date || charge_date).
+    rawPaymentDate = json['payment_date']?.toString();
+    rawChargeDate = json['charge_date']?.toString();
     // ?.toString() — a record with no saved card must keep these null, not
     // become the literal string "null": every consumer null-checks (?? ""),
     // but "null" passes those checks and gets sent to the payment API as if

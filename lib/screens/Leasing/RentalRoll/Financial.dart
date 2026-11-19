@@ -2,7 +2,6 @@ import 'package:three_zero_two_property/services/app_log.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:csv/csv.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
@@ -16,7 +15,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:three_zero_two_property/repository/GetAdminAddressPdf.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:three_zero_two_property/Model/propertytype.dart';
@@ -35,7 +33,6 @@ import '../../../repository/Payment_cronjob/Payment_cronjob_repo.dart';
 import '../../../repository/dashboard_table_repo/cronjob_payment_table.dart';
 import 'Edit_make_payment.dart';
 import 'make_payment.dart';
-import 'package:three_zero_two_property/Model/profile.dart';
 import 'package:printing/printing.dart';
 import 'package:three_zero_two_property/screens/Property_Type/Edit_property_type.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as syncXlsx;
@@ -50,6 +47,10 @@ import 'package:http/http.dart' as http;
 import 'package:three_zero_two_property/services/api_helpers.dart';
 import 'package:three_zero_two_property/TenantsModule/screen/financial/AddAchAccount/AddAchAccount.dart';
 import 'package:three_zero_two_property/services/app_date_format.dart';
+import 'package:three_zero_two_property/repository/tenant_statement_repo.dart';
+import 'package:three_zero_two_property/services/tenant_statement.dart';
+import 'package:three_zero_two_property/services/tenant_statement_xlsx.dart';
+import 'package:three_zero_two_property/widgets/tenant_statement_pdf.dart';
 
 class FinancialTable extends StatefulWidget {
   final String leaseId;
@@ -1287,295 +1288,130 @@ class _FinancialTableState extends State<FinancialTable>
   }
 
   //for pdf xlsx and csv
+  /// The Tenant Statement letterhead for this lease, like web
+  /// (utils/tenantStatement.js): the company, the period the exported rows
+  /// cover (the From / To filters when set), the report date, the tenants
+  /// and the property address.
+  Future<TenantStatementHeader> _tenantStatementHeader(
+      List<Data> rows) async {
+    final facts = await loadTenantStatementFacts(
+        leaseId: widget.leaseId, asStaff: false);
+    // Like web: the first entry's date, else the payment's, else the
+    // charge's, else when it was created.
+    String? rowDate(Data g) {
+      for (final d in [
+        (g.entry != null && g.entry!.isNotEmpty) ? g.entry!.first.date : null,
+        g.rawPaymentDate,
+        g.rawChargeDate,
+        g.createdAt,
+      ]) {
+        if (d != null && d.isNotEmpty) return d;
+      }
+      return null;
+    }
+
+    return buildTenantStatementHeader(
+      company: facts.company,
+      leaseTenant: facts.leaseTenant,
+      fallbackAddress: widget.rentalAddress,
+      rowDates: rows.map(rowDate),
+      fromDate: _fromDateApiFormat,
+      toDate: _toDateApiFormat,
+      datePattern: AppDateFormat.current,
+    );
+  }
+
+  /// One row of the statement table, like web's buildStatementRow.
+  List<String> _statementRow(Data g) => tenantStatementRow(
+        type: g.type,
+        tenantData: g.tenantData,
+        response: g.response,
+        paymentType: g.paymenttype,
+        responseText: g.responseText,
+        entries: [
+          for (final e in g.entry ?? const [])
+            (memo: e.memo, account: e.account),
+        ],
+        dates: [
+          (g.entry != null && g.entry!.isNotEmpty) ? g.entry!.first.date : null,
+          g.rawPaymentDate,
+          g.rawChargeDate,
+          g.createdAt,
+        ],
+        totalAmount: g.totalAmount,
+        balance: g.balance,
+        datePattern: AppDateFormat.current,
+      );
+
   Future<void> generateWorkOrderPdf(List<Data> ledgerdata) async {
-    final GetAddressAdminPdfService service = GetAddressAdminPdfService();
-    profile? profileData;
-    try {
-      profileData = await service.fetchAdminAddress();
-    } catch (e) {
-      // Handle error
-      logError("Error fetching profile data: $e");
-      return;
+    // Web's Tenant Statement letterhead, repeated on every page.
+    final statementHeader = await _tenantStatementHeader(ledgerdata);
+    pw.ImageProvider? logoImage;
+    final logoBytes = await resolveStatementLogo(statementHeader.logo);
+    if (logoBytes != null) {
+      try {
+        logoImage = pw.MemoryImage(logoBytes);
+      } catch (_) {
+        // An unreadable logo prints the company's name, like web.
+      }
     }
     final pdf = pw.Document();
-    final image = pw.MemoryImage(
-      (await rootBundle.load('assets/images/applogo.png')).buffer.asUint8List(),
-    );
-    final currentDate = DateFormat('MMMM dd, yyyy').format(DateTime.now());
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4.landscape,
-        margin: const pw.EdgeInsets.all(30),
-        header: (pw.Context context) => pw.Column(
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Image(image, width: 50, height: 50),
-                // pw.SizedBox(width: 50),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.center,
-                  children: [
-                    pw.Text(
-                      'Tenant Statement',
-                      style: pw.TextStyle(
-                        fontSize: 18,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.SizedBox(height: 10),
-                    pw.Row(children: [
-                      pw.Text(
-                        '${widget.rentalAddress}',
-                        style: pw.TextStyle(
-                          fontSize: 18,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(width: 5),
-                      if (widget.rentalUnit != null)
-                        pw.Text(
-                          ' - ${widget.rentalUnit}',
-                          style: pw.TextStyle(
-                            fontSize: 18,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                    ]),
-                  ],
-                ),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text(
-                      profileData?.companyName?.isNotEmpty == true
-                          ? profileData!.companyName!
-                          : 'N/A',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      profileData?.companyAddress?.isNotEmpty == true
-                          ? profileData!.companyAddress!
-                          : 'N/A',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      '${profileData?.companyCity?.isNotEmpty == true ? profileData!.companyCity! : 'N/A'}, '
-                      '${profileData?.companyState?.isNotEmpty == true ? profileData!.companyState! : 'N/A'}, '
-                      '${profileData?.companyCountry?.isNotEmpty == true ? profileData!.companyCountry! : 'N/A'}',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      profileData?.companyPostalCode?.isNotEmpty == true
-                          ? profileData!.companyPostalCode!
-                          : 'N/A',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 15),
-          ],
+        // Web's 14 mm page margins.
+        margin: const pw.EdgeInsets.fromLTRB(14 * PdfPageFormat.mm,
+            14 * PdfPageFormat.mm, 14 * PdfPageFormat.mm, 8 * PdfPageFormat.mm),
+        header: (pw.Context context) =>
+            tenantStatementPdfHeader(statementHeader, logo: logoImage),
+        footer: (pw.Context context) => pw.Container(
+          alignment: pw.Alignment.centerRight,
+          margin: const pw.EdgeInsets.only(top: 4 * PdfPageFormat.mm),
+          child: pw.Text(
+            'Page ${context.pageNumber} of ${context.pagesCount}',
+            style: const pw.TextStyle(
+                fontSize: 8, color: PdfColor.fromInt(0xFF6C757D)),
+          ),
         ),
-        footer: (pw.Context context) {
-          return pw.Container(
-            alignment: pw.Alignment.centerRight,
-            margin: const pw.EdgeInsets.only(top: 1.0 * PdfPageFormat.cm),
-            child: pw.Text(
-              'Page ${context.pageNumber} of ${context.pagesCount}',
-              style: const pw.TextStyle(color: PdfColors.grey),
-            ),
-          );
-        },
         build: (pw.Context context) => [
-          // pw.SizedBox(height: 15),
-          pw.Table.fromTextArray(
-            headers: [
-              'Date',
-              'Tenants',
-              'Type',
-              'Description',
-              'Amount',
-              'Balance'
-            ],
-            data: ledgerdata.reversed.map((ledger) {
-              return [
-                formatDate4('${ledger.entry?.first.date}') ?? "",
-                ledger.tenantData != null
-                    ? '${ledger.tenantData["tenant_firstName"] ?? ""} ${ledger.tenantData["tenant_lastName"] ?? ""}'
-                    : 'N/A' ?? '',
-                ledger.type ?? '',
-                ledger.type == 'Charge'
-                    ? ' ${ledger.entry?.first.memo}'
-                    : 'Manual ${ledger.type} ${ledger.response} For ${ledger.paymenttype}' ??
-                        '',
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Text(
-                    formatMoneyAccountingCredit(ledger.totalAmount ?? 0,
-                        isCredit: !(ledger.type == "Refund" ||
-                            ledger.type == "Charge")),
-                  ),
-                ),
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Text(formatMoneyAccounting(ledger.balance)),
-                ),
-              ];
-            }).toList(),
-            border: pw.TableBorder.all(
-              color: PdfColors.black,
-              width: 1,
-            ),
-            cellAlignment: pw.Alignment.centerLeft,
-            headerDecoration: pw.BoxDecoration(
-              color: PdfColor.fromHex("#5A86D5"),
-              //color:PdfColor.fromRYB(90, 134, 213,)
-            ),
-            headerStyle: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                fontSize: 12,
-                color: PdfColors.white),
-            headerAlignment: pw.Alignment.centerLeft,
-            cellStyle: const pw.TextStyle(
-              fontSize: 10,
-            ),
-            cellHeight: 30,
-            columnWidths: {
-              0: const pw.FlexColumnWidth(1.2), // Date
-              1: const pw.FlexColumnWidth(1.4), // tenants
-              2: const pw.FlexColumnWidth(1.3), // type
-              3: const pw.FlexColumnWidth(2.2), // transaction
-              4: const pw.FlexColumnWidth(1.3), // increase
-              5: const pw.FlexColumnWidth(1.3), // decrease
-              6: const pw.FlexColumnWidth(1.3), // balance
-            },
-          ),
-          pw.SizedBox(height: 15),
-          pw.Row(
-            children: [
-              pw.Align(
-                alignment: pw.Alignment.centerLeft,
-                child: pw.Text('Balance Due',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              ),
-              pw.Spacer(),
-              pw.Align(
-                alignment: pw.Alignment.centerRight,
-                child: pw.Text(
-                    formatMoneyAccounting(ledgerdata.first.balance),
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 8),
-          pw.Divider(color: PdfColors.black),
-          pw.Divider(color: PdfColors.black),
+          // Web's Tenant Statement table (drawTenantStatementPdf): Date,
+          // Tenant, Type, Description, Charge, Payment, Balance; a grey
+          // header, rows 1, 3, 5... shaded, no borders, and Charge, Payment
+          // and Balance on the right, headers too.
+          tenantStatementPdfTable(
+              ledgerdata.reversed.map(_statementRow).toList()),
         ],
       ),
     );
 
+    // Web saves it as Tenant_statement.pdf.
     if (Platform.isIOS) {
       await Printing.sharePdf(
-          bytes: await pdf.save(), filename: 'Financial.pdf');
+          bytes: await pdf.save(), filename: 'Tenant_statement.pdf');
     } else {
       await Printing.layoutPdf(
-      format: PdfPageFormat.a4.landscape,
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-    );
+        name: 'Tenant_statement.pdf',
+        format: PdfPageFormat.a4.landscape,
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+      );
     }
   }
 
   Future<void> generateWorkOrderExcel(List<Data> ledgerdata) async {
     ledgerdata = ledgerdata.reversed.toList();
-    final syncXlsx.Workbook workbook = syncXlsx.Workbook();
-    final syncXlsx.Worksheet sheet = workbook.worksheets[0];
-    sheet.getRangeByName('A1:f1').columnWidth = 15;
-    sheet.getRangeByName('D1').columnWidth = 45;
-
-    final List<String> headers = [
-      'Date',
-      'Tenants',
-      'Type',
-      'Description',
-      'Amount',
-      'Balance',
+    // Like web's Tenant Statement Excel: the letterhead rows, then the table
+    // on a sheet named "Statement", with Charge, Payment and Balance on the
+    // right in every row, the header too.
+    final rows = <List<String>>[
+      ...tenantStatementSheetRows(await _tenantStatementHeader(ledgerdata)),
+      tenantStatementHead,
+      ...ledgerdata.map(_statementRow),
     ];
-
-    final syncXlsx.Style headerCellStyle = workbook.styles.add(
-      'headerCellStyle',
-    );
-    headerCellStyle.fontSize = 14;
-    headerCellStyle.bold = true;
-    headerCellStyle.backColor = '#D3D3D3';
-    headerCellStyle.hAlign = syncXlsx.HAlignType.left;
-
-    for (int i = 0; i < headers.length; i++) {
-      final cell = sheet.getRangeByIndex(1, i + 1);
-      cell.setText(headers[i]);
-      cell.cellStyle = headerCellStyle;
-    }
-
-    for (int i = 0; i < ledgerdata.reversed.length; i++) {
-      final ledger = ledgerdata[i];
-
-      // Safe date parsing with default/fallback value
-      String formattedDate;
-      try {
-        formattedDate = ledger != null
-            ? DateFormat('yyyy-MM-dd').format(
-                DateFormat('yyyy-MM-dd').parse(ledger.entry?.first.date! ?? ''))
-            : 'Invalid Date';
-      } catch (e) {
-        formattedDate = 'Invalid Date';
-      }
-      sheet.getRangeByIndex(2 + i, 5).cellStyle.hAlign =
-          syncXlsx.HAlignType.right;
-      sheet.getRangeByIndex(2 + i, 6).cellStyle.hAlign =
-          syncXlsx.HAlignType.right;
-
-      sheet.getRangeByIndex(2 + i, 1).setText(ledger.entry?.first.date);
-
-      sheet.getRangeByIndex(2 + i, 2).setText(ledger.tenantData != null
-          ? '${ledger.tenantData["tenant_firstName"] ?? ""} ${ledger.tenantData["tenant_lastName"] ?? ""}'
-          : 'N/A' ?? '');
-
-      sheet.getRangeByIndex(2 + i, 3).setText(ledger.type ?? '');
-
-      sheet.getRangeByIndex(2 + i, 4).setText(ledger.type == "Charge"
-          ? "${ledger.entry?.first.memo}"
-          : 'Manual ${ledger.type} ${ledger.response} For ${ledger.paymenttype}' ??
-              '');
-
-      sheet.getRangeByIndex(2 + i, 5).setText(
-            formatMoneyAccountingCredit(ledger.totalAmount ?? 0,
-                isCredit:
-                    !(ledger.type == "Refund" || ledger.type == "Charge")),
-          );
-
-      sheet
-          .getRangeByIndex(2 + i, 6)
-          .setText(formatMoneyAccounting(ledger.balance));
-    }
+    final syncXlsx.Workbook workbook = tenantStatementWorkbook(rows);
 
     final List<int> bytes = workbook.saveAsStream();
     workbook.dispose();
-    final DateTime now = DateTime.now();
-    final String formattedDate = DateFormat('yyyyMMddHHmmss').format(now);
-    final String fileName = 'Tenant_statement.xlsx';
+    const String fileName = 'Tenant_statement.xlsx';
     final directory = await getApplicationDocumentsDirectory();
     final path = '${directory.path}/$fileName';
     if (!await directory.exists()) {
@@ -1594,53 +1430,15 @@ class _FinancialTableState extends State<FinancialTable>
     List<Data> ledgerdata,
   ) async {
     ledgerdata = ledgerdata.reversed.toList();
-
-    // No need for workbook and worksheet objects in CSV generation
-
-    final List<String> headers = [
-      'Date',
-      'Tenants',
-      'Type',
-      'Description',
-      'Amount',
-      'Balance',
-    ];
-
-    final List<List<String>> csvData = [];
-    csvData.add(headers);
-
-    for (int i = 0; i < ledgerdata.reversed.length; i++) {
-      final ledger = ledgerdata[i];
-      // Safe date parsing with default/fallback value
-      String formattedDate;
-      try {
-        formattedDate = ledger != null
-            ? DateFormat('yyyy-MM-dd').format(
-                DateFormat('yyyy-MM-dd').parse(ledger.entry?.first.date! ?? ''))
-            : 'Invalid Date';
-      } catch (e) {
-        formattedDate = 'Invalid Date';
-      }
-      final rowData = [
-        formattedDate,
-        ledger.tenantData != null
-            ? '${ledger.tenantData["tenant_firstName"] ?? ""} ${ledger.tenantData["tenant_lastName"] ?? ""}'
-            : 'N/A',
-        ledger.type ?? '',
-        ledger.type == "Charge"
-            ? "${ledger.entry?.first.memo}"
-            : 'Manual ${ledger.type} ${ledger.response} For ${ledger.paymenttype}',
-        formatMoneyAccountingCredit(ledger.totalAmount ?? 0,
-            isCredit: !(ledger.type == "Refund" || ledger.type == "Charge")),
-        formatMoneyAccounting(ledger.balance),
-      ];
-      csvData.add(rowData);
-    }
-
-    final String csvContent = const ListToCsvConverter().convert(csvData);
-    final DateTime now = DateTime.now();
-    final String formattedDate = DateFormat('yyyyMMddHHmmss').format(now);
-    final String fileName = 'Tenant_statement.csv';
+    // Like web's Tenant Statement CSV: the letterhead rows, then the table,
+    // every cell quoted and Charge, Payment and Balance padded to line up on
+    // the right.
+    final String csvContent = tenantStatementCsv([
+      ...tenantStatementSheetRows(await _tenantStatementHeader(ledgerdata)),
+      tenantStatementHead,
+      ...ledgerdata.map(_statementRow),
+    ]);
+    const String fileName = 'Tenant_statement.csv';
     final directory = await getApplicationDocumentsDirectory();
     final path = '${directory.path}/$fileName';
     if (!await directory.exists()) {

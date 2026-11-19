@@ -27,6 +27,7 @@ import 'package:three_zero_two_property/provider/dateProvider.dart';
 import 'package:three_zero_two_property/repository/rental_properties.dart';
 
 import '../../../../Model/propertytype.dart';
+import 'package:three_zero_two_property/widgets/property_type_popup.dart';
 import '../../../../constant/constant.dart';
 import '../../../../model/add_property.dart' hide InsuredValue;
 import '../../../../model/properties.dart';
@@ -317,7 +318,6 @@ class _Edit_propertiesState extends State<Edit_properties> {
         provider.setOwnerDetails(Ownersdetails!);
       }
     });
-    isEditable = false;
     // Show insured values from list immediately so they appear before fetch completes
     if (widget.properties.insuredValues != null &&
         widget.properties.insuredValues!.isNotEmpty) {
@@ -407,6 +407,403 @@ class _Edit_propertiesState extends State<Edit_properties> {
     // First photo replaced here: keep the rest after it.
     return <String>[shown, ...stored.sublist(1)];
   }
+  /// One unit's card for the selected property type: its fields and the
+  /// controllers they edit, in the positions the save reads. [slot] is the
+  /// unit's slot (its photo binds to it). [unitAmenities]
+  /// is the unit's amenities. [fromSaved] is true while
+  /// the saved units load; a type change passes false, so the values are
+  /// shown as they are.
+  ({List<TextEditingController> controllers, List<Widget> fields})
+      _unitCardFor(unit_properties unit, int slot,
+      ValueNotifier<List<String>> unitAmenities,
+      {bool fromSaved = true}) {
+    List<TextEditingController> controllers = [];
+    List<Widget> fields = [];
+
+    if (selectedpropertytypedata?.propertyType == 'Commercial') {
+      if (selectedpropertytypedata?.isMultiunit == true) {
+        // Commercial multi-unit
+        controllers = [
+          TextEditingController(text: unit.rentalunit ?? ''),
+          TextEditingController(text: unit.rentalunitadress ?? ''),
+          TextEditingController(text: unit.rentalsqft ?? ''),
+          // Appended, never inserted: existing indices 0-2 must not move.
+          TextEditingController(text: unit.description ?? ''),
+        ];
+        fields = [
+          customTextField('Unit Number', controllers[0],
+              placeholder: 'Enter unit number'),
+          customTextField('Unit Address', controllers[1],
+              placeholder: 'Enter unit address'),
+          customTextField('SQFT', controllers[2],
+              placeholder: 'Enter Sqft'),
+          customOptionalField(
+              'Unit Description', controllers[3],
+              maxLines: 3,
+              placeholder: _pfUnitDescHint,
+              helperText: _pfUnitDescHelp),
+          photo(slot),
+        ];
+      } else {
+        // Commercial single unit
+
+        // For Commercial single unit, if sqft is empty but unit has a value, use that
+        // A type change shows the SQFT as it is (no legacy fallback).
+        String sqftValue = !fromSaved
+            ? (unit.rentalsqft ?? '')
+            : unit.rentalsqft?.isNotEmpty == true
+              ? unit.rentalsqft!
+              : unit.rentalunit ?? '';
+
+
+        controllers = [
+          TextEditingController(
+              text: sqftValue), // sqft in first position
+          // Unit Description takes the unused slot 1 so it sits at the
+          // same index as a Commercial unit built by addPropertyGroup().
+          TextEditingController(text: unit.description ?? ''),
+          TextEditingController(), // dummy controller for consistency
+        ];
+
+        for (int j = 0; j < controllers.length; j++) {
+        }
+
+        fields = [
+          customTextField('SQFT', controllers[0],
+              placeholder: 'Enter Sqft'),
+          customOptionalField(
+              'Unit Description', controllers[1],
+              maxLines: 3,
+              placeholder: _pfUnitDescHint,
+              helperText: _pfUnitDescHelp),
+          photo(slot),
+        ];
+      }
+    } else {
+      // Residential properties
+      if (selectedpropertytypedata?.isMultiunit == true) {
+        // Use original values directly for display
+        controllers = [
+          TextEditingController(text: unit.rentalunit ?? ''),
+          TextEditingController(text: unit.rentalunitadress ?? ''),
+          TextEditingController(text: unit.rentalsqft ?? ''),
+          TextEditingController(text: unit.rentalbath ?? ''),
+          TextEditingController(text: unit.rentalbed ?? ''),
+          // Appended, never inserted: existing indices 0-4 must not move.
+          TextEditingController(text: unit.rentalUnitPrice ?? ''),
+          TextEditingController(text: unit.halfBaths ?? ''),
+          TextEditingController(
+              text: _displayDate(unit.availabilityDate)),
+          TextEditingController(text: unit.parkingType ?? ''),
+          TextEditingController(
+              text: (unit.leaseTerm ?? '').isEmpty
+                  ? 'ContactForDetails'
+                  : unit.leaseTerm!),
+          TextEditingController(text: unit.securityDeposit ?? ''),
+          TextEditingController(
+              text: (unit.securityDepositType ?? '').isEmpty
+                  ? 'flatFee'
+                  : unit.securityDepositType!),
+          TextEditingController(text: unit.securityDepositMax ?? ''),
+          TextEditingController(
+              text: (unit.securityDepositRefundable ?? '').isEmpty
+                  ? 'refundable'
+                  : unit.securityDepositRefundable!),
+          TextEditingController(text: unit.petPolicy ?? ''),
+          TextEditingController(
+              text: (unit.isFurnished ?? false).toString()),
+          TextEditingController(
+              text: (unit.smokingAllowed ?? false).toString()),
+          TextEditingController(text: unit.description ?? ''),
+        ];
+        // Store original values for API
+        if (fromSaved) originalValues.add({
+          'bath': unit.rentalbath ?? '',
+          'bed': unit.rentalbed ?? '',
+        });
+        fields = [
+          customTextField('Unit', controllers[0],
+              placeholder: 'Enter unit'),
+          customTextField('Unit Address', controllers[1],
+              placeholder: 'Enter unit address'),
+          _pfTwoCol(
+            customTextField('SQFT', controllers[2],
+                placeholder: 'Enter Sqft'),
+            customTextField('Rent Price (\$)', controllers[5],
+                money: true, placeholder: 'Enter rent price'),
+          ),
+          _pfTwoCol(
+            customDropdownField('Bed', roomsArray, controllers[4],
+                placeholder: 'Select'),
+            customDropdownField('Baths', bathArray, controllers[3],
+                placeholder: 'Select'),
+          ),
+          _pfTwoCol(
+            customDropdownField(
+                'Half Baths', halfBathArray, controllers[6],
+                placeholder: 'Select'),
+            customValueDropdown(
+                'Parking Type', parkingTypeOptions, controllers[8]),
+          ),
+          customUnitDateField('Availability Date', controllers[7]),
+          customValueDropdown(
+              'Lease Term', leaseTermOptions, controllers[9],
+              showRequired: true),
+          _pfTwoCol(
+            customOptionalField(
+                'Security Deposit (\$)', controllers[10],
+                money: true, placeholder: '0'),
+            customValueDropdown(
+                'Deposit Type', depositTypeOptions, controllers[11]),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controllers[11],
+            builder: (_, v, __) => v.text == 'range'
+                ? customOptionalField(
+                    'Deposit Max (\$)', controllers[12], money: true)
+                : const SizedBox.shrink(),
+          ),
+          customValueDropdown('Deposit Refundable?',
+              depositRefundableOptions, controllers[13]),
+          customOptionalField('Pet Policy', controllers[14],
+              maxLines: 3, placeholder: _pfPetHint),
+          ValueListenableBuilder<List<String>>(
+            valueListenable: unitAmenities,
+            builder: (_, value, __) => AmenitiesField(
+                label: 'Unit Amenities',
+                value: value,
+                isStaff: true,
+                onChanged: (v) => unitAmenities.value = v),
+          ),
+          const SizedBox(height: 16),
+          _pfTileRow(
+            customCheckboxField('Furnished', controllers[15]),
+            customCheckboxField(
+                'Smoking Allowed', controllers[16]),
+          ),
+          customOptionalField(
+              'Unit Description', controllers[17],
+              maxLines: 3,
+              placeholder: _pfUnitDescHint,
+              helperText: _pfUnitDescHelp),
+          photo(slot),
+        ];
+      } else {
+        // Extract correct values from potentially corrupted data
+        // A type change shows the values as they are; the clean-up is
+        // for units loaded from older data.
+        Map<String, String> correctValues = fromSaved
+            ? extractCorrectValues(unit)
+            : <String, String>{
+                'sqft': unit.rentalsqft ?? '',
+                'bath': unit.rentalbath ?? '',
+                'bed': unit.rentalbed ?? '',
+              };
+
+
+        controllers = [
+          TextEditingController(text: correctValues['sqft'] ?? ''),
+          TextEditingController(text: correctValues['bath'] ?? ''),
+          TextEditingController(text: correctValues['bed'] ?? ''),
+          // Appended, never inserted: existing indices 0-2 must not move.
+          TextEditingController(text: unit.rentalUnitPrice ?? ''),
+          TextEditingController(text: unit.halfBaths ?? ''),
+          TextEditingController(
+              text: _displayDate(unit.availabilityDate)),
+          TextEditingController(text: unit.parkingType ?? ''),
+          TextEditingController(
+              text: (unit.leaseTerm ?? '').isEmpty
+                  ? 'ContactForDetails'
+                  : unit.leaseTerm!),
+          TextEditingController(text: unit.securityDeposit ?? ''),
+          TextEditingController(
+              text: (unit.securityDepositType ?? '').isEmpty
+                  ? 'flatFee'
+                  : unit.securityDepositType!),
+          TextEditingController(text: unit.securityDepositMax ?? ''),
+          TextEditingController(
+              text: (unit.securityDepositRefundable ?? '').isEmpty
+                  ? 'refundable'
+                  : unit.securityDepositRefundable!),
+          TextEditingController(text: unit.petPolicy ?? ''),
+          TextEditingController(
+              text: (unit.isFurnished ?? false).toString()),
+          TextEditingController(
+              text: (unit.smokingAllowed ?? false).toString()),
+          TextEditingController(text: unit.description ?? ''),
+        ];
+        // Store original values for API
+        if (fromSaved) originalValues.add({
+          'bath': correctValues['bath'] ?? '',
+          'bed': correctValues['bed'] ?? '',
+        });
+        fields = [
+          _pfTwoCol(
+            customTextField('SQFT', controllers[0],
+                placeholder: 'Enter Sqft'),
+            customTextField('Rent Price (\$)', controllers[3],
+                money: true, placeholder: 'Enter rent price'),
+          ),
+          _pfTwoCol(
+            customDropdownField('Bed', roomsArray, controllers[2],
+                placeholder: 'Select'),
+            customDropdownField('Baths', bathArray, controllers[1],
+                placeholder: 'Select'),
+          ),
+          _pfTwoCol(
+            customDropdownField(
+                'Half Baths', halfBathArray, controllers[4],
+                placeholder: 'Select'),
+            customValueDropdown(
+                'Parking Type', parkingTypeOptions, controllers[6]),
+          ),
+          customUnitDateField('Availability Date', controllers[5]),
+          customValueDropdown(
+              'Lease Term', leaseTermOptions, controllers[7],
+              showRequired: true),
+          _pfTwoCol(
+            customOptionalField(
+                'Security Deposit (\$)', controllers[8],
+                money: true, placeholder: '0'),
+            customValueDropdown(
+                'Deposit Type', depositTypeOptions, controllers[9]),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controllers[9],
+            builder: (_, v, __) => v.text == 'range'
+                ? customOptionalField(
+                    'Deposit Max (\$)', controllers[10], money: true)
+                : const SizedBox.shrink(),
+          ),
+          customValueDropdown('Deposit Refundable?',
+              depositRefundableOptions, controllers[11]),
+          customOptionalField('Pet Policy', controllers[12],
+              maxLines: 3, placeholder: _pfPetHint),
+          ValueListenableBuilder<List<String>>(
+            valueListenable: unitAmenities,
+            builder: (_, value, __) => AmenitiesField(
+                label: 'Unit Amenities',
+                value: value,
+                isStaff: true,
+                onChanged: (v) => unitAmenities.value = v),
+          ),
+          const SizedBox(height: 16),
+          _pfTileRow(
+            customCheckboxField('Furnished', controllers[13]),
+            customCheckboxField(
+                'Smoking Allowed', controllers[14]),
+          ),
+          customOptionalField(
+              'Unit Description', controllers[15],
+              maxLines: 3,
+              placeholder: _pfUnitDescHint,
+              helperText: _pfUnitDescHelp),
+          photo(slot),
+        ];
+      }
+    }
+
+    return (controllers: controllers, fields: fields);
+  }
+
+  /// Unit [slot] as it is on screen, read from its card in the [type] /
+  /// [multi] layout. What that layout does not show comes from the saved
+  /// unit, so nothing is lost when the card is laid out for another type.
+  unit_properties _unitFromCard(int slot,
+      {required String? type, required bool multi}) {
+    final List<TextEditingController> c = propertyGroupControllers[slot];
+    final unit_properties? saved = slot < data.length ? data[slot] : null;
+    String at(int i) => i < c.length ? c[i].text : '';
+    final unit_properties u = unit_properties(
+      unitId: saved?.unitId,
+      rentalunit: saved?.rentalunit,
+      rentalunitadress: saved?.rentalunitadress,
+      rentalsqft: saved?.rentalsqft,
+      rentalbath: saved?.rentalbath,
+      rentalbed: saved?.rentalbed,
+      rentalUnitPrice: saved?.rentalUnitPrice,
+      halfBaths: saved?.halfBaths,
+      availabilityDate: saved?.availabilityDate,
+      parkingType: saved?.parkingType,
+      leaseTerm: saved?.leaseTerm,
+      securityDeposit: saved?.securityDeposit,
+      securityDepositType: saved?.securityDepositType,
+      securityDepositMax: saved?.securityDepositMax,
+      securityDepositRefundable: saved?.securityDepositRefundable,
+      petPolicy: saved?.petPolicy,
+      isFurnished: saved?.isFurnished,
+      smokingAllowed: saved?.smokingAllowed,
+      description: saved?.description,
+      amenities: saved?.amenities,
+      rentalImages: saved?.rentalImages,
+    );
+    if (multi) {
+      u.rentalunit = at(0);
+      u.rentalunitadress = at(1);
+      u.rentalsqft = at(2);
+    } else {
+      u.rentalsqft = at(0);
+    }
+    if (type == 'Commercial') {
+      u.description = at(multi ? 3 : 1);
+    } else {
+      // Baths, then Bed, then Rent Price and the rest in the same order in
+      // both residential layouts.
+      final int b = multi ? 3 : 1;
+      u.rentalbath = at(b);
+      u.rentalbed = at(b + 1);
+      final int x = b + 2;
+      u.rentalUnitPrice = at(x);
+      u.halfBaths = at(x + 1);
+      u.availabilityDate = _toApiDate(at(x + 2)) ?? '';
+      u.parkingType = at(x + 3);
+      u.leaseTerm = at(x + 4);
+      u.securityDeposit = at(x + 5);
+      u.securityDepositType = at(x + 6);
+      u.securityDepositMax = at(x + 7);
+      u.securityDepositRefundable = at(x + 8);
+      u.petPolicy = at(x + 9);
+      u.isFurnished = at(x + 10) == 'true';
+      u.smokingAllowed = at(x + 11) == 'true';
+      u.description = at(x + 12);
+    }
+    return u;
+  }
+
+  /// Like web (Rentals.jsx handlePropSelection), changing the property type
+  /// while editing keeps every unit: each card is laid out again for the new
+  /// type with the values it holds, its unit id, photo and amenities. Call
+  /// inside setState, after the new type is set.
+  void _relayoutUnits({required String? oldType, required bool oldMulti}) {
+    final List<List<Widget>> cards = <List<Widget>>[];
+    for (int slot = 0; slot < propertyGroupControllers.length; slot++) {
+      final unit_properties unit =
+          _unitFromCard(slot, type: oldType, multi: oldMulti);
+      final card = _unitCardFor(unit, slot, propertyGroupAmenities[slot], fromSaved: false);
+      propertyGroupControllers[slot] = card.controllers;
+      if (!_removedUnitSlots.contains(slot)) cards.add(card.fields);
+    }
+    propertyGroups
+      ..clear()
+      ..addAll(cards);
+  }
+
+  // The property type's id as loaded, to tell a type change apart.
+  String? _savedTypeId;
+
+  String? get _loadedTypeId => (_savedTypeId ?? '').isNotEmpty
+      ? _savedTypeId
+      : widget.properties.propertyId;
+
+  /// The chosen property type's id, which the save sends (web sends
+  /// selectedPropType.property_id); the loaded one until another is chosen.
+  String? get _selectedTypeId {
+    final String id = selectedpropertytypedata?.propertyId ?? '';
+    return id.isNotEmpty ? id : _loadedTypeId;
+  }
+
+  bool get _typeChanged => _selectedTypeId != _loadedTypeId;
+
   final Properies_summery_Repo unit1Repository = Properies_summery_Repo();
   Future<void> fetchunits1() async {
     try {
@@ -436,280 +833,12 @@ class _Edit_propertiesState extends State<Edit_properties> {
           final unitAmenities = ValueNotifier<List<String>>(
               List<String>.from(unit.amenities ?? const <String>[]));
 
-          List<TextEditingController> controllers = [];
-          List<Widget> fields = [];
-
-          if (selectedpropertytypedata?.propertyType == 'Commercial') {
-            if (selectedpropertytypedata?.isMultiunit == true) {
-              // Commercial multi-unit
-              controllers = [
-                TextEditingController(text: unit.rentalunit ?? ''),
-                TextEditingController(text: unit.rentalunitadress ?? ''),
-                TextEditingController(text: unit.rentalsqft ?? ''),
-                // Appended, never inserted: existing indices 0-2 must not move.
-                TextEditingController(text: unit.description ?? ''),
-              ];
-              fields = [
-                customTextField('Unit Number', controllers[0],
-                    placeholder: 'Enter unit number'),
-                customTextField('Unit Address', controllers[1],
-                    placeholder: 'Enter unit address'),
-                customTextField('SQFT', controllers[2],
-                    placeholder: 'Enter Sqft'),
-                customOptionalField(
-                    'Unit Description', controllers[3],
-                    maxLines: 3,
-                    placeholder: _pfUnitDescHint,
-                    helperText: _pfUnitDescHelp),
-                photo(propertyGroups.length),
-              ];
-            } else {
-              // Commercial single unit
-
-              // For Commercial single unit, if sqft is empty but unit has a value, use that
-              String sqftValue = unit.rentalsqft?.isNotEmpty == true
-                  ? unit.rentalsqft!
-                  : unit.rentalunit ?? '';
-
-
-              controllers = [
-                TextEditingController(
-                    text: sqftValue), // sqft in first position
-                // Unit Description takes the unused slot 1 so it sits at the
-                // same index as a Commercial unit built by addPropertyGroup().
-                TextEditingController(text: unit.description ?? ''),
-                TextEditingController(), // dummy controller for consistency
-              ];
-
-              for (int j = 0; j < controllers.length; j++) {
-              }
-
-              fields = [
-                customTextField('SQFT', controllers[0],
-                    placeholder: 'Enter Sqft'),
-                customOptionalField(
-                    'Unit Description', controllers[1],
-                    maxLines: 3,
-                    placeholder: _pfUnitDescHint,
-                    helperText: _pfUnitDescHelp),
-                photo(propertyGroups.length),
-              ];
-            }
-          } else {
-            // Residential properties
-            if (selectedpropertytypedata?.isMultiunit == true) {
-              // Use original values directly for display
-              controllers = [
-                TextEditingController(text: unit.rentalunit ?? ''),
-                TextEditingController(text: unit.rentalunitadress ?? ''),
-                TextEditingController(text: unit.rentalsqft ?? ''),
-                TextEditingController(text: unit.rentalbath ?? ''),
-                TextEditingController(text: unit.rentalbed ?? ''),
-                // Appended, never inserted: existing indices 0-4 must not move.
-                TextEditingController(text: unit.rentalUnitPrice ?? ''),
-                TextEditingController(text: unit.halfBaths ?? ''),
-                TextEditingController(
-                    text: _displayDate(unit.availabilityDate)),
-                TextEditingController(text: unit.parkingType ?? ''),
-                TextEditingController(
-                    text: (unit.leaseTerm ?? '').isEmpty
-                        ? 'ContactForDetails'
-                        : unit.leaseTerm!),
-                TextEditingController(text: unit.securityDeposit ?? ''),
-                TextEditingController(
-                    text: (unit.securityDepositType ?? '').isEmpty
-                        ? 'flatFee'
-                        : unit.securityDepositType!),
-                TextEditingController(text: unit.securityDepositMax ?? ''),
-                TextEditingController(
-                    text: (unit.securityDepositRefundable ?? '').isEmpty
-                        ? 'refundable'
-                        : unit.securityDepositRefundable!),
-                TextEditingController(text: unit.petPolicy ?? ''),
-                TextEditingController(
-                    text: (unit.isFurnished ?? false).toString()),
-                TextEditingController(
-                    text: (unit.smokingAllowed ?? false).toString()),
-                TextEditingController(text: unit.description ?? ''),
-              ];
-              // Store original values for API
-              originalValues.add({
-                'bath': unit.rentalbath ?? '',
-                'bed': unit.rentalbed ?? '',
-              });
-              fields = [
-                customTextField('Unit', controllers[0],
-                    placeholder: 'Enter unit'),
-                customTextField('Unit Address', controllers[1],
-                    placeholder: 'Enter unit address'),
-                _pfTwoCol(
-                  customTextField('SQFT', controllers[2],
-                      placeholder: 'Enter Sqft'),
-                  customTextField('Rent Price (\$)', controllers[5],
-                      money: true, placeholder: 'Enter rent price'),
-                ),
-                _pfTwoCol(
-                  customDropdownField('Bed', roomsArray, controllers[4],
-                      placeholder: 'Select'),
-                  customDropdownField('Baths', bathArray, controllers[3],
-                      placeholder: 'Select'),
-                ),
-                _pfTwoCol(
-                  customDropdownField(
-                      'Half Baths', halfBathArray, controllers[6],
-                      placeholder: 'Select'),
-                  customValueDropdown(
-                      'Parking Type', parkingTypeOptions, controllers[8]),
-                ),
-                customUnitDateField('Availability Date', controllers[7]),
-                customValueDropdown(
-                    'Lease Term', leaseTermOptions, controllers[9],
-                    showRequired: true),
-                _pfTwoCol(
-                  customOptionalField(
-                      'Security Deposit (\$)', controllers[10],
-                      money: true, placeholder: '0'),
-                  customValueDropdown(
-                      'Deposit Type', depositTypeOptions, controllers[11]),
-                ),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: controllers[11],
-                  builder: (_, v, __) => v.text == 'range'
-                      ? customOptionalField(
-                          'Deposit Max (\$)', controllers[12], money: true)
-                      : const SizedBox.shrink(),
-                ),
-                customValueDropdown('Deposit Refundable?',
-                    depositRefundableOptions, controllers[13]),
-                customOptionalField('Pet Policy', controllers[14],
-                    maxLines: 3, placeholder: _pfPetHint),
-                ValueListenableBuilder<List<String>>(
-                  valueListenable: unitAmenities,
-                  builder: (_, value, __) => AmenitiesField(
-                      label: 'Unit Amenities',
-                      value: value,
-                      isStaff: true,
-                      onChanged: (v) => unitAmenities.value = v),
-                ),
-                const SizedBox(height: 16),
-                _pfTileRow(
-                  customCheckboxField('Furnished', controllers[15]),
-                  customCheckboxField(
-                      'Smoking Allowed', controllers[16]),
-                ),
-                customOptionalField(
-                    'Unit Description', controllers[17],
-                    maxLines: 3,
-                    placeholder: _pfUnitDescHint,
-                    helperText: _pfUnitDescHelp),
-                photo(propertyGroups.length),
-              ];
-            } else {
-              // Extract correct values from potentially corrupted data
-              Map<String, String> correctValues = extractCorrectValues(unit);
-
-
-              controllers = [
-                TextEditingController(text: correctValues['sqft'] ?? ''),
-                TextEditingController(text: correctValues['bath'] ?? ''),
-                TextEditingController(text: correctValues['bed'] ?? ''),
-                // Appended, never inserted: existing indices 0-2 must not move.
-                TextEditingController(text: unit.rentalUnitPrice ?? ''),
-                TextEditingController(text: unit.halfBaths ?? ''),
-                TextEditingController(
-                    text: _displayDate(unit.availabilityDate)),
-                TextEditingController(text: unit.parkingType ?? ''),
-                TextEditingController(
-                    text: (unit.leaseTerm ?? '').isEmpty
-                        ? 'ContactForDetails'
-                        : unit.leaseTerm!),
-                TextEditingController(text: unit.securityDeposit ?? ''),
-                TextEditingController(
-                    text: (unit.securityDepositType ?? '').isEmpty
-                        ? 'flatFee'
-                        : unit.securityDepositType!),
-                TextEditingController(text: unit.securityDepositMax ?? ''),
-                TextEditingController(
-                    text: (unit.securityDepositRefundable ?? '').isEmpty
-                        ? 'refundable'
-                        : unit.securityDepositRefundable!),
-                TextEditingController(text: unit.petPolicy ?? ''),
-                TextEditingController(
-                    text: (unit.isFurnished ?? false).toString()),
-                TextEditingController(
-                    text: (unit.smokingAllowed ?? false).toString()),
-                TextEditingController(text: unit.description ?? ''),
-              ];
-              // Store original values for API
-              originalValues.add({
-                'bath': correctValues['bath'] ?? '',
-                'bed': correctValues['bed'] ?? '',
-              });
-              fields = [
-                _pfTwoCol(
-                  customTextField('SQFT', controllers[0],
-                      placeholder: 'Enter Sqft'),
-                  customTextField('Rent Price (\$)', controllers[3],
-                      money: true, placeholder: 'Enter rent price'),
-                ),
-                _pfTwoCol(
-                  customDropdownField('Bed', roomsArray, controllers[2],
-                      placeholder: 'Select'),
-                  customDropdownField('Baths', bathArray, controllers[1],
-                      placeholder: 'Select'),
-                ),
-                _pfTwoCol(
-                  customDropdownField(
-                      'Half Baths', halfBathArray, controllers[4],
-                      placeholder: 'Select'),
-                  customValueDropdown(
-                      'Parking Type', parkingTypeOptions, controllers[6]),
-                ),
-                customUnitDateField('Availability Date', controllers[5]),
-                customValueDropdown(
-                    'Lease Term', leaseTermOptions, controllers[7],
-                    showRequired: true),
-                _pfTwoCol(
-                  customOptionalField(
-                      'Security Deposit (\$)', controllers[8],
-                      money: true, placeholder: '0'),
-                  customValueDropdown(
-                      'Deposit Type', depositTypeOptions, controllers[9]),
-                ),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: controllers[9],
-                  builder: (_, v, __) => v.text == 'range'
-                      ? customOptionalField(
-                          'Deposit Max (\$)', controllers[10], money: true)
-                      : const SizedBox.shrink(),
-                ),
-                customValueDropdown('Deposit Refundable?',
-                    depositRefundableOptions, controllers[11]),
-                customOptionalField('Pet Policy', controllers[12],
-                    maxLines: 3, placeholder: _pfPetHint),
-                ValueListenableBuilder<List<String>>(
-                  valueListenable: unitAmenities,
-                  builder: (_, value, __) => AmenitiesField(
-                      label: 'Unit Amenities',
-                      value: value,
-                      isStaff: true,
-                      onChanged: (v) => unitAmenities.value = v),
-                ),
-                const SizedBox(height: 16),
-                _pfTileRow(
-                  customCheckboxField('Furnished', controllers[13]),
-                  customCheckboxField(
-                      'Smoking Allowed', controllers[14]),
-                ),
-                customOptionalField(
-                    'Unit Description', controllers[15],
-                    maxLines: 3,
-                    placeholder: _pfUnitDescHint,
-                    helperText: _pfUnitDescHelp),
-                photo(propertyGroups.length),
-              ];
-            }
-          }
+          // Laid out for the property's type by _unitCardFor; a type
+          // change on this screen lays the cards out the same way.
+          final card = _unitCardFor(unit, propertyGroups.length, unitAmenities);
+          final List<TextEditingController> controllers =
+              card.controllers;
+          final List<Widget> fields = card.fields;
 
           for (int i = 0; i < controllers.length; i++) {
           }
@@ -765,6 +894,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
         originalValues.clear();
         // print(fetchedDetails.rentalAddress);
         // selectedpropertytype = fetchedDetails.propertyTypeData?.propertyType;
+        _savedTypeId = fetchedDetails.propertyTypeData?.propertyId;
         selectedpropertytypedata = propertytype(
             propertyType: fetchedDetails.propertyTypeData?.propertyType ?? "",
             propertysubType:
@@ -2185,7 +2315,6 @@ class _Edit_propertiesState extends State<Edit_properties> {
     );
   }
 
-  bool isEditable = false;
 
   // ---- Redesign helpers (web-aligned property form; visual only) ---------
 
@@ -2469,6 +2598,46 @@ class _Edit_propertiesState extends State<Edit_properties> {
     );
   }
 
+  // Like web (AddpropertyModal.jsx): the pencil next to a property type in
+  // the list reopens the popup filled in, and saves the changes to that type.
+  Future<void> _editPropertyTypeFromList(propertytype item) async {
+    final String? oldName = item.propertysubType;
+    String? newName;
+    final saved = await showPropertyTypePopup(
+      context,
+      editing: item,
+      onSave: (values) async {
+        final prefs = await SharedPreferences.getInstance();
+        await PropertyTypeRepository().EditPropertyType(
+          adminId: prefs.getString("adminId"),
+          id: item.propertyId,
+          propertyType: values.propertyType,
+          propertySubType: values.propertySubType,
+          isMultiUnit: values.isMultiUnit,
+          // This popup has no image field: keep the saved image.
+          propertyTypeImage: item.propertyTypeImage,
+          zillowPropertyType: values.syndicationType,
+        );
+        newName = values.propertySubType;
+      },
+    );
+    if (saved != true || !mounted) return;
+    setState(() {
+      // A renamed type that is chosen here keeps pointing at its new name.
+      if (oldName != null && selectedProperty == oldName && newName != null) {
+        selectedProperty = newName;
+      }
+      futureProperties = PropertyTypeRepository().fetchPropertyTypes();
+    });
+  }
+
+  // Fetches the property types again after the popup saves one.
+  void _reloadPropertyTypes() {
+    setState(() {
+      futureProperties = PropertyTypeRepository().fetchPropertyTypes();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // print(selectedIsMultiUnit);
@@ -2610,405 +2779,50 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                                     color: _pfHintClr,
                                                   ),
                                                 ),
-                                                onChanged: isEditable
+                                                // Like web (Rentals.jsx), the type can be changed while
+                                                // editing, once the units have loaded.
+                                                onChanged: _unitsLoaded
                                                     ? (String? newValue) {
                                                         if (newValue ==
                                                             'Edit_properties') {
                                                           // Prevent the dropdown from changing the selected item
-                                                          setState(() {
-                                                            selectedProperty =
-                                                                null;
-                                                          });
+                                                          // Like web, the property keeps its type while a new one is added.
                                                           // Show the dialog
-                                                          showDialog(
-                                                            context: context,
-                                                            builder:
-                                                                (BuildContext
-                                                                    context) {
-                                                              bool isChecked =
-                                                                  false; // Moved isChecked inside the StatefulBuilder
-                                                              return StatefulBuilder(
-                                                                builder: (BuildContext
-                                                                        context,
-                                                                    StateSetter
-                                                                        setState) {
-                                                                  return Dialog(
-                                                                    // Inline "add a property type" from the property form. Restyled to the
-                                                                    // house card system used by the Property Type screens; fields and the
-                                                                    // save call are exactly as before. No image field on purpose: web's
-                                                                    // inline AddpropertyModal has none either (only Settings' dialog does),
-                                                                    // so the type falls back to the default image, matching web.
-                                                                    backgroundColor: Colors.transparent,
-                                                                    insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                                                    child: ConstrainedBox(
-                                                                      constraints: const BoxConstraints(maxWidth: 480),
-                                                                      child: Container(
-                                                                        decoration: BoxDecoration(
-                                                                          color: Colors.white,
-                                                                          borderRadius: BorderRadius.circular(16),
-                                                                          border: Border.all(color: borderClr),
-                                                                          boxShadow: [
-                                                                            BoxShadow(
-                                                                              color: Colors.black.withOpacity(0.06),
-                                                                              blurRadius: 16,
-                                                                              offset: const Offset(0, 6),
-                                                                            ),
-                                                                          ],
-                                                                        ),
-                                                                        padding: const EdgeInsets.all(20),
-                                                                        child: SingleChildScrollView(
-                                                                          child: Column(
-                                                                            mainAxisSize: MainAxisSize.min,
-                                                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                                                            children: [
-                                                                              // Header: title leads, close control trails.
-                                                                              Row(
-                                                                                children: [
-                                                                                  Expanded(
-                                                                                    child: Text(
-                                                                                      'New Property Type',
-                                                                                      style: TextStyle(
-                                                                                        fontSize: 18,
-                                                                                        fontWeight: FontWeight.bold,
-                                                                                        color: navyClr,
-                                                                                      ),
-                                                                                    ),
-                                                                                  ),
-                                                                                  Material(
-                                                                                    color: Colors.transparent,
-                                                                                    child: InkWell(
-                                                                                      borderRadius: BorderRadius.circular(18),
-                                                                                      onTap: () => Navigator.pop(context),
-                                                                                      child: Container(
-                                                                                        width: 36,
-                                                                                        height: 36,
-                                                                                        decoration: const BoxDecoration(
-                                                                                          color: Color(0xFFF2F4F7),
-                                                                                          shape: BoxShape.circle,
-                                                                                        ),
-                                                                                        child: const Icon(Icons.close,
-                                                                                            size: 20, color: Colors.black54),
-                                                                                      ),
-                                                                                    ),
-                                                                                  ),
-                                                                                ],
-                                                                              ),
-                                                                              const SizedBox(height: 18),
-
-                                                                              // Property Type *
-                                                                              Padding(
-                                                                                padding: const EdgeInsets.only(bottom: 8),
-                                                                                child: RichText(
-                                                                                  text: TextSpan(
-                                                                                    text: 'Property Type',
-                                                                                    style: TextStyle(
-                                                                                        fontSize: 14, fontWeight: FontWeight.bold, color: navyClr),
-                                                                                    children: [
-                                                                                      TextSpan(
-                                                                                          text: ' *',
-                                                                                          style: TextStyle(
-                                                                                              color: redClr, fontWeight: FontWeight.bold)),
-                                                                                    ],
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                              DropdownButtonHideUnderline(
-                                                                                child: DropdownButton2<String>(
-                                                                                  isExpanded: true,
-                                                                                  hint: Text(
-                                                                                    'Select type',
-                                                                                    style: TextStyle(
-                                                                                        fontSize: 15,
-                                                                                        fontWeight: FontWeight.w600,
-                                                                                        color: mutedClr),
-                                                                                    overflow: TextOverflow.ellipsis,
-                                                                                  ),
-                                                                                  items: items
-                                                                                      .map((String item) => DropdownMenuItem<String>(
-                                                                                            value: item,
-                                                                                            // Item padding lives here, not on menuItemStyleData: the package
-                                                                                            // derives the closed button's inner inset from half that value.
-                                                                                            child: Padding(
-                                                                                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                                                                                              child: Text(
-                                                                                                item,
-                                                                                                style: TextStyle(
-                                                                                                    fontSize: 15,
-                                                                                                    fontWeight: FontWeight.w600,
-                                                                                                    color: navyClr),
-                                                                                                overflow: TextOverflow.ellipsis,
-                                                                                              ),
-                                                                                            ),
-                                                                                          ))
-                                                                                      .toList(),
-                                                                                  // The closed button renders the item with menuItemStyleData's own
-                                                                                  // padding on top of the button's, so the selected value sat further
-                                                                                  // in than the text field below it. This draws the closed state
-                                                                                  // itself, with no padding, leaving only the button's 14.
-                                                                                  selectedItemBuilder: (context) => items
-                                                                                      .map((String item) => Align(
-                                                                                            alignment: Alignment.centerLeft,
-                                                                                            child: Text(
-                                                                                              item,
-                                                                                              style: TextStyle(
-                                                                                                fontSize: 15,
-                                                                                                fontWeight: FontWeight.w600,
-                                                                                                color: navyClr,
-                                                                                              ),
-                                                                                              overflow: TextOverflow.ellipsis,
-                                                                                            ),
-                                                                                          ))
-                                                                                      .toList(),
-                                                                                  value: selectedValue,
-                                                                                  onChanged: (value) {
-                                                                                    setState(() {
-                                                                                      selectedValue = value;
-                                                                                    });
-                                                                                  },
-                                                                                  buttonStyleData: ButtonStyleData(
-                                                                                    height: 52,
-                                                                                    padding: const EdgeInsets.only(left: 14, right: 12),
-                                                                                    decoration: BoxDecoration(
-                                                                                      color: Colors.white,
-                                                                                      borderRadius: BorderRadius.circular(10),
-                                                                                      border: Border.all(color: outlineClr),
-                                                                                    ),
-                                                                                  ),
-                                                                                  iconStyleData: IconStyleData(
-                                                                                    icon: Icon(Icons.keyboard_arrow_down_rounded, color: mutedClr),
-                                                                                    iconSize: 24,
-                                                                                  ),
-                                                                                  dropdownStyleData: DropdownStyleData(
-                                                                                    maxHeight: 220,
-                                                                                    decoration: BoxDecoration(
-                                                                                      color: Colors.white,
-                                                                                      borderRadius: BorderRadius.circular(12),
-                                                                                    ),
-                                                                                  ),
-                                                                                  // Zero here on purpose: the package derives the CLOSED button's
-                                                                                  // inner padding from half of this value, which pushed the selected
-                                                                                  // value further in than the text field below it. Each item carries
-                                                                                  // its own padding instead, so the open menu is unchanged.
-                                                                                  menuItemStyleData: const MenuItemStyleData(
-                                                                                    height: 44,
-                                                                                    padding: EdgeInsets.zero,
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                              const SizedBox(height: 18),
-
-                                                                              // Property Sub Type *
-                                                                              Padding(
-                                                                                padding: const EdgeInsets.only(bottom: 8),
-                                                                                child: RichText(
-                                                                                  text: TextSpan(
-                                                                                    text: 'Property Sub Type',
-                                                                                    style: TextStyle(
-                                                                                        fontSize: 14, fontWeight: FontWeight.bold, color: navyClr),
-                                                                                    children: [
-                                                                                      TextSpan(
-                                                                                          text: ' *',
-                                                                                          style: TextStyle(
-                                                                                              color: redClr, fontWeight: FontWeight.bold)),
-                                                                                    ],
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                              Container(
-                                                                                decoration: BoxDecoration(
-                                                                                  color: Colors.white,
-                                                                                  borderRadius: BorderRadius.circular(10),
-                                                                                  border: Border.all(color: outlineClr),
-                                                                                ),
-                                                                                padding: const EdgeInsets.symmetric(horizontal: 14),
-                                                                                child: TextFormField(
-                                                                                  controller: subtype,
-                                                                                  style: TextStyle(
-                                                                                      fontSize: 15, fontWeight: FontWeight.w600, color: navyClr),
-                                                                                  decoration: InputDecoration(
-                                                                                    border: InputBorder.none,
-                                                                                    isDense: true,
-                                                                                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                                                                                    hintText: 'e.g. Townhome',
-                                                                                    hintStyle: TextStyle(
-                                                                                        color: mutedClr,
-                                                                                        fontWeight: FontWeight.w500,
-                                                                                        fontSize: 15),
-                                                                                  ),
-                                                                                ),
-                                                                              ),
-                                                                              const SizedBox(height: 18),
-
-                                                                              // Multi Unit
-                                                                              Row(
-                                                                                children: [
-                                                                                  SizedBox(
-                                                                                    width: 24,
-                                                                                    height: 24,
-                                                                                    child: Checkbox(
-                                                                                      value: isChecked,
-                                                                                      onChanged: (value) {
-                                                                                        setState(() {
-                                                                                          isChecked = value ?? false;
-                                                                                        });
-                                                                                      },
-                                                                                      activeColor: navyClr,
-                                                                                      checkColor: Colors.white,
-                                                                                      side: BorderSide(color: checkOffClr, width: 1.5),
-                                                                                      shape: RoundedRectangleBorder(
-                                                                                          borderRadius: BorderRadius.circular(6)),
-                                                                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                                                      visualDensity: VisualDensity.compact,
-                                                                                    ),
-                                                                                  ),
-                                                                                  const SizedBox(width: 12),
-                                                                                  Expanded(
-                                                                                    child: Text(
-                                                                                      'Multi Unit',
-                                                                                      style: TextStyle(
-                                                                                          fontSize: 15,
-                                                                                          fontWeight: FontWeight.w600,
-                                                                                          color: navyClr),
-                                                                                    ),
-                                                                                  ),
-                                                                                ],
-                                                                              ),
-
-                                                                              if (iserror) ...[
-                                                                                const SizedBox(height: 14),
-                                                                                Text(
-                                                                                  'Please fill in all fields correctly.',
-                                                                                  style: TextStyle(
-                                                                                      color: redClr, fontWeight: FontWeight.w600, fontSize: 13),
-                                                                                ),
-                                                                              ],
-                                                                              const SizedBox(height: 22),
-
-                                                                              // Actions
-                                                                              Row(
-                                                                                children: [
-                                                                                  Expanded(
-                                                                                    child: OutlinedButton(
-                                                                                      onPressed: isLoading ? null : () => Navigator.pop(context),
-                                                                                      style: OutlinedButton.styleFrom(
-                                                                                        backgroundColor: Colors.white,
-                                                                                        side: BorderSide(color: outlineClr),
-                                                                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                                                                        shape: RoundedRectangleBorder(
-                                                                                            borderRadius: BorderRadius.circular(10)),
-                                                                                      ),
-                                                                                      child: Text(
-                                                                                        'Cancel',
-                                                                                        style: TextStyle(
-                                                                                            color: mutedClr,
-                                                                                            fontWeight: FontWeight.bold,
-                                                                                            fontSize: 15),
-                                                                                      ),
-                                                                                    ),
-                                                                                  ),
-                                                                                  const SizedBox(width: 12),
-                                                                                  Expanded(
-                                                                                    child: ElevatedButton(
-                                                                                      // Save logic unchanged from the previous dialog, including
-                                                                                      // the un-trimmed subtype check it always had.
-                                                                                      onPressed: isLoading
-                                                                                          ? null
-                                                                                          : () async {
-                                                                                              if (selectedValue == null ||
-                                                                                                  subtype.text.isEmpty) {
-                                                                                                setState(() {
-                                                                                                  iserror = true;
-                                                                                                });
-                                                                                              } else {
-                                                                                                setState(() {
-                                                                                                  isLoading = true;
-                                                                                                  iserror = false;
-                                                                                                });
-                                                                                                SharedPreferences prefs =
-                                                                                                    await SharedPreferences.getInstance();
-                                                                                                String? id = prefs.getString("adminId");
-                                                                                                PropertyTypeRepository()
-                                                                                                    .addPropertyType(
-                                                                                                  adminId: id!,
-                                                                                                  propertyType: selectedValue,
-                                                                                                  propertySubType: subtype.text,
-                                                                                                  isMultiUnit: isChecked,
-                                                                                                )
-                                                                                                    .then((value) {
-                                                                                                  setState(() {
-                                                                                                    isLoading = false;
-                                                                                                  });
-                                                                                                  Navigator.pop(context, true);
-                                                                                                }).catchError((e) {
-                                                                                                  setState(() {
-                                                                                                    isLoading = false;
-                                                                                                  });
-                                                                                                });
-                                                                                              }
-                                                                                            },
-                                                                                      style: ElevatedButton.styleFrom(
-                                                                                        backgroundColor: navyClr,
-                                                                                        disabledBackgroundColor: navyClr.withOpacity(0.6),
-                                                                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                                                                        elevation: 0,
-                                                                                        shape: RoundedRectangleBorder(
-                                                                                            borderRadius: BorderRadius.circular(10)),
-                                                                                      ),
-                                                                                      child: isLoading
-                                                                                          ? const SpinKitFadingCircle(
-                                                                                              color: Colors.white, size: 22.0)
-                                                                                          : const Text(
-                                                                                              'Add',
-                                                                                              style: TextStyle(
-                                                                                                  color: Colors.white,
-                                                                                                  fontWeight: FontWeight.bold,
-                                                                                                  fontSize: 15),
-                                                                                            ),
-                                                                                    ),
-                                                                                  ),
-                                                                                ],
-                                                                              ),
-                                                                            ],
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  );
-                                                                },
+                                                          showPropertyTypePopup(
+                                                            context,
+                                                            // Like web (AddpropertyModal.jsx): a Residential type also needs
+                                                            // its Syndication Property Type, saved with it.
+                                                            onSave: (values) async {
+                                                              final prefs = await SharedPreferences.getInstance();
+                                                              await PropertyTypeRepository().addPropertyType(
+                                                                adminId: prefs.getString("adminId"),
+                                                                propertyType: values.propertyType,
+                                                                propertySubType: values.propertySubType,
+                                                                isMultiUnit: values.isMultiUnit,
+                                                                zillowPropertyType: values.syndicationType,
                                                               );
                                                             },
-                                                          );
-                                                        } else {
-                                                          setState(() {
-                                                            // selectedIsMultiUnit = snapshot.data!.where((element) => element.isMultiunit == newValue ).first;
-                                                            selectedpropertytypedata = snapshot
-                                                                .data!
-                                                                .where((element) =>
-                                                                    element
-                                                                        .propertysubType ==
-                                                                    newValue)
-                                                                .first;
-                                                            // print(selectedProperty);
-                                                            selectedProperty =
-                                                                newValue;
-                                                            propertyGroups = [];
-                                                            // Call the method here
-                                                            selectedpropertytype =
-                                                                selectedpropertytypedata!
-                                                                    .propertyType;
-                                                            selectedIsMultiUnit =
-                                                                selectedpropertytypedata!
-                                                                    .isMultiunit!;
+                                                          ).then((saved) {
+                                                            // Like web, the list shows the new type straight away.
+                                                            if (saved == true && mounted) _reloadPropertyTypes();
                                                           });
-                                                          showError =
-                                                              selectedProperty ==
-                                                                  null;
-                                                          propertyGroups
-                                                              .clear();
-                                                          addPropertyGroup();
-                                                          propertyTypeError =
-                                                              false;
+                                                        } else if (newValue != selectedProperty) {
+                                                          final String? oldType = selectedpropertytype;
+                                                          final bool oldMulti = selectedIsMultiUnit;
+                                                          setState(() {
+                                                            selectedpropertytypedata = snapshot.data!
+                                                                .where((element) => element.propertysubType == newValue)
+                                                                .first;
+                                                            selectedProperty = newValue;
+                                                            selectedpropertytype = selectedpropertytypedata!.propertyType;
+                                                            selectedIsMultiUnit =
+                                                                selectedpropertytypedata!.isMultiunit ?? false;
+                                                            // Like web (Rentals.jsx handlePropSelection): every unit is
+                                                            // kept and its card is laid out again for the new type.
+                                                            _relayoutUnits(oldType: oldType, oldMulti: oldMulti);
+                                                            showError = false;
+                                                            propertyTypeError = false;
+                                                          });
                                                         }
                                                       }
                                                     : null,
@@ -3039,7 +2853,9 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                                             String>(
                                                           value: item
                                                               .propertysubType,
-                                                          child: Padding(
+                                                          child: Row(
+  children: [
+    Expanded(child: Padding(
                                                             padding:
                                                                 const EdgeInsets
                                                                     .only(
@@ -3056,7 +2872,13 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                                                         .w400,
                                                               ),
                                                             ),
-                                                          ),
+                                                          )),
+    // Like web: edit this type from the list.
+    PropertyTypeEditPencil(
+      onEdit: () => _editPropertyTypeFromList(item),
+    ),
+  ],
+),
                                                         );
                                                       }).toList(),
                                                     ];
@@ -6119,6 +5941,8 @@ class _Edit_propertiesState extends State<Edit_properties> {
                         // Check for changes
 
                         bool hasChanges = hasUnitChanges ||
+                            // A new property type is a change too.
+                            _typeChanged ||
                             address.text != initialAddress ||
                             datePlacedInService.text !=
                                 initialPlacedInService ||
@@ -6209,7 +6033,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
                           Rental rentals = Rental(
                             rentalId: widget.rentalId,
                             adminId: id,
-                            propertyId: widget.properties.propertyId,
+                            propertyId: _selectedTypeId,
                             address: address.text.trim(),
                             city: city.text.trim(),
                             state: state.text.trim(),
@@ -6435,9 +6259,10 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                     .text, // sqft from first controller
                                 'rental_images':
                                     _unitImagesForSave(i),
-                                'rental_bath':
-                                    "", // Add empty bath for consistency
-                                'rental_bed': "", // Add empty bed for consistency
+                                // A unit keeps its saved bed and bath (web keeps them when
+                                // a property is changed to Commercial).
+                                'rental_bath': oldUnit?.rentalbath ?? '',
+                                'rental_bed': oldUnit?.rentalbed ?? '',
                                 'description': _at(controllers, 1),
                               };
                             } else if (actualPropertyType == 'Residential' &&
@@ -6491,8 +6316,10 @@ class _Edit_propertiesState extends State<Edit_properties> {
                                 'rental_sqft': controllers[2].text,
                                 'rental_images':
                                     _unitImagesForSave(i),
-                                'rental_bath': "",
-                                'rental_bed': "",
+                                // Saved bed and bath stay unless the residential fields
+                                // below replace them (web keeps them on a Commercial unit).
+                                'rental_bath': oldUnit?.rentalbath ?? '',
+                                'rental_bed': oldUnit?.rentalbed ?? '',
                               };
                               // Multi-unit Residential: Bath / Bed come from what is
                               // selected now. They used to come from a snapshot taken on
@@ -6607,7 +6434,7 @@ class _Edit_propertiesState extends State<Edit_properties> {
                               processorList: processorIds,
                             ),
                             rentalId: widget.rentalId,
-                            propertyId: widget.properties.propertyId,
+                            propertyId: _selectedTypeId,
                             rentalAddress: address.text.trim(),
                             rentalOwnerId: ownerDetails.rentalOwnerId,
                             rentalCity: city.text.trim(),
